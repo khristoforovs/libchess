@@ -1,8 +1,8 @@
 use std::fs;
 
-pub mod square;
 pub mod board_file;
 pub mod board_rank;
+pub mod square;
 pub mod errors;
 
 

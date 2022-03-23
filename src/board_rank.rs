@@ -57,12 +57,12 @@ impl FromStr for Rank {
 
 impl Rank {
     #[inline]
-    pub fn to_index(&self) -> i64 {
-        *self as i64
+    pub fn to_index(&self) -> usize {
+        *self as usize
     }
 
     #[inline]
-    pub fn from_index(n: i64) -> Result<Self, Error> {
+    pub fn from_index(n: usize) -> Result<Self, Error> {
         match n {
             0 => Ok(Rank::First),
             1 => Ok(Rank::Second),
@@ -72,7 +72,7 @@ impl Rank {
             5 => Ok(Rank::Sixth),
             6 => Ok(Rank::Seventh),
             7 => Ok(Rank::Eighth),
-            _ => Err(Error::InvalidBoardRankIndex{n}),
+            _ => Err(Error::NegativeBoardRankIndex),
         }
     }
 
@@ -83,6 +83,9 @@ impl Rank {
 
     #[inline]
     pub fn down(&self) -> Result<Self, Error> {
+        if self.to_index() == 0 {
+            return Err(Error::NegativeBoardRankIndex);
+        }
         Rank::from_index(self.to_index() - 1)
     }
 }
@@ -117,5 +120,11 @@ mod tests {
     fn init_from_str() { assert_eq!(Rank::from_str("1").unwrap(), Rank::First); }
 
     #[test]
-    fn init_from_str_fails() { assert!(Rank::from_str("123").is_err()); }
+    fn init_from_str_fails() {
+        assert!(Rank::from_str("123").is_err());
+        assert!(Rank::from_str("0").is_err());
+        assert!(Rank::from_str("9").is_err());
+        assert!(Rank::from_str("-9").is_err());
+        assert!(Rank::from_str("a").is_err());
+    }
 }

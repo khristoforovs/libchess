@@ -3,14 +3,23 @@ use failure::Fail;
 #[derive(Debug, Clone, Fail)]
 pub enum Error {
     #[fail(display="Invalid index for board's file: {}", n)]
-    InvalidBoardFileIndex {n: i64},
+    InvalidBoardFileIndex {n: usize},
+
+    #[fail(display="Negative file index found")]
+    NegativeBoardFileIndex,
 
     #[fail(display="Invalid board's file string representation")]
     InvalidBoardFileName,
 
     #[fail(display="Invalid index for board's rank: {}", n)]
-    InvalidBoardRankIndex {n: i64},
+    InvalidBoardRankIndex {n: usize},
+
+    #[fail(display="Negative rank index found")]
+    NegativeBoardRankIndex,
 
     #[fail(display="Invalid board's rank string representation")]
     InvalidBoardRankName,
+
+    #[fail(display="Invalid Square representation string")]
+    InvalidSquareRepresentation,
 }

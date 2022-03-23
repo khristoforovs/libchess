@@ -1,4 +1,8 @@
 use std::fmt;
+use crate::board_file::File;
+use crate::board_rank::Rank;
+use std::str::FromStr;
+use crate::errors::{Error, self};
 
 pub const SQUARES_NUMBER: usize = 64;
 
@@ -16,9 +20,73 @@ impl fmt::Display for Square {
     }
 }
 
+impl FromStr for Square {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 2 { return Err(Error::InvalidSquareRepresentation); }
+
+        let chars: Vec<char> = s.chars().collect();
+        let file = match File::from_str(&chars[0].to_string()[..]) {
+            Ok(f) => f,
+            Err(_) => return Err(Error::InvalidSquareRepresentation),
+        };
+        let rank = match Rank::from_str(&chars[1].to_string()[..]) {
+            Ok(r) => r,
+            Err(_) => return Err(Error::InvalidSquareRepresentation),
+        };
+        Ok(Square::make_square(rank, file))
+    }
+}
+
 impl Square {
     #[inline]
     pub unsafe fn new(square: u8) -> Square { Square(square) }
+
+    #[inline]
+    pub fn make_square(rank: Rank, file: File) -> Square {
+        Square((rank.to_index() as u8) << 3 ^ (file.to_index() as u8))
+    }
+
+    #[inline]
+    pub fn get_rank(&self) -> Rank {
+        Rank::from_index((self.0 >> 3) as usize).unwrap()
+    }
+
+    #[inline]
+    pub fn get_file(&self) -> File {
+        File::from_index((self.0 & 7) as usize).unwrap()
+    }
+
+    #[inline]
+    pub fn to_index(&self) -> usize {
+        self.0 as usize
+    }
+
+    #[inline]
+    pub fn to_int(&self) -> u8 {
+        self.0
+    }
+
+    #[inline]
+    pub fn up(&self) -> Result<Self, errors::Error> {
+        Ok(Self::make_square(self.get_rank().up()?, self.get_file()))
+    }
+
+    #[inline]
+    pub fn down(&self) -> Result<Self, errors::Error> {
+        Ok(Self::make_square(self.get_rank().down()?, self.get_file()))
+    }
+
+    #[inline]
+    pub fn left(&self) -> Result<Self, errors::Error> {
+        Ok(Self::make_square(self.get_rank(), self.get_file().left()?))
+    }
+
+    #[inline]
+    pub fn right(&self) -> Result<Self, errors::Error> {
+        Ok(Self::make_square(self.get_rank(), self.get_file().right()?))
+    }
 
     pub const A1: Square = Square(0);
     pub const B1: Square = Square(1);
@@ -86,3 +154,29 @@ impl Square {
     pub const H8: Square = Square(63);
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_from_string() {
+        assert_eq!(Square::from_str("e2").unwrap(), Square::E2);
+    }
+
+    #[test]
+    fn create_from_string_fails() {
+        assert!(Square::from_str("e20").is_err());
+        assert!(Square::from_str("e9").is_err());
+        assert!(Square::from_str("z4").is_err());
+        assert!(Square::from_str("b0").is_err());
+    }
+
+    #[test]
+    fn neighbor_squares() {
+        assert_eq!(Square::E4.up().unwrap(), Square::E5);
+        assert_eq!(Square::E4.down().unwrap(), Square::E3);
+        assert_eq!(Square::E4.left().unwrap(), Square::D4);
+        assert_eq!(Square::E4.right().unwrap(), Square::F4);
+    }
+}

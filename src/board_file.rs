@@ -57,12 +57,12 @@ impl FromStr for File {
 
 impl File {
     #[inline]
-    pub fn to_index(&self) -> i64 {
-        *self as i64
+    pub fn to_index(&self) -> usize {
+        *self as usize
     }
 
     #[inline]
-    pub fn from_index(n: i64) -> Result<Self, Error> {
+    pub fn from_index(n: usize) -> Result<Self, Error> {
         match n {
             0 => Ok(File::A),
             1 => Ok(File::B),
@@ -72,7 +72,7 @@ impl File {
             5 => Ok(File::F),
             6 => Ok(File::G),
             7 => Ok(File::H),
-            _ => Err(Error::InvalidBoardFileIndex{n}),
+            _ => Err(Error::NegativeBoardFileIndex),
         }
     }
 
@@ -83,6 +83,9 @@ impl File {
 
     #[inline]
     pub fn left(&self) -> Result<Self, Error> {
+        if self.to_index() == 0 {
+            return Err(Error::NegativeBoardFileIndex);
+        }
         File::from_index(self.to_index() - 1)
     }
 }
@@ -117,5 +120,10 @@ mod tests {
     fn init_from_str() { assert_eq!(File::from_str("g").unwrap(), File::G); }
 
     #[test]
-    fn init_from_str_fails() { assert!(File::from_str("bbb").is_err()); }
+    fn init_from_str_fails() {
+        assert!(File::from_str("bbb").is_err());
+        assert!(File::from_str("0").is_err());
+        assert!(File::from_str("9").is_err());
+        assert!(File::from_str("-1").is_err());
+    }
 }
