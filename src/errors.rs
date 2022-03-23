@@ -20,6 +20,9 @@ pub enum Error {
     #[fail(display="Invalid board's rank string representation")]
     InvalidBoardRankName,
 
-    #[fail(display="Invalid Square representation string")]
+    #[fail(display="Invalid square representation string")]
     InvalidSquareRepresentation,
+
+    #[fail(display="Invalid peace representation string")]
+    InvalidPeaceRepresentation,
 }

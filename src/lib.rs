@@ -4,6 +4,8 @@ pub mod board_file;
 pub mod board_rank;
 pub mod square;
 pub mod errors;
+pub mod color;
+pub mod piece;
 
 
 pub fn hello_world() {
