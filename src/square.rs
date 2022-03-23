@@ -1,23 +1,17 @@
 use std::fmt;
-use std::str::FromStr;
-
 
 pub const SQUARES_NUMBER: usize = 64;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct Square(u8);
-
-impl Default for Square {
-    fn default() -> Square { Square(0) }
-}
 
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}{}",
-            ((self.0 & 7) as u8 + ('a' as u8)) as char,
-            ((self.0 >> 3) as u8 + ('1' as u8)) as char
+            ((self.0 & 7) as u8 + b'a') as char,
+            ((self.0 >> 3) as u8 + b'1') as char
         )
     }
 }

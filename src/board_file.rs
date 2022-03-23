@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use std::fmt;
+use std::str::FromStr;
 
 pub const FILES_NUMBER: usize = 8;
 
@@ -21,16 +22,36 @@ impl fmt::Display for File {
             f,
             "{}",
             match self {
-                &File::A => "a",
-                &File::B => "b",
-                &File::C => "c",
-                &File::D => "d",
-                &File::E => "e",
-                &File::F => "f",
-                &File::G => "g",
-                &File::H => "h",
+                File::A => "a",
+                File::B => "b",
+                File::C => "c",
+                File::D => "d",
+                File::E => "e",
+                File::F => "f",
+                File::G => "g",
+                File::H => "h",
             }
         )
+    }
+}
+
+impl FromStr for File {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() != 1 { return Err(Error::InvalidBoardFileName); }
+
+        match s.chars().next().unwrap() {
+            'a' => Ok(File::A),
+            'b' => Ok(File::B),
+            'c' => Ok(File::C),
+            'd' => Ok(File::D),
+            'e' => Ok(File::E),
+            'f' => Ok(File::F),
+            'g' => Ok(File::G),
+            'h' => Ok(File::H),
+            _ => Err(Error::InvalidBoardFileName),
+        }
     }
 }
 
@@ -91,4 +112,10 @@ mod tests {
 
     #[test]
     fn right_for_file() { assert_eq!(File::G.right().unwrap(), File::H); }
+
+    #[test]
+    fn init_from_str() { assert_eq!(File::from_str("g").unwrap(), File::G); }
+
+    #[test]
+    fn init_from_str_fails() { assert!(File::from_str("bbb").is_err()); }
 }

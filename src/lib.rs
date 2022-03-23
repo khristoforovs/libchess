@@ -2,6 +2,7 @@ use std::fs;
 
 pub mod square;
 pub mod board_file;
+pub mod board_rank;
 pub mod errors;
 
 
@@ -26,7 +27,7 @@ pub fn read_print_moves(path: String) {
     ").unwrap();
 
     println!();
-    for cap in re.captures_iter(&contents.to_owned()) {
+    for cap in re.captures_iter(&contents) {
         println!("Move: {} White: {} Black: {};", &cap[1], &cap[2], &cap[3]);
     }
 }
