@@ -1,12 +1,12 @@
 use std::fs;
 
-pub mod board_file;
-pub mod board_rank;
+pub mod board_files;
+pub mod board_ranks;
 pub mod square;
 pub mod errors;
-pub mod color;
-pub mod piece;
-
+pub mod colors;
+pub mod pieces;
+pub mod bitboard;
 
 pub fn hello_world() {
     println!("Hello, world from the example!");

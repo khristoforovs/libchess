@@ -1,4 +1,4 @@
-use crate::color::Color;
+use crate::colors::Color;
 use crate::errors::Error;
 use std::fmt;
 
@@ -71,7 +71,6 @@ mod tests {
     fn create_from_string() {
         let color = Color::White;
         assert_eq!(Piece::from_str("", color).unwrap(), Piece::Pawn(color));
-        println!("11");
         assert_eq!(Piece::from_str("N", color).unwrap(), Piece::Knight(color));
         assert_eq!(Piece::from_str("Q", color).unwrap(), Piece::Queen(color));
     }

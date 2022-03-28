@@ -1,6 +1,6 @@
 use std::fmt;
-use crate::board_file::File;
-use crate::board_rank::Rank;
+use crate::board_files::File;
+use crate::board_ranks::Rank;
 use std::str::FromStr;
 use crate::errors::{Error, self};
 
@@ -35,7 +35,7 @@ impl FromStr for Square {
             Ok(r) => r,
             Err(_) => return Err(Error::InvalidSquareRepresentation),
         };
-        Ok(Square::make_square(rank, file))
+        Ok(Square::from_rank_file(rank, file))
     }
 }
 
@@ -44,7 +44,7 @@ impl Square {
     pub unsafe fn new(square: u8) -> Square { Square(square) }
 
     #[inline]
-    pub fn make_square(rank: Rank, file: File) -> Square {
+    pub fn from_rank_file(rank: Rank, file: File) -> Square {
         Square((rank.to_index() as u8) << 3 ^ (file.to_index() as u8))
     }
 
@@ -70,22 +70,22 @@ impl Square {
 
     #[inline]
     pub fn up(&self) -> Result<Self, errors::Error> {
-        Ok(Self::make_square(self.get_rank().up()?, self.get_file()))
+        Ok(Self::from_rank_file(self.get_rank().up()?, self.get_file()))
     }
 
     #[inline]
     pub fn down(&self) -> Result<Self, errors::Error> {
-        Ok(Self::make_square(self.get_rank().down()?, self.get_file()))
+        Ok(Self::from_rank_file(self.get_rank().down()?, self.get_file()))
     }
 
     #[inline]
     pub fn left(&self) -> Result<Self, errors::Error> {
-        Ok(Self::make_square(self.get_rank(), self.get_file().left()?))
+        Ok(Self::from_rank_file(self.get_rank(), self.get_file().left()?))
     }
 
     #[inline]
     pub fn right(&self) -> Result<Self, errors::Error> {
-        Ok(Self::make_square(self.get_rank(), self.get_file().right()?))
+        Ok(Self::from_rank_file(self.get_rank(), self.get_file().right()?))
     }
 
     pub const A1: Square = Square(0);
