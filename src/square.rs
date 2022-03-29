@@ -1,8 +1,8 @@
-use std::fmt;
 use crate::board_files::File;
 use crate::board_ranks::Rank;
+use crate::errors::{self, Error};
+use std::fmt;
 use std::str::FromStr;
-use crate::errors::{Error, self};
 
 pub const SQUARES_NUMBER: usize = 64;
 
@@ -24,7 +24,9 @@ impl FromStr for Square {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 2 { return Err(Error::InvalidSquareRepresentation); }
+        if s.len() != 2 {
+            return Err(Error::InvalidSquareRepresentation);
+        }
 
         let chars: Vec<char> = s.chars().collect();
         let file = match File::from_str(&chars[0].to_string()[..]) {
@@ -41,7 +43,9 @@ impl FromStr for Square {
 
 impl Square {
     #[inline]
-    pub unsafe fn new(square: u8) -> Square { Square(square) }
+    pub unsafe fn new(square: u8) -> Square {
+        Square(square)
+    }
 
     #[inline]
     pub fn from_rank_file(rank: Rank, file: File) -> Square {
@@ -75,17 +79,26 @@ impl Square {
 
     #[inline]
     pub fn down(&self) -> Result<Self, errors::Error> {
-        Ok(Self::from_rank_file(self.get_rank().down()?, self.get_file()))
+        Ok(Self::from_rank_file(
+            self.get_rank().down()?,
+            self.get_file(),
+        ))
     }
 
     #[inline]
     pub fn left(&self) -> Result<Self, errors::Error> {
-        Ok(Self::from_rank_file(self.get_rank(), self.get_file().left()?))
+        Ok(Self::from_rank_file(
+            self.get_rank(),
+            self.get_file().left()?,
+        ))
     }
 
     #[inline]
     pub fn right(&self) -> Result<Self, errors::Error> {
-        Ok(Self::from_rank_file(self.get_rank(), self.get_file().right()?))
+        Ok(Self::from_rank_file(
+            self.get_rank(),
+            self.get_file().right()?,
+        ))
     }
 
     pub const A1: Square = Square(0);
@@ -153,7 +166,6 @@ impl Square {
     pub const G8: Square = Square(62);
     pub const H8: Square = Square(63);
 }
-
 
 #[cfg(test)]
 mod tests {

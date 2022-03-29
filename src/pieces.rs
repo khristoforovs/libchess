@@ -42,16 +42,14 @@ impl Piece {
     }
 
     fn from_str(s: &str, color: Color) -> Result<Piece, Error> {
-        if s.len() > 1 { return Err(Error::InvalidPeaceRepresentation); }
-    
-        if s.len() == 0 { return Ok(Piece::Pawn(color)); }
-        match s
-            .to_uppercase()
-            .as_str()
-            .chars()
-            .next()
-            .unwrap()
-        {
+        if s.len() > 1 {
+            return Err(Error::InvalidPeaceRepresentation);
+        }
+
+        if s.len() == 0 {
+            return Ok(Piece::Pawn(color));
+        }
+        match s.to_uppercase().as_str().chars().next().unwrap() {
             'N' => Ok(Piece::Knight(color)),
             'B' => Ok(Piece::Bishop(color)),
             'R' => Ok(Piece::Rook(color)),
@@ -61,7 +59,6 @@ impl Piece {
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {

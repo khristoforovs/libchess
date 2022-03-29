@@ -39,7 +39,9 @@ impl FromStr for Rank {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 { return Err(Error::InvalidBoardRankName); }
+        if s.len() != 1 {
+            return Err(Error::InvalidBoardRankName);
+        }
 
         match s.chars().next().unwrap() {
             '1' => Ok(Rank::First),
@@ -90,34 +92,49 @@ impl Rank {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn to_index_test() { assert_eq!(Rank::First.to_index(), 0); }
+    fn to_index_test() {
+        assert_eq!(Rank::First.to_index(), 0);
+    }
 
     #[test]
-    fn from_index_test() { assert_eq!(Rank::from_index(5).unwrap(), Rank::Sixth); }
+    fn from_index_test() {
+        assert_eq!(Rank::from_index(5).unwrap(), Rank::Sixth);
+    }
 
     #[test]
-    fn from_index_test_fails() { assert!(Rank::from_index(10).is_err()); }
+    fn from_index_test_fails() {
+        assert!(Rank::from_index(10).is_err());
+    }
 
     #[test]
-    fn down_for_rank_fails() { assert!(Rank::First.down().is_err()); }
+    fn down_for_rank_fails() {
+        assert!(Rank::First.down().is_err());
+    }
 
     #[test]
-    fn down_for_rank() { assert_eq!(Rank::Second.down().unwrap(), Rank::First); }
+    fn down_for_rank() {
+        assert_eq!(Rank::Second.down().unwrap(), Rank::First);
+    }
 
     #[test]
-    fn up_for_rank_fails() { assert!(Rank::Eighth.up().is_err()); }
+    fn up_for_rank_fails() {
+        assert!(Rank::Eighth.up().is_err());
+    }
 
     #[test]
-    fn up_for_rank() { assert_eq!(Rank::Seventh.up().unwrap(), Rank::Eighth); }
+    fn up_for_rank() {
+        assert_eq!(Rank::Seventh.up().unwrap(), Rank::Eighth);
+    }
 
     #[test]
-    fn init_from_str() { assert_eq!(Rank::from_str("1").unwrap(), Rank::First); }
+    fn init_from_str() {
+        assert_eq!(Rank::from_str("1").unwrap(), Rank::First);
+    }
 
     #[test]
     fn init_from_str_fails() {

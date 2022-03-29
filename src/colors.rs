@@ -26,4 +26,3 @@ impl Color {
         *self as usize
     }
 }
-

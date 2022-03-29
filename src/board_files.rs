@@ -39,7 +39,9 @@ impl FromStr for File {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s.len() != 1 { return Err(Error::InvalidBoardFileName); }
+        if s.len() != 1 {
+            return Err(Error::InvalidBoardFileName);
+        }
 
         match s.chars().next().unwrap() {
             'a' => Ok(File::A),
@@ -90,34 +92,49 @@ impl File {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn to_index_test() { assert_eq!(File::A.to_index(), 0); }
+    fn to_index_test() {
+        assert_eq!(File::A.to_index(), 0);
+    }
 
     #[test]
-    fn from_index_test() { assert_eq!(File::from_index(5).unwrap(), File::F); }
+    fn from_index_test() {
+        assert_eq!(File::from_index(5).unwrap(), File::F);
+    }
 
     #[test]
-    fn from_index_test_fails() { assert!(File::from_index(10).is_err()); }
+    fn from_index_test_fails() {
+        assert!(File::from_index(10).is_err());
+    }
 
     #[test]
-    fn left_for_file_fails() { assert!(File::A.left().is_err()); }
+    fn left_for_file_fails() {
+        assert!(File::A.left().is_err());
+    }
 
     #[test]
-    fn left_for_file() { assert_eq!(File::B.left().unwrap(), File::A); }
+    fn left_for_file() {
+        assert_eq!(File::B.left().unwrap(), File::A);
+    }
 
     #[test]
-    fn right_for_file_fails() { assert!(File::H.right().is_err()); }
+    fn right_for_file_fails() {
+        assert!(File::H.right().is_err());
+    }
 
     #[test]
-    fn right_for_file() { assert_eq!(File::G.right().unwrap(), File::H); }
+    fn right_for_file() {
+        assert_eq!(File::G.right().unwrap(), File::H);
+    }
 
     #[test]
-    fn init_from_str() { assert_eq!(File::from_str("g").unwrap(), File::G); }
+    fn init_from_str() {
+        assert_eq!(File::from_str("g").unwrap(), File::G);
+    }
 
     #[test]
     fn init_from_str_fails() {

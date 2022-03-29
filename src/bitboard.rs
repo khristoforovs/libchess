@@ -1,8 +1,8 @@
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
-use std::fmt;
-use crate::square::Square;
 use crate::board_files::File;
 use crate::board_ranks::Rank;
+use crate::square::Square;
+use std::fmt;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash)]
 pub struct BitBoard(pub u64);
@@ -11,50 +11,66 @@ impl BitAnd for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitand(self, other: BitBoard) -> BitBoard { BitBoard(self.0 & other.0) }
+    fn bitand(self, other: BitBoard) -> BitBoard {
+        BitBoard(self.0 & other.0)
+    }
 }
 
 impl BitOr for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitor(self, other: BitBoard) -> BitBoard { BitBoard(self.0 | other.0) }
+    fn bitor(self, other: BitBoard) -> BitBoard {
+        BitBoard(self.0 | other.0)
+    }
 }
 
 impl BitXor for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitxor(self, other: BitBoard) -> BitBoard { BitBoard(self.0 ^ other.0) }
+    fn bitxor(self, other: BitBoard) -> BitBoard {
+        BitBoard(self.0 ^ other.0)
+    }
 }
 
 impl BitAndAssign for BitBoard {
     #[inline]
-    fn bitand_assign(&mut self, other: BitBoard) { self.0 &= other.0; }
+    fn bitand_assign(&mut self, other: BitBoard) {
+        self.0 &= other.0;
+    }
 }
 
 impl BitOrAssign for BitBoard {
     #[inline]
-    fn bitor_assign(&mut self, other: BitBoard) { self.0 |= other.0; }
+    fn bitor_assign(&mut self, other: BitBoard) {
+        self.0 |= other.0;
+    }
 }
 
 impl BitXorAssign for BitBoard {
     #[inline]
-    fn bitxor_assign(&mut self, other: BitBoard) { self.0 ^= other.0; }
+    fn bitxor_assign(&mut self, other: BitBoard) {
+        self.0 ^= other.0;
+    }
 }
 
 impl Mul for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn mul(self, other: BitBoard) -> BitBoard { BitBoard(self.0.wrapping_mul(other.0)) }
+    fn mul(self, other: BitBoard) -> BitBoard {
+        BitBoard(self.0.wrapping_mul(other.0))
+    }
 }
 
 impl Not for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn not(self) -> BitBoard { BitBoard(!self.0) }
+    fn not(self) -> BitBoard {
+        BitBoard(!self.0)
+    }
 }
 
 impl Iterator for BitBoard {
@@ -86,7 +102,7 @@ impl fmt::Display for BitBoard {
                 }
             }
             s.push_str("\n");
-        } 
+        }
         write!(f, "{}", s)
     }
 }
@@ -123,7 +139,6 @@ impl BitBoard {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,8 +147,7 @@ mod tests {
     #[test]
     fn create() {
         let bit_board = BitBoard::new(2);
-        let result_str = 
-            ". . . . . . . . 
+        let result_str = ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -155,11 +169,9 @@ mod tests {
 
     #[test]
     fn bit_ops() {
-        let bit_board = 
-            BitBoard::from_rank_file(Rank::Second, File::E) |
-            BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = 
-            ". . . . . . . . 
+        let bit_board = BitBoard::from_rank_file(Rank::Second, File::E)
+            | BitBoard::from_rank_file(Rank::Fourth, File::E);
+        let result_or = ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -170,11 +182,8 @@ mod tests {
             ";
         assert_eq!(format!("{}", bit_board), unindent(result_or));
 
-        let bit_board = 
-            bit_board &
-            BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = 
-            ". . . . . . . . 
+        let bit_board = bit_board & BitBoard::from_rank_file(Rank::Fourth, File::E);
+        let result_or = ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -186,8 +195,7 @@ mod tests {
         assert_eq!(format!("{}", bit_board), unindent(result_or));
 
         let bit_board = !bit_board;
-        let result_or = 
-            "X X X X X X X X 
+        let result_or = "X X X X X X X X 
              X X X X X X X X 
              X X X X X X X X 
              X X X X X X X X 
