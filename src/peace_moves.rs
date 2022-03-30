@@ -58,6 +58,21 @@ impl PieceMove {
     }
 
     #[inline]
+    pub fn set_promotion(&mut self, promotion: Option<Piece>) {
+        self.promotion = promotion;
+    }
+
+    #[inline]
+    pub fn set_capture(&mut self, captures: Option<bool>) {
+        self.captures = captures;
+    }
+
+    #[inline]
+    pub fn set_status(&mut self, status: Option<MoveStatus>) {
+        self.status = status;
+    }
+
+    #[inline]
     pub fn get_piece(&self) -> Piece {
         self.piece
     }
@@ -120,5 +135,20 @@ mod tests {
             status: Some(MoveStatus::Check),
         };
         assert_eq!(format!("{}", mv), String::from("a2a1=Q+"));
+    }
+
+    #[test]
+    fn set_properties() {
+        let mut mv = PieceMove::new(Piece::Pawn(Color::White), Square::D7, Square::E8);
+        assert_eq!(format!("{}", mv), String::from("d7e8"));
+
+        mv.set_capture(Some(true));
+        assert_eq!(format!("{}", mv), String::from("d7xe8"));
+
+        mv.set_promotion(Some(Piece::Queen(Color::White)));
+        assert_eq!(format!("{}", mv), String::from("d7xe8=Q"));
+
+        mv.set_status(Some(MoveStatus::Check));
+        assert_eq!(format!("{}", mv), String::from("d7xe8=Q+"));
     }
 }
