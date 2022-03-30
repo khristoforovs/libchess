@@ -1,8 +1,11 @@
 use std::fs;
 
-pub mod bitboard;
+pub mod bitboards;
 pub mod board_files;
 pub mod board_ranks;
+pub mod castling;
+pub mod chess_board_builder;
+pub mod chess_boards;
 pub mod colors;
 pub mod errors;
 pub mod peace_moves;

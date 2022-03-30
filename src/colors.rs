@@ -6,7 +6,7 @@ pub enum Color {
     Black,
 }
 
-pub const COLOR_NUMBER: usize = 2;
+pub const NUMBER_COLORS: usize = 2;
 
 impl Not for Color {
     type Output = Color;

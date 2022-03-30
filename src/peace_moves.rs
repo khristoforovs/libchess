@@ -1,13 +1,13 @@
-use crate::pieces::Piece;
+use crate::pieces::PieceType;
 use crate::square::Square;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PieceMove {
-    piece: Piece,
+    piece: PieceType,
     source: Square,
     destination: Square,
-    promotion: Option<Piece>,
+    promotion: Option<PieceType>,
     captures: Option<bool>,
     status: Option<MoveStatus>,
 }
@@ -15,7 +15,7 @@ pub struct PieceMove {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MoveStatus {
     Check,
-    CheckMate,
+    Checkmate,
     Neither,
 }
 
@@ -32,7 +32,7 @@ impl fmt::Display for PieceMove {
         };
         let status_str = match self.status {
             Some(MoveStatus::Check) => String::from("+"),
-            Some(MoveStatus::CheckMate) => String::from("#"),
+            Some(MoveStatus::Checkmate) => String::from("#"),
             _ => String::new(),
         };
 
@@ -46,7 +46,7 @@ impl fmt::Display for PieceMove {
 
 impl PieceMove {
     #[inline]
-    pub fn new(piece: Piece, source: Square, destination: Square) -> Self {
+    pub fn new(piece: PieceType, source: Square, destination: Square) -> Self {
         Self {
             piece,
             source,
@@ -58,7 +58,7 @@ impl PieceMove {
     }
 
     #[inline]
-    pub fn set_promotion(&mut self, promotion: Option<Piece>) {
+    pub fn set_promotion(&mut self, promotion: Option<PieceType>) {
         self.promotion = promotion;
     }
 
@@ -73,7 +73,7 @@ impl PieceMove {
     }
 
     #[inline]
-    pub fn get_piece(&self) -> Piece {
+    pub fn get_piece(&self) -> PieceType {
         self.piece
     }
 
@@ -88,7 +88,7 @@ impl PieceMove {
     }
 
     #[inline]
-    pub fn get_promotion(&self) -> Option<Piece> {
+    pub fn get_promotion(&self) -> Option<PieceType> {
         self.promotion
     }
 
@@ -106,32 +106,31 @@ impl PieceMove {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::colors::Color;
 
     #[test]
     fn san_format() {
-        let mv = PieceMove::new(Piece::Pawn(Color::White), Square::E2, Square::E4);
+        let mv = PieceMove::new(PieceType::Pawn, Square::E2, Square::E4);
         assert_eq!(format!("{}", mv), String::from("e2e4"));
 
-        let mv = PieceMove::new(Piece::Rook(Color::Black), Square::A1, Square::A8);
+        let mv = PieceMove::new(PieceType::Rook, Square::A1, Square::A8);
         assert_eq!(format!("{}", mv), String::from("Ra1a8"));
 
         let mv = PieceMove {
-            piece: Piece::Queen(Color::White),
+            piece: PieceType::Queen,
             source: Square::E4,
             destination: Square::E8,
             captures: Some(true),
             promotion: None,
-            status: Some(MoveStatus::CheckMate),
+            status: Some(MoveStatus::Checkmate),
         };
         assert_eq!(format!("{}", mv), String::from("Qe4xe8#"));
 
         let mv = PieceMove {
-            piece: Piece::Pawn(Color::Black),
+            piece: PieceType::Pawn,
             source: Square::A2,
             destination: Square::A1,
             captures: Some(false),
-            promotion: Some(Piece::Queen(Color::Black)),
+            promotion: Some(PieceType::Queen),
             status: Some(MoveStatus::Check),
         };
         assert_eq!(format!("{}", mv), String::from("a2a1=Q+"));
@@ -139,13 +138,13 @@ mod tests {
 
     #[test]
     fn set_properties() {
-        let mut mv = PieceMove::new(Piece::Pawn(Color::White), Square::D7, Square::E8);
+        let mut mv = PieceMove::new(PieceType::Pawn, Square::D7, Square::E8);
         assert_eq!(format!("{}", mv), String::from("d7e8"));
 
         mv.set_capture(Some(true));
         assert_eq!(format!("{}", mv), String::from("d7xe8"));
 
-        mv.set_promotion(Some(Piece::Queen(Color::White)));
+        mv.set_promotion(Some(PieceType::Queen));
         assert_eq!(format!("{}", mv), String::from("d7xe8=Q"));
 
         mv.set_status(Some(MoveStatus::Check));

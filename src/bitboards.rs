@@ -7,6 +7,8 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, M
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash)]
 pub struct BitBoard(pub u64);
 
+pub const BLANK: BitBoard = BitBoard(0);
+
 impl BitAnd for BitBoard {
     type Output = BitBoard;
 
@@ -139,6 +141,7 @@ impl BitBoard {
     }
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,7 +150,8 @@ mod tests {
     #[test]
     fn create() {
         let bit_board = BitBoard::new(2);
-        let result_str = ". . . . . . . . 
+        let result_str = 
+            ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -171,7 +175,8 @@ mod tests {
     fn bit_ops() {
         let bit_board = BitBoard::from_rank_file(Rank::Second, File::E)
             | BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = ". . . . . . . . 
+        let result_or = 
+            ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -183,7 +188,8 @@ mod tests {
         assert_eq!(format!("{}", bit_board), unindent(result_or));
 
         let bit_board = bit_board & BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = ". . . . . . . . 
+        let result_or = 
+            ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -195,7 +201,8 @@ mod tests {
         assert_eq!(format!("{}", bit_board), unindent(result_or));
 
         let bit_board = !bit_board;
-        let result_or = "X X X X X X X X 
+        let result_or = 
+            "X X X X X X X X 
              X X X X X X X X 
              X X X X X X X X 
              X X X X X X X X 

@@ -3,58 +3,57 @@ use crate::errors::Error;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Piece {
-    Pawn(Color),
-    Knight(Color),
-    Bishop(Color),
-    Rook(Color),
-    Queen(Color),
-    King(Color),
+pub enum PieceType {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
 }
 
-impl fmt::Display for Piece {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Piece(PieceType, Color);
+
+pub const NUMBER_PIECE_TYPES: usize = 6;
+
+impl fmt::Display for PieceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "{}",
             match *self {
-                Piece::Pawn(_) => "",
-                Piece::Knight(_) => "N",
-                Piece::Bishop(_) => "B",
-                Piece::Rook(_) => "R",
-                Piece::Queen(_) => "Q",
-                Piece::King(_) => "K",
+                PieceType::Pawn => "",
+                PieceType::Knight => "N",
+                PieceType::Bishop => "B",
+                PieceType::Rook => "R",
+                PieceType::Queen => "Q",
+                PieceType::King => "K",
             }
         )
     }
 }
 
-impl Piece {
-    pub fn color(&self) -> Color {
-        match *self {
-            Piece::Pawn(c) => c,
-            Piece::Knight(c) => c,
-            Piece::Bishop(c) => c,
-            Piece::Rook(c) => c,
-            Piece::Queen(c) => c,
-            Piece::King(c) => c,
-        }
+impl PieceType {
+    #[inline]
+    pub fn to_index(&self) -> usize {
+        *self as usize
     }
 
-    fn from_str(s: &str, color: Color) -> Result<Piece, Error> {
+    fn from_str(s: &str) -> Result<PieceType, Error> {
         if s.len() > 1 {
             return Err(Error::InvalidPeaceRepresentation);
         }
 
         if s.len() == 0 {
-            return Ok(Piece::Pawn(color));
+            return Ok(PieceType::Pawn);
         }
         match s.to_uppercase().as_str().chars().next().unwrap() {
-            'N' => Ok(Piece::Knight(color)),
-            'B' => Ok(Piece::Bishop(color)),
-            'R' => Ok(Piece::Rook(color)),
-            'Q' => Ok(Piece::Queen(color)),
-            'K' => Ok(Piece::King(color)),
+            'N' => Ok(PieceType::Knight),
+            'B' => Ok(PieceType::Bishop),
+            'R' => Ok(PieceType::Rook),
+            'Q' => Ok(PieceType::Queen),
+            'K' => Ok(PieceType::King),
             _ => Err(Error::InvalidPeaceRepresentation),
         }
     }
@@ -66,15 +65,8 @@ mod tests {
 
     #[test]
     fn create_from_string() {
-        let color = Color::White;
-        assert_eq!(Piece::from_str("", color).unwrap(), Piece::Pawn(color));
-        assert_eq!(Piece::from_str("N", color).unwrap(), Piece::Knight(color));
-        assert_eq!(Piece::from_str("Q", color).unwrap(), Piece::Queen(color));
-    }
-
-    #[test]
-    fn get_piece_color() {
-        let color = Color::Black;
-        assert_eq!(Piece::from_str("N", color).unwrap().color(), color);
+        assert_eq!(PieceType::from_str("").unwrap(), PieceType::Pawn);
+        assert_eq!(PieceType::from_str("N").unwrap(), PieceType::Knight);
+        assert_eq!(PieceType::from_str("Q").unwrap(), PieceType::Queen);
     }
 }
