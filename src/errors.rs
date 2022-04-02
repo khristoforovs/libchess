@@ -2,6 +2,7 @@ use failure::Fail;
 
 #[derive(Debug, Clone, Fail)]
 pub enum Error {
+    // Board coordinates errors
     #[fail(display = "Invalid index for board's file: {}", n)]
     InvalidBoardFileIndex { n: usize },
 
@@ -23,6 +24,11 @@ pub enum Error {
     #[fail(display = "Invalid square representation string")]
     InvalidSquareRepresentation,
 
+    // Piece representation errors
     #[fail(display = "Invalid peace representation string")]
     InvalidPeaceRepresentation,
+
+    // Board Builder errors
+    #[fail(display = "Invalid FEN string: {}", s)]
+    InvalidFENString { s: String },
 }

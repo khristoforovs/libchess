@@ -1,4 +1,4 @@
-use std::hint::unreachable_unchecked;
+use std::fmt;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,32 +41,50 @@ impl SubAssign for CastlingRights {
     }
 }
 
+impl fmt::Display for CastlingRights {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match *self {
+            CastlingRights::Neither => "",
+            CastlingRights::QueenSide => "q",
+            CastlingRights::KingSide => "k",
+            CastlingRights::BothSides => "kq",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 impl CastlingRights {
+    #[inline]
     fn to_bits(&self) -> [bool; 2] {
         [self.has_kingside(), self.has_queenside()]
     }
 
+    #[inline]
     fn from_bits(bits: [bool; 2]) -> Self {
+        #![allow(unreachable_patterns)]
         match bits {
             [false, false] => CastlingRights::Neither,
             [true, false] => CastlingRights::KingSide,
             [false, true] => CastlingRights::QueenSide,
             [true, true] => CastlingRights::BothSides,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 
+    #[inline]
     pub fn to_index(&self) -> usize {
         *self as usize
     }
 
+    #[inline]
     pub fn from_index(i: usize) -> CastlingRights {
+        #![allow(unreachable_patterns)]
         match i {
             0 => CastlingRights::Neither,
             1 => CastlingRights::KingSide,
             2 => CastlingRights::QueenSide,
             3 => CastlingRights::BothSides,
-            _ => unsafe { unreachable_unchecked() },
+            _ => unreachable!(),
         }
     }
 

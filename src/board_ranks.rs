@@ -16,6 +16,17 @@ pub enum Rank {
     Eighth,
 }
 
+pub const RANKS: [Rank; 8] = [
+    Rank::First,
+    Rank::Second,
+    Rank::Third,
+    Rank::Fourth,
+    Rank::Fifth,
+    Rank::Sixth,
+    Rank::Seventh,
+    Rank::Eighth,
+];
+
 impl fmt::Display for Rank {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -74,7 +85,7 @@ impl Rank {
             5 => Ok(Rank::Sixth),
             6 => Ok(Rank::Seventh),
             7 => Ok(Rank::Eighth),
-            _ => Err(Error::NegativeBoardRankIndex),
+            _ => Err(Error::InvalidBoardRankIndex { n }),
         }
     }
 

@@ -13,7 +13,7 @@ pub enum PieceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Piece(PieceType, Color);
+pub struct Piece(pub PieceType, pub Color);
 
 pub const NUMBER_PIECE_TYPES: usize = 6;
 
@@ -23,7 +23,7 @@ impl fmt::Display for PieceType {
             f,
             "{}",
             match *self {
-                PieceType::Pawn => "",
+                PieceType::Pawn => "P",
                 PieceType::Knight => "N",
                 PieceType::Bishop => "B",
                 PieceType::Rook => "R",
@@ -40,7 +40,7 @@ impl PieceType {
         *self as usize
     }
 
-    fn from_str(s: &str) -> Result<PieceType, Error> {
+    pub fn from_str(s: &str) -> Result<PieceType, Error> {
         if s.len() > 1 {
             return Err(Error::InvalidPeaceRepresentation);
         }
@@ -49,6 +49,7 @@ impl PieceType {
             return Ok(PieceType::Pawn);
         }
         match s.to_uppercase().as_str().chars().next().unwrap() {
+            'P' => Ok(PieceType::Pawn),
             'N' => Ok(PieceType::Knight),
             'B' => Ok(PieceType::Bishop),
             'R' => Ok(PieceType::Rook),

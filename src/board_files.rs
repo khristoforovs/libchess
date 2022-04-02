@@ -16,6 +16,17 @@ pub enum File {
     H,
 }
 
+pub const FILES: [File; 8] = [
+    File::A,
+    File::B,
+    File::C,
+    File::D,
+    File::E,
+    File::F,
+    File::G,
+    File::H,
+];
+
 impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -74,7 +85,7 @@ impl File {
             5 => Ok(File::F),
             6 => Ok(File::G),
             7 => Ok(File::H),
-            _ => Err(Error::NegativeBoardFileIndex),
+            _ => Err(Error::InvalidBoardFileIndex { n }),
         }
     }
 
