@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn san_format() {
         let mv = PieceMove::new(PieceType::Pawn, Square::E2, Square::E4);
-        assert_eq!(format!("{}", mv), String::from("e2e4"));
+        assert_eq!(format!("{}", mv), String::from("Pe2e4"));
 
         let mv = PieceMove::new(PieceType::Rook, Square::A1, Square::A8);
         assert_eq!(format!("{}", mv), String::from("Ra1a8"));
@@ -133,21 +133,21 @@ mod tests {
             promotion: Some(PieceType::Queen),
             status: Some(MoveStatus::Check),
         };
-        assert_eq!(format!("{}", mv), String::from("a2a1=Q+"));
+        assert_eq!(format!("{}", mv), String::from("Pa2a1=Q+"));
     }
 
     #[test]
     fn set_properties() {
         let mut mv = PieceMove::new(PieceType::Pawn, Square::D7, Square::E8);
-        assert_eq!(format!("{}", mv), String::from("d7e8"));
+        assert_eq!(format!("{}", mv), String::from("Pd7e8"));
 
         mv.set_capture(Some(true));
-        assert_eq!(format!("{}", mv), String::from("d7xe8"));
+        assert_eq!(format!("{}", mv), String::from("Pd7xe8"));
 
         mv.set_promotion(Some(PieceType::Queen));
-        assert_eq!(format!("{}", mv), String::from("d7xe8=Q"));
+        assert_eq!(format!("{}", mv), String::from("Pd7xe8=Q"));
 
         mv.set_status(Some(MoveStatus::Check));
-        assert_eq!(format!("{}", mv), String::from("d7xe8=Q+"));
+        assert_eq!(format!("{}", mv), String::from("Pd7xe8=Q+"));
     }
 }
