@@ -92,7 +92,7 @@ impl FromStr for BoardBuilder {
                     match File::from_index(current_file.to_index() + (c as usize) - ('0' as usize))
                     {
                         Ok(f) => current_file = f,
-                        Err(_) => ()
+                        Err(_) => (),
                     }
                 }
                 'r' | 'R' | 'n' | 'N' | 'b' | 'B' | 'q' | 'Q' | 'k' | 'K' | 'p' | 'P' => {
@@ -190,14 +190,14 @@ impl fmt::Display for BoardBuilder {
                             Color::Black => s = s.to_lowercase(),
                         }
                         pieces_string.push_str(&s);
-                    },
+                    }
                     None => {
                         empty_squares += 1;
-                    },
+                    }
                 }
             }
         }
-        
+
         let castles = format!(
             " {}{}",
             format!("{}", self.castle_rights[0]).to_uppercase(),
@@ -331,10 +331,14 @@ mod tests {
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
         assert_eq!(
-            format!("{}", BoardBuilder::from_str(
-                "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3"
-            ).unwrap()),
+            format!(
+                "{}",
+                BoardBuilder::from_str(
+                    "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3"
+                )
+                .unwrap()
+            ),
             "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3"
-        );       
+        );
     }
 }
