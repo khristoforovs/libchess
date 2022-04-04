@@ -137,7 +137,7 @@ impl BitBoard {
 
     #[inline]
     pub fn to_square(&self) -> Square {
-        unsafe { Square::new(self.0.trailing_zeros() as u8) }
+        Square::new(self.0.trailing_zeros() as u8).unwrap()
     }
 }
 

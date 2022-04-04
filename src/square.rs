@@ -1,8 +1,8 @@
 use crate::board_files::File;
 use crate::board_ranks::Rank;
 use crate::errors::{self, Error};
-use std::fmt;
 use std::str::FromStr;
+use std::fmt;
 
 pub const SQUARES_NUMBER: usize = 64;
 
@@ -43,8 +43,11 @@ impl FromStr for Square {
 
 impl Square {
     #[inline]
-    pub unsafe fn new(square: u8) -> Square {
-        Square(square)
+    pub fn new(square: u8) -> Result<Square, Error> {
+        match square {
+            0..=63 => Ok(Square(square)),
+            _ => Err(Error::InvalidBoardFileName),
+        }
     }
 
     #[inline]
