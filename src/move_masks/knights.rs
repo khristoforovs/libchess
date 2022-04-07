@@ -22,7 +22,7 @@ pub fn generate_knight_moves() -> MoveTable {
                 destination_mask = destination_mask | BitBoard::from_square(s_);
             }
         }
-        knight_moves.insert(BitBoard::from_square(source_square), destination_mask);
+        knight_moves.set(source_square, destination_mask);
     }
 
     knight_moves
@@ -37,7 +37,7 @@ mod tests {
     #[test]
     fn create() {
         let move_table = generate_knight_moves();
-        let bit_board = BitBoard::from_square(Square::E4);
+        let square = Square::E4;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -48,10 +48,9 @@ mod tests {
              . . . X . X . . 
              . . . . . . . . 
             ";
-        println!("{}", move_table.get(&bit_board).unwrap());
+        println!("{}", move_table.get(square));
         assert_eq!(
-            format!("{}", move_table.get(&bit_board).unwrap()),
-            unindent(result_str)
+            format!("{}", move_table.get(square)), unindent(result_str)
         );
     }
 }

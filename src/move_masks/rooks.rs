@@ -24,7 +24,7 @@ pub fn generate_rook_moves() -> MoveTable {
         }
         let source_mask = BitBoard::from_square(source_square);
         destination_mask ^= source_mask;
-        rook_moves.insert(source_mask, destination_mask);
+        rook_moves.set(source_square, destination_mask);
     }
 
     rook_moves
@@ -39,7 +39,7 @@ mod tests {
     #[test]
     fn create() {
         let move_table = generate_rook_moves();
-        let bit_board = BitBoard::from_square(Square::E4);
+        let square = Square::E4;
         let result_str = 
             ". . . . X . . . 
              . . . . X . . . 
@@ -50,10 +50,9 @@ mod tests {
              . . . . X . . . 
              . . . . X . . . 
             ";
-        println!("{}", move_table.get(&bit_board).unwrap());
+        println!("{}", move_table.get(square));
         assert_eq!(
-            format!("{}", move_table.get(&bit_board).unwrap()),
-            unindent(result_str)
+            format!("{}", move_table.get(square)), unindent(result_str)
         );
     }
 }

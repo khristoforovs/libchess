@@ -1,8 +1,8 @@
 use crate::board_files::File;
 use crate::board_ranks::Rank;
 use crate::errors::{self, Error};
-use std::str::FromStr;
 use std::fmt;
+use std::str::FromStr;
 
 pub const SQUARES_NUMBER: usize = 64;
 
