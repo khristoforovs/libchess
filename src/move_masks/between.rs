@@ -50,17 +50,22 @@ pub fn generate_between_masks() -> BetweenTable {
             } else {
                 let dist = ((rank_a - rank_b).abs(), (file_a - file_b).abs());
                 if (dist.0 == dist.1) | (dist.0 == 0) | (dist.1 == 0) {
-                    let mut mask = BitBoard::from_square(square_a) | BitBoard::from_square(square_b);
+                    let mut mask =
+                        BitBoard::from_square(square_a) | BitBoard::from_square(square_b);
                     let max_distance = max(dist.0, dist.1);
                     for i in 1..max_distance {
                         mask |= BitBoard::from_rank_file(
-                            Rank::from_index((rank_a + (rank_b - rank_a) / max_distance * i) as usize)
-                                .unwrap(),
-                            File::from_index((file_a + (file_b - file_a) / max_distance * i) as usize)
-                                .unwrap(),
+                            Rank::from_index(
+                                (rank_a + (rank_b - rank_a) / max_distance * i) as usize,
+                            )
+                            .unwrap(),
+                            File::from_index(
+                                (file_a + (file_b - file_a) / max_distance * i) as usize,
+                            )
+                            .unwrap(),
                         );
                     }
-    
+
                     between_masks.set(square_a, square_b, Some(mask));
                 } else {
                     between_masks.set(square_a, square_b, None);

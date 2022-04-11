@@ -1,19 +1,45 @@
 use crate::bitboards::{BitBoard, BLANK};
 use crate::square::{Square, SQUARES_NUMBER};
 
-pub struct MoveTable([BitBoard; SQUARES_NUMBER]);
+pub struct MoveTable {
+    moves: [BitBoard; SQUARES_NUMBER],
+    captures: Option<[BitBoard; SQUARES_NUMBER]>,
+}
 
 impl MoveTable {
     pub fn new() -> Self {
-        Self([BLANK; SQUARES_NUMBER])
+        Self {
+            moves: [BLANK; SQUARES_NUMBER],
+            captures: None,
+        }
     }
 
-    pub fn set(&mut self, square: Square, value: BitBoard) {
-        self.0[square.to_index()] = value;
+    pub fn set_moves(&mut self, square: Square, value: BitBoard) {
+        self.moves[square.to_index()] = value;
     }
 
-    pub fn get(&self, square: Square) -> BitBoard {
-        self.0[square.to_index()]
+    pub fn set_captures(&mut self, square: Square, value: BitBoard) {
+        let mut captures = match self.captures {
+            Some(captures) => captures,
+            None => [BLANK; SQUARES_NUMBER],
+        };
+        captures[square.to_index()] = value;
+        self.captures = Some(captures);
+    }
+
+    pub fn reset_captures(&mut self) {
+        self.captures = None
+    }
+
+    pub fn get_moves(&self, square: Square) -> BitBoard {
+        self.moves[square.to_index()]
+    }
+
+    pub fn get_captures(&self, square: Square) -> BitBoard {
+        match self.captures {
+            Some(captures) => captures[square.to_index()],
+            None => self.moves[square.to_index()],
+        }
     }
 }
 

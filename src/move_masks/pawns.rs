@@ -2,8 +2,7 @@ use super::MoveTable;
 use crate::bitboards::{BitBoard, BLANK};
 use crate::square::{Square, SQUARES_NUMBER};
 
-pub fn generate_pawn_moves() -> MoveTable {
-    let mut pawn_moves: MoveTable = MoveTable::new();
+pub fn generate_pawn_moves(pawn_moves: &mut MoveTable) {
     for source_index in 0..SQUARES_NUMBER {
         let source_square = Square::new(source_index as u8).unwrap();
         let (rank, file) = (
@@ -22,14 +21,11 @@ pub fn generate_pawn_moves() -> MoveTable {
                 destination_mask = destination_mask | BitBoard::from_square(s_);
             }
         }
-        pawn_moves.set(source_square, destination_mask);
+        pawn_moves.set_moves(source_square, destination_mask);
     }
-
-    pawn_moves
 }
 
-pub fn generate_pawn_captures() -> MoveTable {
-    let mut pawn_captures: MoveTable = MoveTable::new();
+pub fn generate_pawn_captures(pawn_captures: &mut MoveTable) {
     for source_index in 0..SQUARES_NUMBER {
         let source_square = Square::new(source_index as u8).unwrap();
         let (rank, file) = (
@@ -48,10 +44,8 @@ pub fn generate_pawn_captures() -> MoveTable {
                 destination_mask = destination_mask | BitBoard::from_square(s_);
             }
         }
-        pawn_captures.set(source_square, destination_mask);
+        pawn_captures.set_captures(source_square, destination_mask);
     }
-
-    pawn_captures
 }
 
 #[rustfmt::skip]
@@ -62,7 +56,9 @@ mod tests {
 
     #[test]
     fn create() {
-        let move_table = generate_pawn_moves();
+        let mut move_table = MoveTable::new();
+        generate_pawn_moves(&mut move_table);
+        generate_pawn_captures(&mut move_table);
         let square = Square::E4;
         let result_str = 
             ". . . . . . . . 
@@ -74,16 +70,17 @@ mod tests {
              . . . . . . . . 
              . . . . . . . . 
             ";
-        println!("{}", move_table.get(square));
+        println!("{}", move_table.get_moves(square));
         assert_eq!(
-            format!("{}", move_table.get(square)), unindent(result_str)
+            format!("{}", move_table.get_moves(square)), unindent(result_str)
         );
     }
 
     #[test]
     fn create_2nd_rank() {
-        let move_table = generate_pawn_moves();
-        let square = Square::E2;
+        let mut move_table = MoveTable::new();
+        generate_pawn_moves(&mut move_table);
+        generate_pawn_captures(&mut move_table);        let square = Square::E2;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -94,15 +91,17 @@ mod tests {
              . . . . . . . . 
              . . . . . . . . 
             ";
-        println!("{}", move_table.get(square));
+        println!("{}", move_table.get_moves(square));
         assert_eq!(
-            format!("{}", move_table.get(square)), unindent(result_str)
+            format!("{}", move_table.get_moves(square)), unindent(result_str)
         );
     }
 
     #[test]
     fn captures() {
-        let move_table = generate_pawn_captures();
+        let mut move_table = MoveTable::new();
+        generate_pawn_moves(&mut move_table);
+        generate_pawn_captures(&mut move_table);
         let square = Square::E3;
         let result_str = 
             ". . . . . . . . 
@@ -114,9 +113,9 @@ mod tests {
              . . . . . . . . 
              . . . . . . . . 
             ";
-        println!("{}", move_table.get(square));
+        println!("{}", move_table.get_captures(square));
         assert_eq!(
-            format!("{}", move_table.get(square)), unindent(result_str)
+            format!("{}", move_table.get_captures(square)), unindent(result_str)
         );
     }
 }

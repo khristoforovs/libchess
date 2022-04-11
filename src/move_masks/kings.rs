@@ -2,8 +2,7 @@ use super::MoveTable;
 use crate::bitboards::{BitBoard, BLANK};
 use crate::square::{Square, SQUARES_NUMBER};
 
-pub fn generate_king_moves() -> MoveTable {
-    let mut king_moves: MoveTable = MoveTable::new();
+pub fn generate_king_moves(king_moves: &mut MoveTable) {
     for source_index in 0..SQUARES_NUMBER {
         let source_square = Square::new(source_index as u8).unwrap();
         let (rank, file) = (
@@ -24,10 +23,8 @@ pub fn generate_king_moves() -> MoveTable {
         }
         let source_mask = BitBoard::from_square(source_square);
         destination_mask ^= source_mask;
-        king_moves.set(source_square, destination_mask);
+        king_moves.set_moves(source_square, destination_mask);
     }
-
-    king_moves
 }
 
 #[rustfmt::skip]
@@ -38,7 +35,8 @@ mod tests {
 
     #[test]
     fn create() {
-        let move_table = generate_king_moves();
+        let mut move_table = MoveTable::new();
+        generate_king_moves(&mut move_table);
         let square = Square::E4;
         let result_str = 
             ". . . . . . . . 
@@ -50,9 +48,9 @@ mod tests {
              . . . . . . . . 
              . . . . . . . . 
             ";
-        println!("{}", move_table.get(square));
+        println!("{}", move_table.get_moves(square));
         assert_eq!(
-            format!("{}", move_table.get(square)), unindent(result_str)
+            format!("{}", move_table.get_moves(square)), unindent(result_str)
         );
     }
 }
