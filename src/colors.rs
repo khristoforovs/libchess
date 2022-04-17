@@ -1,12 +1,13 @@
+use crate::errors::Error;
 use std::ops::Not;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Color {
     White,
     Black,
 }
 
-pub const NUMBER_COLORS: usize = 2;
+pub const COLORS_NUMBER: usize = 2;
 
 impl Not for Color {
     type Output = Color;
@@ -24,5 +25,13 @@ impl Color {
     #[inline]
     pub fn to_index(&self) -> usize {
         *self as usize
+    }
+
+    pub fn from_index(n: usize) -> Result<Self, Error> {
+        match n {
+            0 => Ok(Color::White),
+            1 => Ok(Color::Black),
+            _ => Err(Error::InvalidColorIndex { n }),
+        }
     }
 }

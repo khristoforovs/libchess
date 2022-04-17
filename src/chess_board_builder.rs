@@ -1,10 +1,11 @@
 use crate::board_files::{File, FILES};
 use crate::board_ranks::{Rank, RANKS};
 use crate::castling::CastlingRights;
-use crate::colors::Color;
+use crate::chess_boards::ChessBoard;
+use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::Error;
 use crate::pieces::{Piece, PieceType};
-use crate::square::Square;
+use crate::square::{Square, SQUARES_NUMBER};
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str;
@@ -12,9 +13,9 @@ use std::str::FromStr;
 
 #[derive(Copy, Clone)]
 pub struct BoardBuilder {
-    pieces: [Option<Piece>; 64],
+    pieces: [Option<Piece>; SQUARES_NUMBER],
     side_to_move: Color,
-    castle_rights: [CastlingRights; 2],
+    castle_rights: [CastlingRights; COLORS_NUMBER],
     en_passant: Option<Square>,
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
@@ -223,6 +224,29 @@ impl fmt::Display for BoardBuilder {
     }
 }
 
+impl From<&ChessBoard> for BoardBuilder {
+    fn from(board: &ChessBoard) -> Self {
+        let mut pieces = vec![];
+        for i in 0..SQUARES_NUMBER {
+            let square = Square::new(i as u8).unwrap();
+            if let Some(piece_type) = board.get_piece_type_on(square) {
+                let color = board.get_piece_color_on(square).unwrap();
+                pieces.push((square, Piece(piece_type, color)));
+            }
+        }
+
+        BoardBuilder::setup(
+            &pieces,
+            board.get_side_to_move(),
+            board.get_castle_rights(Color::White),
+            board.get_castle_rights(Color::Black),
+            board.get_en_passant(),
+            board.get_moves_since_capture(),
+            board.get_black_moved_counter(),
+        )
+    }
+}
+
 impl BoardBuilder {
     pub fn new() -> BoardBuilder {
         BoardBuilder {
@@ -235,12 +259,8 @@ impl BoardBuilder {
         }
     }
 
-    pub fn validate() -> Option<Error> {
-        todo!()
-    }
-
     pub fn setup<'a>(
-        pieces: impl IntoIterator<Item = &'a (Square, PieceType, Color)>,
+        pieces: impl IntoIterator<Item = &'a (Square, Piece)>,
         side_to_move: Color,
         white_castle_rights: CastlingRights,
         black_castle_rights: CastlingRights,
@@ -249,7 +269,7 @@ impl BoardBuilder {
         black_moved_counter: usize,
     ) -> BoardBuilder {
         let mut builder = BoardBuilder {
-            pieces: [None; 64],
+            pieces: [None; SQUARES_NUMBER],
             side_to_move: side_to_move,
             castle_rights: [white_castle_rights, black_castle_rights],
             en_passant,
@@ -257,8 +277,8 @@ impl BoardBuilder {
             black_moved_counter,
         };
 
-        for (s, p, c) in pieces.into_iter() {
-            builder.pieces[s.to_index()] = Some(Piece(*p, *c));
+        for (s, p) in pieces.into_iter() {
+            builder.pieces[s.to_index()] = Some(*p);
         }
 
         builder
@@ -287,6 +307,11 @@ impl BoardBuilder {
     #[inline]
     pub fn get_side_to_move(&self) -> Color {
         self.side_to_move
+    }
+
+    #[inline]
+    pub fn get_en_passant(&self) -> Option<Square> {
+        self.en_passant
     }
 
     pub fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {

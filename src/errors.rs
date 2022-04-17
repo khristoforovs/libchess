@@ -28,6 +28,12 @@ pub enum Error {
     #[fail(display = "Invalid peace representation string")]
     InvalidPeaceRepresentation,
 
+    #[fail(display = "Invalid peace index : {}", n)]
+    InvalidPeaceIndex { n: usize },
+
+    #[fail(display = "Invalid color index : {}", n)]
+    InvalidColorIndex { n: usize },
+
     // Board Builder errors
     #[fail(display = "Invalid FEN string: {}", s)]
     InvalidFENString { s: String },

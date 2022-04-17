@@ -40,6 +40,18 @@ impl PieceType {
         *self as usize
     }
 
+    pub fn from_index(n: usize) -> Result<Self, Error> {
+        match n {
+            0 => Ok(PieceType::Pawn),
+            1 => Ok(PieceType::Knight),
+            2 => Ok(PieceType::Bishop),
+            3 => Ok(PieceType::Rook),
+            4 => Ok(PieceType::Queen),
+            5 => Ok(PieceType::King),
+            _ => Err(Error::InvalidPeaceIndex { n }),
+        }
+    }
+
     pub fn from_str(s: &str) -> Result<PieceType, Error> {
         if s.len() > 1 {
             return Err(Error::InvalidPeaceRepresentation);

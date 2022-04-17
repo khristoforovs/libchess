@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 pub const SQUARES_NUMBER: usize = 64;
 
-#[derive(Default, Debug, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Hash)]
 pub struct Square(u8);
 
 impl fmt::Display for Square {
