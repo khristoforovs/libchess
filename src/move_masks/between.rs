@@ -28,8 +28,7 @@ impl BetweenTable {
     }
 }
 
-pub fn generate_between_masks() -> BetweenTable {
-    let mut between_masks: BetweenTable = BetweenTable::new();
+pub fn generate_between_masks(table: &mut BetweenTable) {
     for index_a in 0..SQUARES_NUMBER {
         for index_b in index_a..SQUARES_NUMBER {
             let square_a = Square::new(index_a as u8).unwrap();
@@ -46,7 +45,7 @@ pub fn generate_between_masks() -> BetweenTable {
 
             if square_a == square_b {
                 let mask = BitBoard::from_square(square_a);
-                between_masks.set(square_a, square_b, Some(mask));
+                table.set(square_a, square_b, Some(mask));
             } else {
                 let dist = ((rank_a - rank_b).abs(), (file_a - file_b).abs());
                 if (dist.0 == dist.1) | (dist.0 == 0) | (dist.1 == 0) {
@@ -66,15 +65,13 @@ pub fn generate_between_masks() -> BetweenTable {
                         );
                     }
 
-                    between_masks.set(square_a, square_b, Some(mask));
+                    table.set(square_a, square_b, Some(mask));
                 } else {
-                    between_masks.set(square_a, square_b, None);
+                    table.set(square_a, square_b, None);
                 }
             }
         }
     }
-
-    between_masks
 }
 
 #[rustfmt::skip]
@@ -85,7 +82,8 @@ mod tests {
 
     #[test]
     fn between_diagonal() {
-        let between_table = generate_between_masks();
+        let mut between_table = BetweenTable::new();
+        generate_between_masks(&mut between_table);
         let (square_a, square_b) = (Square::C3, Square::G7);
         let result_str = 
             ". . . . . . . . 
@@ -106,7 +104,8 @@ mod tests {
 
     #[test]
     fn between_vertical() {
-        let between_table = generate_between_masks();
+        let mut between_table = BetweenTable::new();
+        generate_between_masks(&mut between_table);
         let (square_a, square_b) = (Square::D5, Square::D1);
         let result_str = 
             ". . . . . . . . 
@@ -127,7 +126,8 @@ mod tests {
 
     #[test]
     fn between_point() {
-        let between_table = generate_between_masks();
+        let mut between_table = BetweenTable::new();
+        generate_between_masks(&mut between_table);
         let (square_a, square_b) = (Square::D5, Square::D5);
         let result_str = 
             ". . . . . . . . 
@@ -148,7 +148,8 @@ mod tests {
 
     #[test]
     fn between_empty() {
-        let between_table = generate_between_masks();
+        let mut between_table = BetweenTable::new();
+        generate_between_masks(&mut between_table);
         let (square_a, square_b) = (Square::D5, Square::C3);
         assert!(between_table.get(square_a, square_b).is_none());
     }

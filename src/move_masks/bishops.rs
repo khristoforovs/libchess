@@ -1,8 +1,8 @@
-use super::MoveTable;
+use super::PieceMoveTable;
 use crate::bitboards::{BitBoard, BLANK};
 use crate::square::{Square, SQUARES_NUMBER};
 
-pub fn generate_bishop_moves(bishop_moves: &mut MoveTable) {
+pub fn generate_bishop_moves(table: &mut PieceMoveTable) {
     for source_index in 0..SQUARES_NUMBER {
         let source_square = Square::new(source_index as u8).unwrap();
         let (rank, file) = (
@@ -23,7 +23,7 @@ pub fn generate_bishop_moves(bishop_moves: &mut MoveTable) {
         }
         let source_mask = BitBoard::from_square(source_square);
         destination_mask ^= source_mask;
-        bishop_moves.set_moves(source_square, destination_mask);
+        table.set_moves(source_square, destination_mask);
     }
 }
 
@@ -35,7 +35,7 @@ mod tests {
 
     #[test]
     fn create() {
-        let mut move_table = MoveTable::new();
+        let mut move_table = PieceMoveTable::new();
         generate_bishop_moves(&mut move_table);
         let square = Square::E4;
         let result_str = 
