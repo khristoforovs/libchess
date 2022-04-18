@@ -2,7 +2,6 @@ use crate::bitboards::{BitBoard, BLANK};
 use crate::colors::Color;
 use crate::square::{Square, SQUARES_NUMBER};
 use lazy_static::lazy_static;
-use std::sync::Mutex;
 
 pub struct PieceMoveTable([BitBoard; SQUARES_NUMBER]);
 
@@ -46,42 +45,42 @@ mod between;
 pub use between::{generate_between_masks, BetweenTable};
 
 lazy_static! {
-    pub static ref BISHOP_TABLE: Mutex<PieceMoveTable> = {
+    pub static ref BISHOP_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_bishop_moves(&mut table);
-        Mutex::new(table)
+        table
     };
-    pub static ref KNIGHT_TABLE: Mutex<PieceMoveTable> = {
+    pub static ref KNIGHT_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_knight_moves(&mut table);
-        Mutex::new(table)
+        table
     };
-    pub static ref ROOK_TABLE: Mutex<PieceMoveTable> = {
+    pub static ref ROOK_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_rook_moves(&mut table);
-        Mutex::new(table)
+        table
     };
-    pub static ref QUEEN_TABLE: Mutex<PieceMoveTable> = {
+    pub static ref QUEEN_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_queen_moves(&mut table);
-        Mutex::new(table)
+        table
     };
-    pub static ref KING_TABLE: Mutex<PieceMoveTable> = {
+    pub static ref KING_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_king_moves(&mut table);
-        Mutex::new(table)
+        table
     };
-    pub static ref PAWN_TABLE: Mutex<PawnMoveTable> = {
+    pub static ref PAWN_TABLE: PawnMoveTable = {
         let mut table = PawnMoveTable::new();
         generate_pawn_moves(&mut table, Color::White);
         generate_pawn_moves(&mut table, Color::Black);
         generate_pawn_captures(&mut table, Color::White);
         generate_pawn_captures(&mut table, Color::Black);
-        Mutex::new(table)
+        table
     };
-    pub static ref BETWEEN_TABLE: Mutex<BetweenTable> = {
+    pub static ref BETWEEN_TABLE: BetweenTable = {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
-        Mutex::new(between_table)
+        between_table
     };
 }

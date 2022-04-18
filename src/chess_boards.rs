@@ -8,6 +8,7 @@ use crate::move_masks::{
 };
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::square::{Square, SQUARES_NUMBER};
+use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -24,12 +25,17 @@ pub struct ChessBoard {
     checks: BitBoard,
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
-    hash: usize,
 }
 
 impl Hash for ChessBoard {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.hash.hash(state);
+        self.pieces_mask.hash(state);
+        self.colors_mask.hash(state);
+        self.side_to_move.hash(state);
+        self.castle_rights.hash(state);
+        self.en_passant.hash(state);
+        self.moves_since_capture_counter.hash(state);
+        self.black_moved_counter.hash(state);
     }
 }
 
@@ -42,7 +48,9 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
         for i in 0..SQUARES_NUMBER {
             let square = Square::new(i as u8).unwrap();
             if let Some(piece) = builder[square] {
-                unsafe { board.put_piece_unchecked(piece, square); }
+                unsafe {
+                    board.put_piece_unchecked(piece, square);
+                }
             }
         }
 
@@ -118,16 +126,11 @@ impl ChessBoard {
             checks: BLANK,
             moves_since_capture_counter: 0,
             black_moved_counter: 0,
-            hash: 0,
         }
     }
 
     pub fn validate(&self) -> Option<Error> {
         None
-    }
-
-    pub fn hash(&self) -> usize {
-        todo!()
     }
 
     #[inline]
@@ -260,7 +263,9 @@ impl ChessBoard {
     }
 
     fn put_piece(&mut self, piece: Piece, square: Square) {
-        unsafe { self.put_piece_unchecked(piece, square); }
+        unsafe {
+            self.put_piece_unchecked(piece, square);
+        }
         self.update_pins_and_checks();
         self.validate();
     }
@@ -280,8 +285,10 @@ impl ChessBoard {
     }
 
     fn clear_square(&mut self, square: Square) {
-        unsafe { self.clear_square_unchecked(square); }
-        self.update_pins_and_checks();  // TODO compare hashes for not to check if nothing changes
+        unsafe {
+            self.clear_square_unchecked(square);
+        }
+        self.update_pins_and_checks(); // TODO compare hashes for not to check if nothing changes
         self.validate();
     }
 
@@ -293,17 +300,15 @@ impl ChessBoard {
         let king_square = self.get_king_square(self.side_to_move);
         let pinners = self.get_color_mask(!self.side_to_move)
             & (
-                BISHOP_TABLE.lock().unwrap().get_moves(king_square)
+                BISHOP_TABLE.get_moves(king_square)
                     & (self.get_piece_type_masks(PieceType::Bishop) | self.get_piece_type_masks(PieceType::Queen))
-                | ROOK_TABLE.lock().unwrap().get_moves(king_square)
+                | ROOK_TABLE.get_moves(king_square)
                     & (self.get_piece_type_masks(PieceType::Rook) | self.get_piece_type_masks(PieceType::Queen))
             );
 
         for pinner_square in pinners {
             let between = self.get_combined_mask()
                 & BETWEEN_TABLE
-                    .lock()
-                    .unwrap()
                     .get(king_square, pinner_square)
                     .unwrap();
             if between == BLANK {
@@ -313,14 +318,18 @@ impl ChessBoard {
             }
         }
 
-        self.checks ^= KNIGHT_TABLE.lock().unwrap().get_moves(king_square)
+        self.checks ^= KNIGHT_TABLE.get_moves(king_square)
             & self.get_piece_type_masks(PieceType::Knight);
 
         self.checks ^= PAWN_TABLE
-            .lock()
-            .unwrap()
             .get_captures(king_square, !self.side_to_move)
             & self.get_piece_type_masks(PieceType::Pawn);
+    }
+
+    fn calculate_hash(&self) -> u64 {
+        let mut h = DefaultHasher::new();
+        self.hash(&mut h);
+        h.finish()
     }
 }
 
@@ -334,6 +343,7 @@ pub enum BoardStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use unindent::unindent;
 
     #[test]
     fn create_from_string() {
@@ -341,5 +351,70 @@ mod tests {
             format!("{}", ChessBoard::default()),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
+    }
+
+    #[test]
+    fn test_kings_position() {
+        let color = Color::White;
+        assert_eq!(ChessBoard::default().get_king_square(color), Square::E1);
+    }
+
+    #[test]
+    fn test_masks() {
+        let board = ChessBoard::default();
+        let combined_str = "X X X X X X X X 
+             X X X X X X X X 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             X X X X X X X X 
+             X X X X X X X X 
+            ";
+        assert_eq!(
+            format!("{}", board.get_combined_mask()),
+            unindent(combined_str)
+        );
+
+        let white = Color::White;
+        let whites_str = ". . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             X X X X X X X X 
+             X X X X X X X X 
+            ";
+        assert_eq!(
+            format!("{}", board.get_color_mask(white)),
+            unindent(whites_str)
+        );
+
+        let black = Color::Black;
+        let blacks_str = "X X X X X X X X 
+             X X X X X X X X 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+             . . . . . . . . 
+            ";
+        assert_eq!(
+            format!("{}", board.get_color_mask(black)),
+            unindent(blacks_str)
+        );
+    }
+
+    #[test]
+    fn test_hash() {
+        let board = ChessBoard::default();
+        assert_eq!(board.calculate_hash(), board.calculate_hash());
+
+        let mut another_board = ChessBoard::default();
+        another_board.clear_square(Square::D2);
+        another_board.put_piece(Piece(PieceType::Queen, Color::White), Square::E2);
+        assert_ne!(board.calculate_hash(), another_board.calculate_hash());
     }
 }
