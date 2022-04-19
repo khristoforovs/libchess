@@ -47,7 +47,7 @@ impl FromStr for BoardBuilder {
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let mut fen = BoardBuilder::new();
         let tokens: Vec<&str> = value.split(' ').collect();
-        if (tokens.len() < 5) | (tokens.len() > 6) {
+        if tokens.len() != 6 {
             return Err(Error::InvalidFENString {
                 s: value.to_string(),
             });
@@ -56,8 +56,8 @@ impl FromStr for BoardBuilder {
         let pieces = tokens[0];
         let side = tokens[1];
         let castles = tokens[2];
-        let en_passant = if tokens.len() == 6 { tokens[3] } else { "" };
-        fen.set_moves_since_capture_counter(match usize::from_str(tokens[tokens.len() - 2]) {
+        let en_passant = tokens[3];
+        fen.set_moves_since_capture_counter(match usize::from_str(tokens[4]) {
             Ok(c) => c,
             Err(_) => {
                 return Err(Error::InvalidFENString {
@@ -65,7 +65,7 @@ impl FromStr for BoardBuilder {
                 });
             }
         });
-        fen.set_black_moves_counter(match usize::from_str(tokens[tokens.len() - 1]) {
+        fen.set_black_moves_counter(match usize::from_str(tokens[5]) {
             Ok(c) => c,
             Err(_) => {
                 return Err(Error::InvalidFENString {
@@ -172,10 +172,6 @@ impl fmt::Display for BoardBuilder {
 
         for rank in RANKS.iter().rev() {
             if *rank != Rank::Eighth {
-                if empty_squares != 0 {
-                    pieces_string += format!("{}", empty_squares).as_str();
-                    empty_squares = 0;
-                }
                 pieces_string.push_str("/");
             }
             for file in FILES.iter() {
@@ -197,23 +193,32 @@ impl fmt::Display for BoardBuilder {
                     }
                 }
             }
+            if empty_squares != 0 {
+                pieces_string += format!("{}", empty_squares).as_str();
+                empty_squares = 0;
+            }
         }
 
-        let castles = format!(
-            " {}{}",
-            format!("{}", self.castle_rights[0]).to_uppercase(),
-            self.castle_rights[1],
-        );
+        let castles_string = match self.castle_rights {
+            [CastlingRights::Neither, CastlingRights::Neither] => String::from("-"),
+            _ => {
+                format!(
+                    "{}{}",
+                    format!("{}", self.castle_rights[0]).to_uppercase(),
+                    self.castle_rights[1]
+                )
+            }
+        };
 
         write!(
             f,
-            "{} {}{} {} {} {}",
+            "{} {} {} {} {} {}",
             pieces_string,
             match self.get_side_to_move() {
                 Color::White => "w",
                 Color::Black => "b",
             },
-            castles,
+            castles_string,
             match self.en_passant {
                 Some(value) => format!("{}", value),
                 None => "-".to_string(),
@@ -355,15 +360,11 @@ mod tests {
             format!("{}", BoardBuilder::default()),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
-        assert_eq!(
-            format!(
-                "{}",
-                BoardBuilder::from_str(
-                    "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3"
-                )
-                .unwrap()
-            ),
-            "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3"
-        );
+
+        let fen = "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3";
+        assert_eq!(format!("{}", BoardBuilder::from_str(fen).unwrap()), fen);
+
+        let fen = "8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1";
+        assert_eq!(format!("{}", BoardBuilder::from_str(fen).unwrap()), fen);
     }
 }

@@ -1,6 +1,6 @@
 use crate::bitboards::{BitBoard, BLANK};
-use crate::board_files::{File, FILES};
-use crate::board_ranks::{self, Rank, RANKS, RANKS_NUMBER};
+use crate::board_files::FILES;
+use crate::board_ranks::RANKS;
 use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
 use crate::colors::{Color, COLORS_NUMBER};
@@ -135,8 +135,8 @@ impl fmt::Display for ChessBoard {
                     board_string.push_str(sq_str);
                     let mut piece_type_str = format!("{}", self.get_piece_type_on(square).unwrap());
                     piece_type_str = match self.get_piece_color_on(square).unwrap() {
-                        Color::White => { piece_type_str.to_uppercase() },
-                        Color::Black => { piece_type_str.to_lowercase() },
+                        Color::White => piece_type_str.to_uppercase(),
+                        Color::Black => piece_type_str.to_lowercase(),
                     };
                     board_string.push_str(piece_type_str.as_str());
                     board_string.push_str(sq_str);
@@ -207,6 +207,11 @@ impl ChessBoard {
     #[inline]
     pub fn get_piece_type_masks(&self, piece_type: PieceType) -> BitBoard {
         self.pieces_mask[piece_type.to_index()]
+    }
+
+    #[inline]
+    pub fn get_pin_mask(&self) -> BitBoard {
+        self.pinned
     }
 
     #[inline]
@@ -423,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    fn test_square_emptiness() {
+    fn square_emptiness() {
         let board = ChessBoard::default();
         let a1 = Square::A1;
         let a3 = Square::A3;
@@ -432,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn test_display_representation() {
+    fn display_representation() {
         let board = ChessBoard::default();
         let board_str = 
         "   ╔════════════════════════╗
@@ -470,13 +475,13 @@ mod tests {
     }
 
     #[test]
-    fn test_kings_position() {
+    fn kings_position() {
         let color = Color::White;
         assert_eq!(ChessBoard::default().get_king_square(color), Square::E1);
     }
 
     #[test]
-    fn test_masks() {
+    fn masks() {
         let board = ChessBoard::default();
         let combined_str = 
             "X X X X X X X X 
@@ -527,7 +532,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hash() {
+    fn hash_calculating() {
         let board = ChessBoard::default();
         assert_eq!(board.calculate_hash(), board.calculate_hash());
 
@@ -535,5 +540,20 @@ mod tests {
         another_board.clear_square(Square::D2);
         another_board.put_piece(Piece(PieceType::Queen, Color::White), Square::E2);
         assert_ne!(board.calculate_hash(), another_board.calculate_hash());
+    }
+
+    #[test]
+    fn checks_and_pins() {
+        let board = ChessBoard::try_from(
+            ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap()
+        ).unwrap();
+        let checkers: Vec<Square> = board.get_check_mask().into_iter().collect();
+        assert_eq!(checkers, vec![Square::D4, Square::G4]);
+
+        let board = ChessBoard::try_from(
+            ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap()
+        ).unwrap();
+        let pinned = board.get_pin_mask().to_square();
+        assert_eq!(pinned, Square::E5);
     }
 }
