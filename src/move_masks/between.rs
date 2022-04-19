@@ -1,4 +1,4 @@
-use crate::bitboards::BitBoard;
+use crate::bitboards::{BitBoard, BLANK};
 use crate::board_files::File;
 use crate::board_ranks::Rank;
 use crate::square::{Square, SQUARES_NUMBER};
@@ -44,13 +44,11 @@ pub fn generate_between_masks(table: &mut BetweenTable) {
             );
 
             if square_a == square_b {
-                let mask = BitBoard::from_square(square_a);
-                table.set(square_a, square_b, Some(mask));
+                table.set(square_a, square_b, Some(BLANK));
             } else {
                 let dist = ((rank_a - rank_b).abs(), (file_a - file_b).abs());
                 if (dist.0 == dist.1) | (dist.0 == 0) | (dist.1 == 0) {
-                    let mut mask =
-                        BitBoard::from_square(square_a) | BitBoard::from_square(square_b);
+                    let mut mask = BLANK;
                     let max_distance = max(dist.0, dist.1);
                     for i in 1..max_distance {
                         mask |= BitBoard::from_rank_file(
@@ -87,11 +85,11 @@ mod tests {
         let (square_a, square_b) = (Square::C3, Square::G7);
         let result_str = 
             ". . . . . . . . 
-             . . . . . . X . 
+             . . . . . . . . 
              . . . . . X . . 
              . . . . X . . . 
              . . . X . . . . 
-             . . X . . . . . 
+             . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
             ";
@@ -111,11 +109,11 @@ mod tests {
             ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
+             . . . . . . . . 
              . . . X . . . . 
              . . . X . . . . 
              . . . X . . . . 
-             . . . X . . . . 
-             . . . X . . . . 
+             . . . . . . . . 
             ";
         println!("{}", between_table.get(square_a, square_b).unwrap());
         assert_eq!(
@@ -133,7 +131,7 @@ mod tests {
             ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
-             . . . X . . . . 
+             . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
