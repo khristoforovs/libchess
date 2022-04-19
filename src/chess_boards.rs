@@ -1,4 +1,6 @@
 use crate::bitboards::{BitBoard, BLANK};
+use crate::board_files::{File, FILES};
+use crate::board_ranks::{Rank, RANKS, RANKS_NUMBER, self};
 use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
 use crate::colors::{Color, COLORS_NUMBER};
@@ -12,6 +14,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
+use either::Either;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChessBoard {
@@ -25,6 +28,7 @@ pub struct ChessBoard {
     checks: BitBoard,
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
+    draw_flipped: bool,
 }
 
 impl Hash for ChessBoard {
@@ -101,8 +105,33 @@ impl FromStr for ChessBoard {
 
 impl fmt::Display for ChessBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let builder = BoardBuilder::try_from(self).unwrap();
-        write!(f, "{}", builder)
+        let mut board_string = String::new();
+        let ranks = if self.draw_flipped {
+            Either::Left(RANKS.iter())
+        } else {
+            Either::Right(RANKS.iter().rev())
+        };
+
+        for rank in ranks {
+            board_string.push_str(format!("{}  ", (*rank).to_index() + 1).as_str());
+            for file in FILES.iter() {
+                let square = Square::from_rank_file(*rank, *file);
+
+                if self.is_empty_square(square) {
+                    board_string.push_str(". ");
+                } else {
+                    let mut piece_type_str = format!("{} ", self.get_piece_type_on(square).unwrap());
+                    match self.get_piece_color_on(square).unwrap() {
+                        Color::White => { piece_type_str = piece_type_str.to_uppercase(); },
+                        Color::Black => { piece_type_str = piece_type_str.to_lowercase(); },
+                    };
+                    board_string.push_str(piece_type_str.as_str());
+                }
+            }
+            board_string.push_str("\n");
+        }
+        board_string.push_str("   a-b-c-d-e-f-g-h \n");
+        write!(f, "{}", board_string)
     }
 }
 
@@ -126,6 +155,7 @@ impl ChessBoard {
             checks: BLANK,
             moves_since_capture_counter: 0,
             black_moved_counter: 0,
+            draw_flipped: false,
         }
     }
 
@@ -187,6 +217,22 @@ impl ChessBoard {
     #[inline]
     pub fn get_check_mask(&self) -> BitBoard {
         self.checks
+    }
+
+    #[inline]
+    pub fn is_empty_square(&self, square: Square) -> bool {
+        let mask = self.get_combined_mask() & BitBoard::from_square(square);
+        if mask.count_ones() == 0 { return true };
+        false
+    }
+
+    #[inline]
+    pub fn get_flipped_draw(&mut self) -> bool {
+        self.draw_flipped
+    }
+
+    pub fn set_flipped_draw(&mut self, flipped: bool) {
+        self.draw_flipped = flipped
     }
 
     pub fn get_piece_type_on(&self, square: Square) -> Option<PieceType> {
@@ -349,9 +395,50 @@ mod tests {
     #[test]
     fn create_from_string() {
         assert_eq!(
-            format!("{}", ChessBoard::default()),
+            format!("{}", BoardBuilder::try_from(&ChessBoard::default()).unwrap()),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
+    }
+
+    #[test]
+    fn test_square_emptiness() {
+        let board = ChessBoard::default();
+        let a1 = Square::A1;
+        let a3 = Square::A3;
+        assert_eq!(board.is_empty_square(a1), false);
+        assert_eq!(board.is_empty_square(a3), true);
+    }
+
+    #[test]
+    fn test_display_representation() {
+        let board = ChessBoard::default();
+        let board_str = 
+        "8  r n b q k b n r 
+         7  p p p p p p p p 
+         6  . . . . . . . . 
+         5  . . . . . . . . 
+         4  . . . . . . . . 
+         3  . . . . . . . . 
+         2  P P P P P P P P 
+         1  R N B Q K B N R 
+            a-b-c-d-e-f-g-h 
+        ";
+        assert_eq!(format!("{}", board), unindent(board_str));
+
+        let mut board = ChessBoard::default();
+        board.set_flipped_draw(true);
+        let board_str = 
+        "1  R N B Q K B N R 
+         2  P P P P P P P P 
+         3  . . . . . . . . 
+         4  . . . . . . . . 
+         5  . . . . . . . . 
+         6  . . . . . . . . 
+         7  p p p p p p p p 
+         8  r n b q k b n r 
+            a-b-c-d-e-f-g-h 
+        ";
+        assert_eq!(format!("{}", board), unindent(board_str));
     }
 
     #[test]
