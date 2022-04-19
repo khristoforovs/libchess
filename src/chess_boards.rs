@@ -111,10 +111,15 @@ impl fmt::Display for ChessBoard {
         } else {
             Either::Right(RANKS.iter().rev())
         };
+        let files = if self.draw_flipped {
+            Either::Right(FILES.iter().rev())
+        } else {
+            Either::Left(FILES.iter())
+        };
 
         for rank in ranks {
             board_string.push_str(format!("{}  ", (*rank).to_index() + 1).as_str());
-            for file in FILES.iter() {
+            for file in files.clone() {
                 let square = Square::from_rank_file(*rank, *file);
 
                 if self.is_empty_square(square) {
@@ -130,7 +135,11 @@ impl fmt::Display for ChessBoard {
             }
             board_string.push_str("\n");
         }
-        board_string.push_str("   a-b-c-d-e-f-g-h \n");
+        if self.draw_flipped {
+            board_string.push_str("   h-g-f-e-d-c-b-a \n");
+        } else {
+            board_string.push_str("   a-b-c-d-e-f-g-h \n");
+        };        
         write!(f, "{}", board_string)
     }
 }
@@ -428,15 +437,15 @@ mod tests {
         let mut board = ChessBoard::default();
         board.set_flipped_draw(true);
         let board_str = 
-        "1  R N B Q K B N R 
+        "1  R N B K Q B N R 
          2  P P P P P P P P 
          3  . . . . . . . . 
          4  . . . . . . . . 
          5  . . . . . . . . 
          6  . . . . . . . . 
          7  p p p p p p p p 
-         8  r n b q k b n r 
-            a-b-c-d-e-f-g-h 
+         8  r n b k q b n r 
+            h-g-f-e-d-c-b-a 
         ";
         assert_eq!(format!("{}", board), unindent(board_str));
     }
