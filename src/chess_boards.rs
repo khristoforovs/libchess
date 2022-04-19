@@ -340,6 +340,7 @@ pub enum BoardStatus {
     Checkmate,
 }
 
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,7 +363,8 @@ mod tests {
     #[test]
     fn test_masks() {
         let board = ChessBoard::default();
-        let combined_str = "X X X X X X X X 
+        let combined_str = 
+            "X X X X X X X X 
              X X X X X X X X 
              . . . . . . . . 
              . . . . . . . . 
@@ -377,7 +379,8 @@ mod tests {
         );
 
         let white = Color::White;
-        let whites_str = ". . . . . . . . 
+        let whites_str = 
+            ". . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
              . . . . . . . . 
@@ -392,7 +395,8 @@ mod tests {
         );
 
         let black = Color::Black;
-        let blacks_str = "X X X X X X X X 
+        let blacks_str = 
+            "X X X X X X X X 
              X X X X X X X X 
              . . . . . . . . 
              . . . . . . . . 
