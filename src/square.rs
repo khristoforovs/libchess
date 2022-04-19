@@ -104,6 +104,20 @@ impl Square {
         ))
     }
 
+    pub fn is_light(&self) -> bool {
+        let rank_id = self.get_rank().to_index();
+        let file_id = self.get_file().to_index();
+        if (rank_id + file_id) % 2 == 0 {
+            return false;
+        }
+        true
+    }
+
+    #[inline]
+    pub fn is_dark(&self) -> bool {
+        !self.is_light()
+    }
+
     pub const A1: Square = Square(0);
     pub const B1: Square = Square(1);
     pub const C1: Square = Square(2);
@@ -193,5 +207,13 @@ mod tests {
         assert_eq!(Square::E4.down().unwrap(), Square::E3);
         assert_eq!(Square::E4.left().unwrap(), Square::D4);
         assert_eq!(Square::E4.right().unwrap(), Square::F4);
+    }
+
+    #[test]
+    fn test_light_dark() {
+        assert_eq!(Square::A1.is_light(), false);
+        assert_eq!(Square::E4.is_light(), true);
+        assert_eq!(Square::A3.is_dark(), true);
+        assert_eq!(Square::E6.is_dark(), false);
     }
 }

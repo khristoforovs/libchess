@@ -1,6 +1,6 @@
 use crate::bitboards::{BitBoard, BLANK};
 use crate::board_files::{File, FILES};
-use crate::board_ranks::{Rank, RANKS, RANKS_NUMBER, self};
+use crate::board_ranks::{self, Rank, RANKS, RANKS_NUMBER};
 use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
 use crate::colors::{Color, COLORS_NUMBER};
@@ -10,11 +10,11 @@ use crate::move_masks::{
 };
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::square::{Square, SQUARES_NUMBER};
+use either::Either;
 use std::collections::hash_map::DefaultHasher;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
-use either::Either;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ChessBoard {
@@ -28,7 +28,7 @@ pub struct ChessBoard {
     checks: BitBoard,
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
-    draw_flipped: bool,
+    flipped_view: bool,
 }
 
 impl Hash for ChessBoard {
@@ -106,40 +106,46 @@ impl FromStr for ChessBoard {
 impl fmt::Display for ChessBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut board_string = String::new();
-        let ranks = if self.draw_flipped {
+        let ranks = if self.flipped_view {
             Either::Left(RANKS.iter())
         } else {
             Either::Right(RANKS.iter().rev())
         };
-        let files = if self.draw_flipped {
+        let files = if self.flipped_view {
             Either::Right(FILES.iter().rev())
         } else {
             Either::Left(FILES.iter())
         };
+        let footer = if self.flipped_view {
+            "     h  g  f  e  d  c  b  a \n"
+        } else {
+            "     a  b  c  d  e  f  g  h \n"
+        };
 
+        board_string.push_str("   ╔════════════════════════╗\n");
         for rank in ranks {
-            board_string.push_str(format!("{}  ", (*rank).to_index() + 1).as_str());
+            board_string.push_str(format!("{}  ║", (*rank).to_index() + 1).as_str());
             for file in files.clone() {
                 let square = Square::from_rank_file(*rank, *file);
+                let sq_str = if square.is_light() { "█" } else { " " };
 
                 if self.is_empty_square(square) {
-                    board_string.push_str(". ");
+                    board_string.push_str(sq_str.repeat(3).as_str());
                 } else {
-                    let mut piece_type_str = format!("{} ", self.get_piece_type_on(square).unwrap());
-                    match self.get_piece_color_on(square).unwrap() {
-                        Color::White => { piece_type_str = piece_type_str.to_uppercase(); },
-                        Color::Black => { piece_type_str = piece_type_str.to_lowercase(); },
+                    board_string.push_str(sq_str);
+                    let mut piece_type_str = format!("{}", self.get_piece_type_on(square).unwrap());
+                    piece_type_str = match self.get_piece_color_on(square).unwrap() {
+                        Color::White => { piece_type_str.to_uppercase() },
+                        Color::Black => { piece_type_str.to_lowercase() },
                     };
                     board_string.push_str(piece_type_str.as_str());
+                    board_string.push_str(sq_str);
                 }
             }
-            board_string.push_str("\n");
+            board_string.push_str("║\n");
         }
-        if self.draw_flipped {
-            board_string.push_str("   h-g-f-e-d-c-b-a \n");
-        } else {
-            board_string.push_str("   a-b-c-d-e-f-g-h \n");
-        };        
+        board_string.push_str("   ╚════════════════════════╝\n");
+        board_string.push_str(footer);
         write!(f, "{}", board_string)
     }
 }
@@ -164,12 +170,17 @@ impl ChessBoard {
             checks: BLANK,
             moves_since_capture_counter: 0,
             black_moved_counter: 0,
-            draw_flipped: false,
+            flipped_view: false,
         }
     }
 
     pub fn validate(&self) -> Option<Error> {
         None
+    }
+
+    #[inline]
+    pub fn as_fen(&self) -> String {
+        format!("{}", BoardBuilder::try_from(self).unwrap())
     }
 
     #[inline]
@@ -231,17 +242,19 @@ impl ChessBoard {
     #[inline]
     pub fn is_empty_square(&self, square: Square) -> bool {
         let mask = self.get_combined_mask() & BitBoard::from_square(square);
-        if mask.count_ones() == 0 { return true };
+        if mask.count_ones() == 0 {
+            return true;
+        };
         false
     }
 
     #[inline]
-    pub fn get_flipped_draw(&mut self) -> bool {
-        self.draw_flipped
+    pub fn get_flipped_view(&mut self) -> bool {
+        self.flipped_view
     }
 
-    pub fn set_flipped_draw(&mut self, flipped: bool) {
-        self.draw_flipped = flipped
+    pub fn set_flipped_view(&mut self, flipped: bool) {
+        self.flipped_view = flipped
     }
 
     pub fn get_piece_type_on(&self, square: Square) -> Option<PieceType> {
@@ -422,31 +435,37 @@ mod tests {
     fn test_display_representation() {
         let board = ChessBoard::default();
         let board_str = 
-        "8  r n b q k b n r 
-         7  p p p p p p p p 
-         6  . . . . . . . . 
-         5  . . . . . . . . 
-         4  . . . . . . . . 
-         3  . . . . . . . . 
-         2  P P P P P P P P 
-         1  R N B Q K B N R 
-            a-b-c-d-e-f-g-h 
+        "   ╔════════════════════════╗
+         8  ║█r█ n █b█ q █k█ b █n█ r ║
+         7  ║ p █p█ p █p█ p █p█ p █p█║
+         6  ║███   ███   ███   ███   ║
+         5  ║   ███   ███   ███   ███║
+         4  ║███   ███   ███   ███   ║
+         3  ║   ███   ███   ███   ███║
+         2  ║█P█ P █P█ P █P█ P █P█ P ║
+         1  ║ R █N█ B █Q█ K █B█ N █R█║
+            ╚════════════════════════╝
+              a  b  c  d  e  f  g  h 
         ";
+        println!("{}", board);
         assert_eq!(format!("{}", board), unindent(board_str));
 
         let mut board = ChessBoard::default();
-        board.set_flipped_draw(true);
-        let board_str = 
-        "1  R N B K Q B N R 
-         2  P P P P P P P P 
-         3  . . . . . . . . 
-         4  . . . . . . . . 
-         5  . . . . . . . . 
-         6  . . . . . . . . 
-         7  p p p p p p p p 
-         8  r n b k q b n r 
-            h-g-f-e-d-c-b-a 
+        board.set_flipped_view(true);
+        let board_str =         
+        "   ╔════════════════════════╗
+         1  ║█R█ N █B█ K █Q█ B █N█ R ║
+         2  ║ P █P█ P █P█ P █P█ P █P█║
+         3  ║███   ███   ███   ███   ║
+         4  ║   ███   ███   ███   ███║
+         5  ║███   ███   ███   ███   ║
+         6  ║   ███   ███   ███   ███║
+         7  ║█p█ p █p█ p █p█ p █p█ p ║
+         8  ║ r █n█ b █k█ q █b█ n █r█║
+            ╚════════════════════════╝
+              h  g  f  e  d  c  b  a 
         ";
+        println!("{}", board);
         assert_eq!(format!("{}", board), unindent(board_str));
     }
 
