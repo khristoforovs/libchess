@@ -10,6 +10,7 @@ use crate::move_masks::{
 };
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::square::{Square, SQUARES_NUMBER};
+use colored::Colorize;
 use either::Either;
 use std::collections::hash_map::DefaultHasher;
 use std::fmt;
@@ -127,19 +128,25 @@ impl fmt::Display for ChessBoard {
             board_string.push_str(format!("{}  ║", (*rank).to_index() + 1).as_str());
             for file in files.clone() {
                 let square = Square::from_rank_file(*rank, *file);
-                let sq_str = if square.is_light() { "█" } else { " " };
-
                 if self.is_empty_square(square) {
-                    board_string.push_str(sq_str.repeat(3).as_str());
+                    if square.is_light() {
+                        board_string = format!("{}{}", board_string, "   ".on_white());
+                    } else {
+                        board_string = format!("{}{}", board_string, "   ");
+                    };
                 } else {
-                    board_string.push_str(sq_str);
-                    let mut piece_type_str = format!("{}", self.get_piece_type_on(square).unwrap());
+                    let mut piece_type_str =
+                        format!(" {} ", self.get_piece_type_on(square).unwrap());
                     piece_type_str = match self.get_piece_color_on(square).unwrap() {
                         Color::White => piece_type_str.to_uppercase(),
                         Color::Black => piece_type_str.to_lowercase(),
                     };
-                    board_string.push_str(piece_type_str.as_str());
-                    board_string.push_str(sq_str);
+                    if square.is_light() {
+                        board_string =
+                            format!("{}{}", board_string, piece_type_str.black().on_white());
+                    } else {
+                        board_string = format!("{}{}", board_string, piece_type_str);
+                    };
                 }
             }
             board_string.push_str("║\n");
@@ -441,37 +448,49 @@ mod tests {
         let board = ChessBoard::default();
         let board_str = 
         "   ╔════════════════════════╗
-         8  ║█r█ n █b█ q █k█ b █n█ r ║
-         7  ║ p █p█ p █p█ p █p█ p █p█║
-         6  ║███   ███   ███   ███   ║
-         5  ║   ███   ███   ███   ███║
-         4  ║███   ███   ███   ███   ║
-         3  ║   ███   ███   ███   ███║
-         2  ║█P█ P █P█ P █P█ P █P█ P ║
-         1  ║ R █N█ B █Q█ K █B█ N █R█║
+         8  ║ r  n  b  q  k  b  n  r ║
+         7  ║ p  p  p  p  p  p  p  p ║
+         6  ║                        ║
+         5  ║                        ║
+         4  ║                        ║
+         3  ║                        ║
+         2  ║ P  P  P  P  P  P  P  P ║
+         1  ║ R  N  B  Q  K  B  N  R ║
             ╚════════════════════════╝
               a  b  c  d  e  f  g  h 
         ";
         println!("{}", board);
-        assert_eq!(format!("{}", board), unindent(board_str));
+        assert_eq!(
+            format!("{}", board)
+                .replace("\u{1b}[47;30m", "")
+                .replace("\u{1b}[47m", "")
+                .replace("\u{1b}[0m", ""),
+            unindent(board_str)
+        );
 
         let mut board = ChessBoard::default();
         board.set_flipped_view(true);
         let board_str =         
         "   ╔════════════════════════╗
-         1  ║█R█ N █B█ K █Q█ B █N█ R ║
-         2  ║ P █P█ P █P█ P █P█ P █P█║
-         3  ║███   ███   ███   ███   ║
-         4  ║   ███   ███   ███   ███║
-         5  ║███   ███   ███   ███   ║
-         6  ║   ███   ███   ███   ███║
-         7  ║█p█ p █p█ p █p█ p █p█ p ║
-         8  ║ r █n█ b █k█ q █b█ n █r█║
+         1  ║ R  N  B  K  Q  B  N  R ║
+         2  ║ P  P  P  P  P  P  P  P ║
+         3  ║                        ║
+         4  ║                        ║
+         5  ║                        ║
+         6  ║                        ║
+         7  ║ p  p  p  p  p  p  p  p ║
+         8  ║ r  n  b  k  q  b  n  r ║
             ╚════════════════════════╝
               h  g  f  e  d  c  b  a 
         ";
         println!("{}", board);
-        assert_eq!(format!("{}", board), unindent(board_str));
+        assert_eq!(
+            format!("{}", board)
+                .replace("\u{1b}[47;30m", "")
+                .replace("\u{1b}[47m", "")
+                .replace("\u{1b}[0m", ""),
+            unindent(board_str)
+        );
     }
 
     #[test]
