@@ -106,7 +106,6 @@ impl FromStr for ChessBoard {
 
 impl fmt::Display for ChessBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut board_string = String::new();
         let ranks = if self.flipped_view {
             Either::Left(RANKS.iter())
         } else {
@@ -118,21 +117,21 @@ impl fmt::Display for ChessBoard {
             Either::Left(FILES.iter())
         };
         let footer = if self.flipped_view {
-            "     h  g  f  e  d  c  b  a \n"
+            "     h  g  f  e  d  c  b  a"
         } else {
-            "     a  b  c  d  e  f  g  h \n"
+            "     a  b  c  d  e  f  g  h"
         };
 
-        board_string.push_str("   ╔════════════════════════╗\n");
+        let mut field_string = String::new();
         for rank in ranks {
-            board_string.push_str(format!("{}  ║", (*rank).to_index() + 1).as_str());
+            field_string = format!("{}{}  ║", field_string, (*rank).to_index() + 1);
             for file in files.clone() {
                 let square = Square::from_rank_file(*rank, *file);
                 if self.is_empty_square(square) {
                     if square.is_light() {
-                        board_string = format!("{}{}", board_string, "   ".on_white());
+                        field_string = format!("{}{}", field_string, "   ".on_white());
                     } else {
-                        board_string = format!("{}{}", board_string, "   ");
+                        field_string = format!("{}{}", field_string, "   ");
                     };
                 } else {
                     let mut piece_type_str =
@@ -142,17 +141,26 @@ impl fmt::Display for ChessBoard {
                         Color::Black => piece_type_str.to_lowercase(),
                     };
                     if square.is_light() {
-                        board_string =
-                            format!("{}{}", board_string, piece_type_str.black().on_white());
+                        field_string =
+                            format!("{}{}", field_string, piece_type_str.black().on_white());
                     } else {
-                        board_string = format!("{}{}", board_string, piece_type_str);
+                        field_string = format!("{}{}", field_string, piece_type_str);
                     };
                 }
             }
-            board_string.push_str("║\n");
+            field_string = format!("{}║\n", field_string);
         }
-        board_string.push_str("   ╚════════════════════════╝\n");
-        board_string.push_str(footer);
+
+        let board_string = format!(
+            "   {}  {}{}\n{}\n{}{}\n{}\n",
+            self.get_side_to_move(),
+            format!("{}", self.get_castle_rights(Color::White)).to_uppercase(),
+            self.get_castle_rights(Color::Black),
+            "   ╔════════════════════════╗",
+            field_string,
+            "   ╚════════════════════════╝",
+            footer,
+        );
         write!(f, "{}", board_string)
     }
 }
@@ -447,7 +455,8 @@ mod tests {
     fn display_representation() {
         let board = ChessBoard::default();
         let board_str = 
-        "   ╔════════════════════════╗
+        "   white  KQkq
+            ╔════════════════════════╗
          8  ║ r  n  b  q  k  b  n  r ║
          7  ║ p  p  p  p  p  p  p  p ║
          6  ║                        ║
@@ -457,7 +466,7 @@ mod tests {
          2  ║ P  P  P  P  P  P  P  P ║
          1  ║ R  N  B  Q  K  B  N  R ║
             ╚════════════════════════╝
-              a  b  c  d  e  f  g  h 
+              a  b  c  d  e  f  g  h
         ";
         println!("{}", board);
         assert_eq!(
@@ -471,7 +480,8 @@ mod tests {
         let mut board = ChessBoard::default();
         board.set_flipped_view(true);
         let board_str =         
-        "   ╔════════════════════════╗
+        "   white  KQkq
+            ╔════════════════════════╗
          1  ║ R  N  B  K  Q  B  N  R ║
          2  ║ P  P  P  P  P  P  P  P ║
          3  ║                        ║
@@ -481,7 +491,7 @@ mod tests {
          7  ║ p  p  p  p  p  p  p  p ║
          8  ║ r  n  b  k  q  b  n  r ║
             ╚════════════════════════╝
-              h  g  f  e  d  c  b  a 
+              h  g  f  e  d  c  b  a
         ";
         println!("{}", board);
         assert_eq!(

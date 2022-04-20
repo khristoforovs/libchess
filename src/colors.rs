@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use std::ops::Not;
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Color {
@@ -18,6 +19,16 @@ impl Not for Color {
             Color::White => Color::Black,
             Color::Black => Color::White,
         }
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let display_str = match self {
+            &Color::White => "white",
+            &Color::Black => "black",
+        };
+        write!(f, "{}", display_str)
     }
 }
 
