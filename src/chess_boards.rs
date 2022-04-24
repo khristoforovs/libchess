@@ -53,9 +53,7 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
         for i in 0..SQUARES_NUMBER {
             let square = Square::new(i as u8).unwrap();
             if let Some(piece) = builder[square] {
-                unsafe {
-                    board.put_piece_unchecked(piece, square);
-                }
+                board.put_piece(piece, square);
             }
         }
 
@@ -190,6 +188,123 @@ impl ChessBoard {
     }
 
     pub fn validate(&self) -> Option<Error> {
+        // make sure that is no color overlapping
+        if self.get_color_mask(Color::White) & self.get_color_mask(Color::Black) != BLANK {
+            return Some(Error::InvalidPositionColorsOverlap);
+        };
+
+        // check overlapping of piece type masks
+        for i in 0..(NUMBER_PIECE_TYPES - 1) {
+            for j in i + 1..NUMBER_PIECE_TYPES {
+                if (self.get_piece_type_masks(PieceType::from_index(i).unwrap())
+                    & self.get_piece_type_masks(PieceType::from_index(j).unwrap()))
+                    != BLANK
+                {
+                    return Some(Error::InvalidPositionPieceTypeOverlap);
+                }
+            }
+        }
+
+        // make sure that each square has only 0 or 1 piece
+        let calculated_combined = {
+            (0..NUMBER_PIECE_TYPES).fold(BLANK, |current, i| {
+                current | self.get_piece_type_masks(PieceType::from_index(i).unwrap())
+            })
+        };
+        if calculated_combined != self.get_combined_mask() {
+            return Some(Error::InvalidBoardSelfNonConsistency);
+        }
+
+        // make sure there is 1 black and 1 white king
+        let king_mask = self.get_piece_type_masks(PieceType::King);
+        if (king_mask & self.get_color_mask(Color::White)).count_ones() != 1 {
+            return Some(Error::InvalidBoardMultipleOneColorKings);
+        }
+        if (king_mask & self.get_color_mask(Color::White)).count_ones() != 1 {
+            return Some(Error::InvalidBoardMultipleOneColorKings);
+        }
+
+        // make sure that opponent is not on check
+        let mut cloned_board = self.clone();
+        cloned_board.set_side_to_move(!cloned_board.get_side_to_move());
+        cloned_board.update_pins_and_checks();
+        if cloned_board.get_check_mask().count_ones() > 0 {
+            return Some(Error::InvalidBoardOpponentIsOnCheck);
+        }
+
+        // validate en passant
+        match self.get_en_passant() {
+            None => {}
+            Some(square) => {
+                if self.get_piece_type_masks(PieceType::Pawn)
+                    & self.get_color_mask(!self.get_side_to_move())
+                    & BitBoard::from_square(square)
+                    == BLANK
+                {
+                    return Some(Error::InvalidBoardInconsistentEnPassant);
+                }
+            }
+        }
+
+        // validate castling rights
+        let rook_mask =
+            self.get_piece_type_masks(PieceType::Rook) & self.get_color_mask(Color::White);
+        let king_square = self.get_king_square(Color::White);
+        match self.get_castle_rights(Color::White) {
+            CastlingRights::Neither => {}
+            CastlingRights::QueenSide => {
+                if (king_square != Square::E1)
+                    & (rook_mask & BitBoard::from_square(Square::A1) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+            CastlingRights::KingSide => {
+                if (king_square != Square::E1)
+                    & (rook_mask & BitBoard::from_square(Square::H1) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+            CastlingRights::BothSides => {
+                if (king_square != Square::E1)
+                    & (rook_mask & BitBoard::from_square(Square::A1) != BLANK)
+                    & (rook_mask & BitBoard::from_square(Square::H1) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+        }
+
+        let rook_mask =
+            self.get_piece_type_masks(PieceType::Rook) & self.get_color_mask(Color::Black);
+        let king_square = self.get_king_square(Color::Black);
+        match self.get_castle_rights(Color::Black) {
+            CastlingRights::Neither => {}
+            CastlingRights::QueenSide => {
+                if (king_square != Square::E8)
+                    & (rook_mask & BitBoard::from_square(Square::A8) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+            CastlingRights::KingSide => {
+                if (king_square != Square::E8)
+                    & (rook_mask & BitBoard::from_square(Square::H8) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+            CastlingRights::BothSides => {
+                if (king_square != Square::E8)
+                    & (rook_mask & BitBoard::from_square(Square::A8) != BLANK)
+                    & (rook_mask & BitBoard::from_square(Square::H8) != BLANK)
+                {
+                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+                }
+            }
+        }
+
         None
     }
 
@@ -317,48 +432,40 @@ impl ChessBoard {
         }
     }
 
-    pub fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {
+    fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {
         self.black_moved_counter = counter;
         self
     }
 
-    pub fn set_moves_since_capture_counter(&mut self, counter: usize) -> &mut Self {
+    fn set_moves_since_capture_counter(&mut self, counter: usize) -> &mut Self {
         self.moves_since_capture_counter = counter;
         self
     }
 
-    pub fn set_side_to_move(&mut self, color: Color) -> &mut Self {
+    fn set_side_to_move(&mut self, color: Color) -> &mut Self {
         self.side_to_move = color;
         self
     }
 
-    pub fn set_castling_rights(&mut self, color: Color, rights: CastlingRights) -> &mut Self {
+    fn set_castling_rights(&mut self, color: Color, rights: CastlingRights) -> &mut Self {
         self.castle_rights[color.to_index()] = rights;
         self
     }
 
-    pub fn set_en_passant(&mut self, square: Option<Square>) -> *mut Self {
+    fn set_en_passant(&mut self, square: Option<Square>) -> *mut Self {
         self.en_passant = square;
         self
     }
 
-    unsafe fn put_piece_unchecked(&mut self, piece: Piece, square: Square) {
-        self.clear_square_unchecked(square);
+    fn put_piece(&mut self, piece: Piece, square: Square) {
+        self.clear_square(square);
         let square_bitboard = BitBoard::from_square(square);
         self.combined_mask |= square_bitboard;
         self.pieces_mask[piece.0.to_index()] |= square_bitboard;
         self.colors_mask[piece.1.to_index()] |= square_bitboard;
     }
 
-    fn put_piece(&mut self, piece: Piece, square: Square) {
-        unsafe {
-            self.put_piece_unchecked(piece, square);
-        }
-        self.update_pins_and_checks();
-        self.validate();
-    }
-
-    unsafe fn clear_square_unchecked(&mut self, square: Square) {
+    fn clear_square(&mut self, square: Square) {
         match self.get_piece_type_on(square) {
             Some(piece_type) => {
                 let color = self.get_piece_color_on(square).unwrap();
@@ -370,14 +477,6 @@ impl ChessBoard {
             }
             None => {}
         }
-    }
-
-    fn clear_square(&mut self, square: Square) {
-        unsafe {
-            self.clear_square_unchecked(square);
-        }
-        self.update_pins_and_checks(); // TODO compare hashes for not to check if nothing changes
-        self.validate();
     }
 
     #[rustfmt::skip]
@@ -584,5 +683,26 @@ mod tests {
         ).unwrap();
         let pinned = board.get_pin_mask().to_square();
         assert_eq!(pinned, Square::E5);
+    }
+
+    #[test]
+    fn board_validation() {
+        assert!(
+            ChessBoard::try_from(
+                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").unwrap()
+            ).is_err()
+        );
+
+        assert!(
+            ChessBoard::try_from(
+                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").unwrap()
+            ).is_err()
+        );
+
+        assert!(
+            ChessBoard::try_from(
+                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").unwrap()
+            ).is_err()
+        );
     }
 }

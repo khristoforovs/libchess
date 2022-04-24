@@ -1,6 +1,6 @@
 use crate::errors::Error;
-use std::ops::Not;
 use std::fmt;
+use std::ops::Not;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum Color {

@@ -37,4 +37,26 @@ pub enum Error {
     // Board Builder errors
     #[fail(display = "Invalid FEN string: {}", s)]
     InvalidFENString { s: String },
+
+    // ChessBoard validation errors
+    #[fail(display = "Invalid position: colors overlapping detected")]
+    InvalidPositionColorsOverlap,
+
+    #[fail(display = "Invalid position: 2 or more piece type overlap detected")]
+    InvalidPositionPieceTypeOverlap,
+
+    #[fail(display = "Invalid board: combined mask is not self-consistent")]
+    InvalidBoardSelfNonConsistency,
+
+    #[fail(display = "Invalid board: more than 1 king of the same color")]
+    InvalidBoardMultipleOneColorKings,
+
+    #[fail(display = "Invalid board: opponent is on check")]
+    InvalidBoardOpponentIsOnCheck,
+
+    #[fail(display = "Invalid board: en passant square does not have a pawn on it")]
+    InvalidBoardInconsistentEnPassant,
+
+    #[fail(display = "Invalid board: inconsistent castling rights")]
+    InvalidBoardInconsistentCastlingRights,
 }
