@@ -1,8 +1,7 @@
 use failure::Fail;
 
 #[derive(Debug, Clone, Fail)]
-pub enum Error {
-    // Board coordinates errors
+pub enum ChessBoardCoordinatesError {
     #[fail(display = "Invalid index for board's file: {}", n)]
     InvalidBoardFileIndex { n: usize },
 
@@ -23,8 +22,10 @@ pub enum Error {
 
     #[fail(display = "Invalid square representation string")]
     InvalidSquareRepresentation,
+}
 
-    // Piece representation errors
+#[derive(Debug, Clone, Fail)]
+pub enum PieceRepresentationError {
     #[fail(display = "Invalid peace representation string")]
     InvalidPeaceRepresentation,
 
@@ -33,12 +34,13 @@ pub enum Error {
 
     #[fail(display = "Invalid color index : {}", n)]
     InvalidColorIndex { n: usize },
+}
 
-    // Board Builder errors
+#[derive(Debug, Clone, Fail)]
+pub enum ChessBoardError {
     #[fail(display = "Invalid FEN string: {}", s)]
     InvalidFENString { s: String },
 
-    // ChessBoard validation errors
     #[fail(display = "Invalid position: colors overlapping detected")]
     InvalidPositionColorsOverlap,
 

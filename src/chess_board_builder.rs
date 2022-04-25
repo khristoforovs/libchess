@@ -3,7 +3,7 @@ use crate::board_ranks::{Rank, RANKS};
 use crate::castling::CastlingRights;
 use crate::chess_boards::ChessBoard;
 use crate::colors::{Color, COLORS_NUMBER};
-use crate::errors::Error;
+use crate::errors::ChessBoardError as Error;
 use crate::pieces::{Piece, PieceType};
 use crate::square::{Square, SQUARES_NUMBER};
 use std::fmt;

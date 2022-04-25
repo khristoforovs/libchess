@@ -1,4 +1,4 @@
-use crate::errors::Error;
+use crate::errors::PieceRepresentationError as Error;
 use std::fmt;
 use std::ops::Not;
 

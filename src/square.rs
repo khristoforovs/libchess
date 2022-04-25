@@ -1,6 +1,6 @@
 use crate::board_files::File;
 use crate::board_ranks::Rank;
-use crate::errors::{self, Error};
+use crate::errors::ChessBoardCoordinatesError as Error;
 use std::fmt;
 use std::str::FromStr;
 
@@ -76,12 +76,12 @@ impl Square {
     }
 
     #[inline]
-    pub fn up(&self) -> Result<Self, errors::Error> {
+    pub fn up(&self) -> Result<Self, Error> {
         Ok(Self::from_rank_file(self.get_rank().up()?, self.get_file()))
     }
 
     #[inline]
-    pub fn down(&self) -> Result<Self, errors::Error> {
+    pub fn down(&self) -> Result<Self, Error> {
         Ok(Self::from_rank_file(
             self.get_rank().down()?,
             self.get_file(),
@@ -89,7 +89,7 @@ impl Square {
     }
 
     #[inline]
-    pub fn left(&self) -> Result<Self, errors::Error> {
+    pub fn left(&self) -> Result<Self, Error> {
         Ok(Self::from_rank_file(
             self.get_rank(),
             self.get_file().left()?,
@@ -97,7 +97,7 @@ impl Square {
     }
 
     #[inline]
-    pub fn right(&self) -> Result<Self, errors::Error> {
+    pub fn right(&self) -> Result<Self, Error> {
         Ok(Self::from_rank_file(
             self.get_rank(),
             self.get_file().right()?,

@@ -1,5 +1,5 @@
 use crate::colors::Color;
-use crate::errors::Error;
+use crate::errors::PieceRepresentationError as Error;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]

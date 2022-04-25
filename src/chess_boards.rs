@@ -4,7 +4,7 @@ use crate::board_ranks::RANKS;
 use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
 use crate::colors::{Color, COLORS_NUMBER};
-use crate::errors::Error;
+use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{BETWEEN_TABLE, BISHOP_TABLE, KNIGHT_TABLE, PAWN_TABLE, ROOK_TABLE};
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::square::{Square, SQUARES_NUMBER};
@@ -691,19 +691,8 @@ mod tests {
 
     #[test]
     fn board_validation() {
-        assert!(ChessBoard::try_from(
-            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").unwrap()
-        )
-        .is_err());
-
-        assert!(ChessBoard::try_from(
-            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").unwrap()
-        )
-        .is_err());
-
-        assert!(ChessBoard::try_from(
-            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").unwrap()
-        )
-        .is_err());
+        assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").is_err());
+        assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").is_err());
+        assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").is_err());
     }
 }
