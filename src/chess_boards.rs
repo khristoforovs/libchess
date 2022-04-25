@@ -5,9 +5,7 @@ use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
 use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::Error;
-use crate::move_masks::{
-    BETWEEN_TABLE, BISHOP_TABLE, KING_TABLE, KNIGHT_TABLE, PAWN_TABLE, QUEEN_TABLE, ROOK_TABLE,
-};
+use crate::move_masks::{BETWEEN_TABLE, BISHOP_TABLE, KNIGHT_TABLE, PAWN_TABLE, ROOK_TABLE};
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::square::{Square, SQUARES_NUMBER};
 use colored::Colorize;
@@ -527,7 +525,6 @@ pub enum BoardStatus {
     Checkmate,
 }
 
-#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -536,7 +533,10 @@ mod tests {
     #[test]
     fn create_from_string() {
         assert_eq!(
-            format!("{}", BoardBuilder::try_from(&ChessBoard::default()).unwrap()),
+            format!(
+                "{}",
+                BoardBuilder::try_from(&ChessBoard::default()).unwrap()
+            ),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
     }
@@ -550,6 +550,7 @@ mod tests {
         assert_eq!(board.is_empty_square(a3), true);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn display_representation() {
         let board = ChessBoard::default();
@@ -608,6 +609,7 @@ mod tests {
         assert_eq!(ChessBoard::default().get_king_square(color), Square::E1);
     }
 
+    #[rustfmt::skip]
     #[test]
     fn masks() {
         let board = ChessBoard::default();
@@ -673,36 +675,35 @@ mod tests {
     #[test]
     fn checks_and_pins() {
         let board = ChessBoard::try_from(
-            ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap()
-        ).unwrap();
+            ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap(),
+        )
+        .unwrap();
         let checkers: Vec<Square> = board.get_check_mask().into_iter().collect();
         assert_eq!(checkers, vec![Square::D4, Square::G4]);
 
         let board = ChessBoard::try_from(
-            ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap()
-        ).unwrap();
+            ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap(),
+        )
+        .unwrap();
         let pinned = board.get_pin_mask().to_square();
         assert_eq!(pinned, Square::E5);
     }
 
     #[test]
     fn board_validation() {
-        assert!(
-            ChessBoard::try_from(
-                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").unwrap()
-            ).is_err()
-        );
+        assert!(ChessBoard::try_from(
+            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").unwrap()
+        )
+        .is_err());
 
-        assert!(
-            ChessBoard::try_from(
-                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").unwrap()
-            ).is_err()
-        );
+        assert!(ChessBoard::try_from(
+            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").unwrap()
+        )
+        .is_err());
 
-        assert!(
-            ChessBoard::try_from(
-                BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").unwrap()
-            ).is_err()
-        );
+        assert!(ChessBoard::try_from(
+            BoardBuilder::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").unwrap()
+        )
+        .is_err());
     }
 }
