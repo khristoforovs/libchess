@@ -91,33 +91,50 @@ impl ChessMove {
         }
     }
 
+    #[inline]
     pub fn get_piece_type(&self) -> PieceType {
         self.piece_type
     }
 
+    #[inline]
     pub fn get_source_square(&self) -> Square {
         self.square_from
     }
 
+    #[inline]
     pub fn get_destination_square(&self) -> Square {
         self.square_to
     }
 
+    #[inline]
     pub fn get_promotion(&self) -> Option<PieceType> {
         self.promotion
     }
 
-    fn get_capture(&self) -> bool {
+    #[inline]
+    pub fn get_capture(&self) -> bool {
         self.is_capture
     }
 
+    #[inline]
     pub fn get_source_square_representation(&self) -> SourceSquareRepresentation {
         self.source_square_representation
     }
 
+    #[inline]
     pub fn set_source_square_representation(&mut self, representation: SourceSquareRepresentation) {
         self.source_square_representation = representation;
     }
+}
+
+macro_rules! mv {
+    ($piece_type:expr, $square_from:expr, $square_to:expr) => {
+        ChessMove::new($piece_type, $square_from, $square_to, None)
+    };
+
+    ($piece_type:expr, $square_from:expr, $square_to:expr, $promotion:expr) => {
+        ChessMove::new($piece_type, $square_from, $square_to, $promotion)
+    };
 }
 
 #[cfg(test)]
@@ -126,27 +143,27 @@ mod tests {
 
     #[test]
     fn move_representation() {
-        let chess_move = ChessMove::new(PieceType::Pawn, Square::E2, Square::E4, None);
+        let chess_move = mv!(PieceType::Pawn, Square::E2, Square::E4);
         assert_eq!(format!("{}", chess_move), "e2e4");
 
-        let chess_move = ChessMove::new(
+        let chess_move = mv!(
             PieceType::Pawn,
             Square::E7,
             Square::E8,
-            Some(PromotionPieceType::Queen),
+            Some(PromotionPieceType::Queen)
         );
         assert_eq!(format!("{}", chess_move), "e7e8->Q");
 
-        let mut chess_move = ChessMove::new(
+        let mut chess_move = mv!(
             PieceType::Pawn,
             Square::E7,
             Square::D8,
-            Some(PromotionPieceType::Rook),
+            Some(PromotionPieceType::Rook)
         );
         chess_move.is_capture = true;
         assert_eq!(format!("{}", chess_move), "e7xd8->R");
 
-        let mut chess_move = ChessMove::new(PieceType::Queen, Square::A1, Square::A8, None);
+        let mut chess_move = mv!(PieceType::Queen, Square::A1, Square::A8);
         assert_eq!(format!("{}", chess_move), "Qa1a8");
         chess_move.set_source_square_representation(SourceSquareRepresentation::None);
         assert_eq!(format!("{}", chess_move), "Qa8");
