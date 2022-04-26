@@ -1,7 +1,7 @@
 use crate::bitboards::{BitBoard, BLANK};
 use crate::board_files::File;
 use crate::board_ranks::Rank;
-use crate::square::{Square, SQUARES_NUMBER};
+use crate::squares::{Square, SQUARES_NUMBER};
 use std::cmp::max;
 
 pub struct BetweenTable([[Option<BitBoard>; SQUARES_NUMBER]; SQUARES_NUMBER]);

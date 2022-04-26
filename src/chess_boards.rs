@@ -7,7 +7,7 @@ use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{BETWEEN_TABLE, BISHOP_TABLE, KNIGHT_TABLE, PAWN_TABLE, ROOK_TABLE};
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
-use crate::square::{Square, SQUARES_NUMBER};
+use crate::squares::{Square, SQUARES_NUMBER};
 use colored::Colorize;
 use either::Either;
 use std::collections::hash_map::DefaultHasher;

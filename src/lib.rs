@@ -12,7 +12,7 @@ pub mod errors;
 pub mod move_masks;
 pub mod peace_moves;
 pub mod pieces;
-pub mod square;
+pub mod squares;
 
 pub fn hello_world() {
     println!("Hello, world from the example!");

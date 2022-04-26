@@ -1,6 +1,6 @@
 use super::PieceMoveTable;
 use crate::bitboards::{BitBoard, BLANK};
-use crate::square::{Square, SQUARES_NUMBER};
+use crate::squares::{Square, SQUARES_NUMBER};
 
 pub fn generate_knight_moves(table: &mut PieceMoveTable) {
     for source_index in 0..SQUARES_NUMBER {

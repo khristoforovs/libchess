@@ -1,6 +1,6 @@
 use crate::board_files::File;
 use crate::board_ranks::Rank;
-use crate::square::Square;
+use crate::squares::Square;
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
 
