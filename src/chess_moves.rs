@@ -38,8 +38,6 @@ impl fmt::Display for ChessMove {
             Some(piece_type) => format!("->{}", piece_type),
             None => String::new(),
         };
-        let source_square = self.get_source_square();
-        let source_square_string = format!("{}", source_square);
         let piece_type_string = match self.get_piece_type() {
             PieceType::Pawn => String::new(),
             p => format!("{}", p),
@@ -48,7 +46,7 @@ impl fmt::Display for ChessMove {
             f,
             "{}{}{}{}",
             piece_type_string,
-            source_square_string,
+            self.get_source_square(),
             self.get_destination_square(),
             promotion_string,
         )

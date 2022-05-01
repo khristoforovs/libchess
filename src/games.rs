@@ -23,6 +23,8 @@ pub enum GameStatus {
     Ongoing,
     CheckMated(Color),
     Resigned(Color),
+    FiftyMovesDrawDeclared,
+    NoEnoughPiecesDeclared,
     RepetitionDrawDeclared,
     DrawAccepted,
     Stalemate,
@@ -34,14 +36,17 @@ impl fmt::Display for GameStatus {
             GameStatus::Ongoing => String::from("the game is ongoing"),
             GameStatus::CheckMated(color) => format!("{} won by checkmate", !*color),
             GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
-            GameStatus::RepetitionDrawDeclared => String::from("draw declared by repetition of moves"),
             GameStatus::DrawAccepted => String::from("draw declared by agreement"),
+            GameStatus::FiftyMovesDrawDeclared => String::from("draw declared by a 50 moves rule"),
+            GameStatus::NoEnoughPiecesDeclared => String::from("draw: no enough pieces"),
+            GameStatus::RepetitionDrawDeclared => String::from("draw declared by repetition of moves"),
             GameStatus::Stalemate => String::from("stalemate"),
         };
         write!(f, "{}", status_string)
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Game {
     position: ChessBoard,
     history: Vec<Action>,
@@ -139,6 +144,8 @@ impl Game {
                     } else {
                         if self.get_position_counter(position) == 3 {
                             GameStatus::RepetitionDrawDeclared
+                        } else if position.get_moves_since_capture() >= 100 {
+                            GameStatus::FiftyMovesDrawDeclared
                         } else {
                             GameStatus::Ongoing
                         }
@@ -266,7 +273,7 @@ mod tests {
 
     #[test]
     fn draw_declaration() {
-        let mut game = Game::from_fen("8/8/8/4k3/8/4K3/8/8 w - - 0 1").unwrap();
+        let mut game = Game::from_fen("8/8/8/p3k3/P7/4K3/8/8 w - - 0 1").unwrap();
         let moves = vec![
             mv!(PieceType::King, Square::E3, Square::D3),
             mv!(PieceType::King, Square::E5, Square::D5),

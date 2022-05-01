@@ -4,7 +4,7 @@ pub mod bitboards;
 pub mod board_files;
 pub mod board_ranks;
 pub mod castling;
-pub mod chess_board_builder;
+pub mod board_builders;
 pub mod chess_boards;
 #[macro_use]
 pub mod chess_moves;

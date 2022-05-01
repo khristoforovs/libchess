@@ -2,7 +2,7 @@ use crate::bitboards::{BitBoard, BLANK};
 use crate::board_files::FILES;
 use crate::board_ranks::{Rank, RANKS};
 use crate::castling::CastlingRights;
-use crate::chess_board_builder::BoardBuilder;
+use crate::board_builders::BoardBuilder;
 use crate::chess_moves::{ChessMove, PromotionPieceType};
 use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::ChessBoardError as Error;
@@ -46,8 +46,6 @@ impl Hash for ChessBoard {
         self.side_to_move.hash(state);
         self.castle_rights.hash(state);
         self.en_passant.hash(state);
-        self.moves_since_capture_counter.hash(state);
-        self.black_moved_counter.hash(state);
     }
 }
 
@@ -60,18 +58,19 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
         for i in 0..SQUARES_NUMBER {
             let square = Square::new(i as u8).unwrap();
             if let Some(piece) = builder[square] {
-                board.put_piece_unchecked(piece, square);
+                board.put_piece(piece, square);
             }
         }
 
-        board.side_to_move = builder.get_side_to_move();
-        board.set_en_passant(builder.get_en_passant());
-        board.set_castling_rights(Color::White, builder.get_castle_rights(Color::White));
-        board.set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black));
-        board.set_black_moves_counter(builder.get_black_moved_counter());
-        board.set_moves_since_capture_counter(builder.get_moves_since_capture());
-        board.update_pins_and_checks();
-        board.update_legal_moves();
+        board
+            .set_side_to_move(builder.get_side_to_move())
+            .set_en_passant(builder.get_en_passant())
+            .set_castling_rights(Color::White, builder.get_castle_rights(Color::White))
+            .set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black))
+            .set_black_moved_counter(builder.get_black_moved_counter())
+            .set_moves_since_capture(builder.get_moves_since_capture())
+            .update_pins_and_checks()
+            .update_legal_moves();
 
         match board.validate() {
             None => Ok(board),
@@ -452,7 +451,9 @@ impl ChessBoard {
             // TODO Promotion processing
 
             next_position
-                .apply_move_unchecked(next_move)
+                .update_black_moved_counter()
+                .update_moves_since_capture(next_move)
+                .apply_move(next_move)
                 .set_side_to_move(!self.side_to_move)
                 .update_pins_and_checks()
                 .update_legal_moves();
@@ -462,23 +463,23 @@ impl ChessBoard {
         Ok(next_position)
     }
 
-    fn apply_move_unchecked(&mut self, next_move: ChessMove) -> &mut Self {
+    fn apply_move(&mut self, next_move: ChessMove) -> &mut Self {
         let side_to_move = self.get_side_to_move();
-        self.clear_square_unchecked(next_move.get_source_square())
-            .clear_square_unchecked(next_move.get_destination_square())
-            .put_piece_unchecked(
+        self.clear_square(next_move.get_source_square())
+            .clear_square(next_move.get_destination_square())
+            .put_piece(
                 Piece(next_move.get_piece_type(), side_to_move),
                 next_move.get_destination_square(),
             )
     }
 
-    fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {
-        self.black_moved_counter = counter;
+    fn set_black_moved_counter(&mut self, value: usize) -> &mut Self {
+        self.black_moved_counter = value;
         self
     }
 
-    fn set_moves_since_capture_counter(&mut self, counter: usize) -> &mut Self {
-        self.moves_since_capture_counter = counter;
+    fn set_moves_since_capture(&mut self, value: usize) -> &mut Self {
+        self.moves_since_capture_counter = value;
         self
     }
 
@@ -497,8 +498,8 @@ impl ChessBoard {
         self
     }
 
-    fn put_piece_unchecked(&mut self, piece: Piece, square: Square) -> &mut Self {
-        self.clear_square_unchecked(square);
+    fn put_piece(&mut self, piece: Piece, square: Square) -> &mut Self {
+        self.clear_square(square);
         let square_bitboard = BitBoard::from_square(square);
         self.combined_mask |= square_bitboard;
         self.pieces_mask[piece.0.to_index()] |= square_bitboard;
@@ -506,7 +507,7 @@ impl ChessBoard {
         self
     }
 
-    fn clear_square_unchecked(&mut self, square: Square) -> &mut Self {
+    fn clear_square(&mut self, square: Square) -> &mut Self {
         match self.get_piece_type_on(square) {
             Some(piece_type) => {
                 let color = self.get_piece_color_on(square).unwrap();
@@ -517,6 +518,24 @@ impl ChessBoard {
                 self.colors_mask[color.to_index()] &= mask;
             }
             None => {}
+        }
+        self
+    }
+
+    fn update_black_moved_counter(&mut self) -> &mut Self {
+        if self.side_to_move == Color::Black {
+            self.black_moved_counter += 1;
+        }
+        self
+    }
+
+    fn update_moves_since_capture(&mut self, last_move: ChessMove) -> &mut Self {
+        if (last_move.get_piece_type() == PieceType::Pawn) 
+            | last_move.is_capture_on_board(self).unwrap()
+        {
+            self.moves_since_capture_counter = 0;
+        } else {
+            self.moves_since_capture_counter += 1;
         }
         self
     }
@@ -623,7 +642,7 @@ impl ChessBoard {
                     .map(|s| mv!(piece_type, square, s))
                     .filter(|m| {
                         self.clone()
-                            .apply_move_unchecked(*m)
+                            .apply_move(*m)
                             .update_pins_and_checks()
                             .get_check_mask()
                             .count_ones()
