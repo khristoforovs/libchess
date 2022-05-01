@@ -1,5 +1,5 @@
-use crate::board_files::File;
-use crate::board_ranks::Rank;
+use crate::board_files::{File, FILES};
+use crate::board_ranks::{Rank, RANKS};
 use crate::squares::Square;
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
@@ -123,6 +123,22 @@ impl BitBoard {
     #[inline]
     pub fn from_rank_file(rank: Rank, file: File) -> Self {
         Self::from_square(Square::from_rank_file(rank, file))
+    }
+
+    pub fn from_file(file: File) -> Self {
+        let mut result = BLANK;
+        for rank in RANKS.iter() {
+            result |= Self::from_square(Square::from_rank_file(*rank, file));
+        }
+        result
+    }
+
+    pub fn from_rank(rank: Rank) -> Self {
+        let mut result = BLANK;
+        for file in FILES.iter() {
+            result |= Self::from_square(Square::from_rank_file(rank, *file));
+        }
+        result
     }
 
     #[inline]

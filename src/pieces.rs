@@ -2,7 +2,7 @@ use crate::colors::Color;
 use crate::errors::PieceRepresentationError as Error;
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceType {
     Pawn,
     Knight,

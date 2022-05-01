@@ -1,21 +1,29 @@
 use crate::bitboards::{BitBoard, BLANK};
 use crate::board_files::FILES;
-use crate::board_ranks::RANKS;
+use crate::board_ranks::{Rank, RANKS};
 use crate::castling::CastlingRights;
 use crate::chess_board_builder::BoardBuilder;
+use crate::chess_moves::{ChessMove, PromotionPieceType};
 use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::ChessBoardError as Error;
-use crate::move_masks::{BETWEEN_TABLE, BISHOP_TABLE, KNIGHT_TABLE, PAWN_TABLE, ROOK_TABLE};
+use crate::move_masks::{
+    BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
+    PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
+};
+use crate::mv;
 use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 use crate::squares::{Square, SQUARES_NUMBER};
 use colored::Colorize;
 use either::Either;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::hash_set::HashSet;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy)]
+pub type LegalMoves = HashSet<ChessMove>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
     pieces_mask: [BitBoard; NUMBER_PIECE_TYPES],
     colors_mask: [BitBoard; COLORS_NUMBER],
@@ -28,6 +36,7 @@ pub struct ChessBoard {
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
     flipped_view: bool,
+    legal_moves: LegalMoves,
 }
 
 impl Hash for ChessBoard {
@@ -51,23 +60,18 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
         for i in 0..SQUARES_NUMBER {
             let square = Square::new(i as u8).unwrap();
             if let Some(piece) = builder[square] {
-                board.put_piece(piece, square);
+                board.put_piece_unchecked(piece, square);
             }
         }
 
         board.side_to_move = builder.get_side_to_move();
-
-        if let Some(ep) = builder.get_en_passant() {
-            board.side_to_move = !board.side_to_move;
-            board.set_en_passant(Some(ep));
-            board.side_to_move = !board.side_to_move;
-        }
-
+        board.set_en_passant(builder.get_en_passant());
         board.set_castling_rights(Color::White, builder.get_castle_rights(Color::White));
         board.set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black));
         board.set_black_moves_counter(builder.get_black_moved_counter());
         board.set_moves_since_capture_counter(builder.get_moves_since_capture());
         board.update_pins_and_checks();
+        board.update_legal_moves();
 
         match board.validate() {
             None => Ok(board),
@@ -170,7 +174,7 @@ impl Default for ChessBoard {
 
 impl ChessBoard {
     pub fn new() -> Self {
-        ChessBoard {
+        let mut result = ChessBoard {
             pieces_mask: [BLANK; NUMBER_PIECE_TYPES],
             colors_mask: [BLANK; COLORS_NUMBER],
             combined_mask: BLANK,
@@ -182,7 +186,11 @@ impl ChessBoard {
             moves_since_capture_counter: 0,
             black_moved_counter: 0,
             flipped_view: false,
-        }
+            legal_moves: LegalMoves::new(),
+        };
+
+        result.update_legal_moves();
+        result
     }
 
     pub fn validate(&self) -> Option<Error> {
@@ -194,8 +202,8 @@ impl ChessBoard {
         // check overlapping of piece type masks
         for i in 0..(NUMBER_PIECE_TYPES - 1) {
             for j in i + 1..NUMBER_PIECE_TYPES {
-                if (self.get_piece_type_masks(PieceType::from_index(i).unwrap())
-                    & self.get_piece_type_masks(PieceType::from_index(j).unwrap()))
+                if (self.get_piece_type_mask(PieceType::from_index(i).unwrap())
+                    & self.get_piece_type_mask(PieceType::from_index(j).unwrap()))
                     != BLANK
                 {
                     return Some(Error::InvalidPositionPieceTypeOverlap);
@@ -206,7 +214,7 @@ impl ChessBoard {
         // make sure that each square has only 0 or 1 piece
         let calculated_combined = {
             (0..NUMBER_PIECE_TYPES).fold(BLANK, |current, i| {
-                current | self.get_piece_type_masks(PieceType::from_index(i).unwrap())
+                current | self.get_piece_type_mask(PieceType::from_index(i).unwrap())
             })
         };
         if calculated_combined != self.get_combined_mask() {
@@ -214,7 +222,7 @@ impl ChessBoard {
         }
 
         // make sure there is 1 black and 1 white king
-        let king_mask = self.get_piece_type_masks(PieceType::King);
+        let king_mask = self.get_piece_type_mask(PieceType::King);
         if (king_mask & self.get_color_mask(Color::White)).count_ones() != 1 {
             return Some(Error::InvalidBoardMultipleOneColorKings);
         }
@@ -224,7 +232,7 @@ impl ChessBoard {
 
         // make sure that opponent is not on check
         let mut cloned_board = self.clone();
-        cloned_board.set_side_to_move(!cloned_board.get_side_to_move());
+        cloned_board.set_side_to_move(!self.side_to_move);
         cloned_board.update_pins_and_checks();
         if cloned_board.get_check_mask().count_ones() > 0 {
             return Some(Error::InvalidBoardOpponentIsOnCheck);
@@ -234,9 +242,12 @@ impl ChessBoard {
         match self.get_en_passant() {
             None => {}
             Some(square) => {
-                if self.get_piece_type_masks(PieceType::Pawn)
-                    & self.get_color_mask(!self.get_side_to_move())
-                    & BitBoard::from_square(square)
+                if self.get_piece_type_mask(PieceType::Pawn)
+                    & self.get_color_mask(!self.side_to_move)
+                    & BitBoard::from_square(match !self.side_to_move {
+                        Color::White => square.up().unwrap(),
+                        Color::Black => square.down().unwrap(),
+                    })
                     == BLANK
                 {
                     return Some(Error::InvalidBoardInconsistentEnPassant);
@@ -246,7 +257,7 @@ impl ChessBoard {
 
         // validate castling rights
         let rook_mask =
-            self.get_piece_type_masks(PieceType::Rook) & self.get_color_mask(Color::White);
+            self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::White);
         let king_square = self.get_king_square(Color::White);
         match self.get_castle_rights(Color::White) {
             CastlingRights::Neither => {}
@@ -275,7 +286,7 @@ impl ChessBoard {
         }
 
         let rook_mask =
-            self.get_piece_type_masks(PieceType::Rook) & self.get_color_mask(Color::Black);
+            self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::Black);
         let king_square = self.get_king_square(Color::Black);
         match self.get_castle_rights(Color::Black) {
             CastlingRights::Neither => {}
@@ -322,18 +333,12 @@ impl ChessBoard {
     }
 
     #[inline]
-    pub fn get_piece_type_position(&self, piece_type: PieceType) -> BitBoard {
-        unsafe { *self.pieces_mask.get_unchecked(piece_type.to_index()) }
-    }
-
-    #[inline]
     pub fn get_king_square(&self, color: Color) -> Square {
-        (self.get_piece_type_position(PieceType::King) & self.colors_mask[color.to_index()])
-            .to_square()
+        (self.get_piece_type_mask(PieceType::King) & self.get_color_mask(color)).to_square()
     }
 
     #[inline]
-    pub fn get_piece_type_masks(&self, piece_type: PieceType) -> BitBoard {
+    pub fn get_piece_type_mask(&self, piece_type: PieceType) -> BitBoard {
         self.pieces_mask[piece_type.to_index()]
     }
 
@@ -374,7 +379,7 @@ impl ChessBoard {
 
     #[inline]
     pub fn is_empty_square(&self, square: Square) -> bool {
-        let mask = self.get_combined_mask() & BitBoard::from_square(square);
+        let mask = self.combined_mask & BitBoard::from_square(square);
         if mask.count_ones() == 0 {
             return true;
         };
@@ -395,23 +400,23 @@ impl ChessBoard {
         if self.get_combined_mask() & bitboard == BLANK {
             None
         } else {
-            if (self.get_piece_type_position(PieceType::Pawn)
-                ^ self.get_piece_type_position(PieceType::Knight)
-                ^ self.get_piece_type_position(PieceType::Bishop))
+            if (self.get_piece_type_mask(PieceType::Pawn)
+                | self.get_piece_type_mask(PieceType::Knight)
+                | self.get_piece_type_mask(PieceType::Bishop))
                 & bitboard
                 != BLANK
             {
-                if self.get_piece_type_position(PieceType::Pawn) & bitboard != BLANK {
+                if self.get_piece_type_mask(PieceType::Pawn) & bitboard != BLANK {
                     Some(PieceType::Pawn)
-                } else if self.get_piece_type_position(PieceType::Knight) & bitboard != BLANK {
+                } else if self.get_piece_type_mask(PieceType::Knight) & bitboard != BLANK {
                     Some(PieceType::Knight)
                 } else {
                     Some(PieceType::Bishop)
                 }
             } else {
-                if self.get_piece_type_position(PieceType::Rook) & bitboard != BLANK {
+                if self.get_piece_type_mask(PieceType::Rook) & bitboard != BLANK {
                     Some(PieceType::Rook)
-                } else if self.get_piece_type_position(PieceType::Queen) & bitboard != BLANK {
+                } else if self.get_piece_type_mask(PieceType::Queen) & bitboard != BLANK {
                     Some(PieceType::Queen)
                 } else {
                     Some(PieceType::King)
@@ -428,6 +433,43 @@ impl ChessBoard {
         } else {
             None
         }
+    }
+
+    pub fn get_legal_moves(&self) -> &LegalMoves {
+        &self.legal_moves
+    }
+
+    pub fn get_hash(&self) -> u64 {
+        let mut h = DefaultHasher::new();
+        self.hash(&mut h);
+        h.finish()
+    }
+
+    pub fn make_move(&self, next_move: ChessMove) -> Result<Self, Error> {
+        let mut next_position = self.clone();
+        if self.get_legal_moves().contains(&next_move) {
+            // TODO castling processing
+            // TODO Promotion processing
+
+            next_position
+                .apply_move_unchecked(next_move)
+                .set_side_to_move(!self.side_to_move)
+                .update_pins_and_checks()
+                .update_legal_moves();
+        } else {
+            return Err(Error::IllegalMoveDetected);
+        }
+        Ok(next_position)
+    }
+
+    fn apply_move_unchecked(&mut self, next_move: ChessMove) -> &mut Self {
+        let side_to_move = self.get_side_to_move();
+        self.clear_square_unchecked(next_move.get_source_square())
+            .clear_square_unchecked(next_move.get_destination_square())
+            .put_piece_unchecked(
+                Piece(next_move.get_piece_type(), side_to_move),
+                next_move.get_destination_square(),
+            )
     }
 
     fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {
@@ -450,20 +492,21 @@ impl ChessBoard {
         self
     }
 
-    fn set_en_passant(&mut self, square: Option<Square>) -> *mut Self {
+    fn set_en_passant(&mut self, square: Option<Square>) -> &mut Self {
         self.en_passant = square;
         self
     }
 
-    fn put_piece(&mut self, piece: Piece, square: Square) {
-        self.clear_square(square);
+    fn put_piece_unchecked(&mut self, piece: Piece, square: Square) -> &mut Self {
+        self.clear_square_unchecked(square);
         let square_bitboard = BitBoard::from_square(square);
         self.combined_mask |= square_bitboard;
         self.pieces_mask[piece.0.to_index()] |= square_bitboard;
         self.colors_mask[piece.1.to_index()] |= square_bitboard;
+        self
     }
 
-    fn clear_square(&mut self, square: Square) {
+    fn clear_square_unchecked(&mut self, square: Square) -> &mut Self {
         match self.get_piece_type_on(square) {
             Some(piece_type) => {
                 let color = self.get_piece_color_on(square).unwrap();
@@ -475,54 +518,145 @@ impl ChessBoard {
             }
             None => {}
         }
+        self
     }
 
-    #[rustfmt::skip]
-    fn update_pins_and_checks(&mut self) {
+    fn update_pins_and_checks(&mut self) -> &mut Self {
         self.pinned = BLANK;
         self.checks = BLANK;
 
+        let opposite_color = !self.side_to_move;
         let king_square = self.get_king_square(self.side_to_move);
-        let pinners = self.get_color_mask(!self.side_to_move)
-            & (
-                BISHOP_TABLE.get_moves(king_square)
-                    & (self.get_piece_type_masks(PieceType::Bishop) | self.get_piece_type_masks(PieceType::Queen))
-                | ROOK_TABLE.get_moves(king_square)
-                    & (self.get_piece_type_masks(PieceType::Rook) | self.get_piece_type_masks(PieceType::Queen))
-            );
 
+        let bishops_and_queens = self.get_piece_type_mask(PieceType::Bishop)
+            | self.get_piece_type_mask(PieceType::Queen);
+        let rooks_and_queens =
+            self.get_piece_type_mask(PieceType::Rook) | self.get_piece_type_mask(PieceType::Queen);
+        let pinners = self.get_color_mask(opposite_color)
+            & (BISHOP.get_moves(king_square) & bishops_and_queens
+                | ROOK.get_moves(king_square) & rooks_and_queens);
         for pinner_square in pinners {
-            let between = self.get_combined_mask()
-                & BETWEEN_TABLE
-                    .get(king_square, pinner_square)
-                    .unwrap();
+            let between =
+                self.get_combined_mask() & BETWEEN.get(king_square, pinner_square).unwrap();
             if between == BLANK {
-                self.checks ^= BitBoard::from_square(pinner_square);
+                self.checks |= BitBoard::from_square(pinner_square);
             } else if between.count_ones() == 1 {
-                self.pinned ^= between;
+                self.pinned |= between;
             }
         }
 
-        self.checks ^= KNIGHT_TABLE.get_moves(king_square)
-            & self.get_piece_type_masks(PieceType::Knight);
+        self.checks |= self.get_color_mask(opposite_color)
+            & KNIGHT.get_moves(king_square)
+            & self.get_piece_type_mask(PieceType::Knight);
 
-        self.checks ^= PAWN_TABLE
-            .get_captures(king_square, !self.side_to_move)
-            & self.get_piece_type_masks(PieceType::Pawn);
+        self.checks |= {
+            let mut all_pawn_attacks = BLANK;
+            for attacked_square in
+                self.get_color_mask(opposite_color) & self.get_piece_type_mask(PieceType::Pawn)
+            {
+                all_pawn_attacks |= PAWN.get_captures(attacked_square, opposite_color);
+            }
+            all_pawn_attacks & BitBoard::from_square(king_square)
+        };
+
+        self.checks |= self.get_color_mask(opposite_color)
+            & KING.get_moves(king_square)
+            & self.get_piece_type_mask(PieceType::King);
+
+        self
     }
 
-    fn calculate_hash(&self) -> u64 {
-        let mut h = DefaultHasher::new();
-        self.hash(&mut h);
-        h.finish()
-    }
-}
+    fn update_legal_moves(&mut self) -> &mut Self {
+        let mut moves = LegalMoves::new();
+        let color_mask = self.get_color_mask(self.side_to_move);
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
-pub enum BoardStatus {
-    Ongoing,
-    Stalemate,
-    Checkmate,
+        for i in 0..NUMBER_PIECE_TYPES {
+            let piece_type = PieceType::from_index(i).unwrap();
+            let free_pieces_mask =
+                color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
+
+            for square in free_pieces_mask {
+                let mut full = match piece_type {
+                    PieceType::Pawn => {
+                        (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
+                            | (PAWN.get_captures(square, self.side_to_move)
+                                & self.get_color_mask(!self.side_to_move))
+                    }
+                    PieceType::Knight => KNIGHT.get_moves(square) & !color_mask,
+                    PieceType::King => KING.get_moves(square) & !color_mask,
+                    PieceType::Bishop => BISHOP.get_moves(square),
+                    PieceType::Rook => ROOK.get_moves(square),
+                    PieceType::Queen => QUEEN.get_moves(square),
+                };
+
+                match piece_type {
+                    PieceType::Pawn | PieceType::Knight | PieceType::King => {}
+                    _ => {
+                        let mut legals = BLANK;
+                        for destination in full {
+                            let destination_mask = BitBoard::from_square(destination);
+                            let between_mask = BETWEEN.get(square, destination).unwrap();
+
+                            match ((between_mask | destination_mask) & self.combined_mask)
+                                .count_ones()
+                            {
+                                0 => {
+                                    legals |= destination_mask;
+                                }
+                                1 => match self.get_piece_color_on(destination) {
+                                    Some(c) => {
+                                        if c == !self.side_to_move {
+                                            legals |= destination_mask;
+                                        }
+                                    }
+                                    None => {}
+                                },
+                                _ => {}
+                            }
+                        }
+                        full = legals;
+                    }
+                }
+
+                for one in full
+                    .into_iter()
+                    .map(|s| mv!(piece_type, square, s))
+                    .filter(|m| {
+                        self.clone()
+                            .apply_move_unchecked(*m)
+                            .update_pins_and_checks()
+                            .get_check_mask()
+                            .count_ones()
+                            == 0
+                    })
+                {
+                    if (one.get_piece_type() == PieceType::Pawn) & {
+                        let destination_rank = one.get_destination_square().get_rank();
+                        match self.side_to_move {
+                            Color::White => destination_rank == Rank::Eighth,
+                            Color::Black => destination_rank == Rank::First,
+                        }
+                    } {
+                        // Generate promotion moves
+                        let s = one.get_source_square();
+                        let d = one.get_destination_square();
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Knight));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Bishop));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Rook));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Queen));
+                    } else {
+                        moves.insert(one);
+                    }
+                }
+
+                // TODO castling processing
+                // TODO en passant processing
+            }
+        }
+
+        self.legal_moves = moves;
+        self
+    }
 }
 
 #[cfg(test)]
@@ -662,37 +796,79 @@ mod tests {
     }
 
     #[test]
-    fn hash_calculating() {
+    fn hash_comparison_for_different_boards() {
         let board = ChessBoard::default();
-        assert_eq!(board.calculate_hash(), board.calculate_hash());
+        assert_eq!(board.get_hash(), board.get_hash());
 
         let mut another_board = ChessBoard::default();
-        another_board.clear_square(Square::D2);
-        another_board.put_piece(Piece(PieceType::Queen, Color::White), Square::E2);
-        assert_ne!(board.calculate_hash(), another_board.calculate_hash());
+        another_board = another_board
+            .make_move(mv!(PieceType::Pawn, Square::E2, Square::E4))
+            .unwrap();
+        assert_ne!(board.get_hash(), another_board.get_hash());
     }
 
     #[test]
     fn checks_and_pins() {
-        let board = ChessBoard::try_from(
-            ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap(),
-        )
-        .unwrap();
+        let board =
+            ChessBoard::from_str("rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R w KQkq - 0 1")
+                .unwrap();
+        let checkers: Vec<Square> = board.get_check_mask().into_iter().collect();
+        assert_eq!(checkers, vec![]);
+
+        let board = ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap();
         let checkers: Vec<Square> = board.get_check_mask().into_iter().collect();
         assert_eq!(checkers, vec![Square::D4, Square::G4]);
 
-        let board = ChessBoard::try_from(
-            ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap(),
-        )
-        .unwrap();
+        let board = ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap();
         let pinned = board.get_pin_mask().to_square();
         assert_eq!(pinned, Square::E5);
     }
 
     #[test]
-    fn board_validation() {
+    fn board_builded_from_fen_validation() {
         assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - - 0 1").is_err());
         assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w KQkq - 0 1").is_err());
         assert!(ChessBoard::from_str("8/8/5k2/8/5Q2/5K2/8/8 w - f5 0 1").is_err());
+        assert!(ChessBoard::from_str("k7/K7/8/8/8/8/8/8 b - - 0 1").is_err());
+        assert!(ChessBoard::from_str(
+            "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn legal_moves_number_equality() {
+        assert_eq!(ChessBoard::default().get_legal_moves().len(), 20);
+        assert_eq!(
+            ChessBoard::from_str("Q2k4/8/3K4/8/8/8/8/8 b - - 0 1")
+                .unwrap()
+                .get_legal_moves()
+                .len(),
+            0
+        );
+        assert_eq!(
+            ChessBoard::from_str("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1")
+                .unwrap()
+                .get_legal_moves()
+                .len(),
+            29
+        );
+        assert_eq!(
+            ChessBoard::from_str("3k4/3P4/3K4/8/8/8/8/8 b - - 0 1")
+                .unwrap()
+                .get_legal_moves()
+                .len(),
+            0
+        );
+    }
+
+    #[test]
+    fn promotion() {
+        let board = ChessBoard::from_str("1r5k/P7/7K/8/8/8/8/8 w - - 0 1").unwrap();
+        for one in board.get_legal_moves() {
+            println!("{}", one);
+        }
+
+        assert_eq!(board.get_legal_moves().len(), 11);
     }
 }

@@ -1,3 +1,6 @@
+use crate::bitboards::BitBoard;
+use crate::chess_boards::ChessBoard;
+use crate::errors::ChessBoardError;
 use crate::pieces::PieceType;
 use crate::squares::Square;
 use std::fmt;
@@ -21,22 +24,12 @@ impl From<PromotionPieceType> for PieceType {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum SourceSquareRepresentation {
-    OnlyRank,
-    OnlyFile,
-    Full,
-    None,
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChessMove {
     piece_type: PieceType,
     square_from: Square,
     square_to: Square,
     promotion: Option<PieceType>,
-    is_capture: bool,
-    source_square_representation: SourceSquareRepresentation,
 }
 
 impl fmt::Display for ChessMove {
@@ -46,23 +39,16 @@ impl fmt::Display for ChessMove {
             None => String::new(),
         };
         let source_square = self.get_source_square();
-        let source_square_string = match self.get_source_square_representation() {
-            SourceSquareRepresentation::OnlyRank => format!("{}", source_square.get_rank()),
-            SourceSquareRepresentation::OnlyFile => format!("{}", source_square.get_file()),
-            SourceSquareRepresentation::Full => format!("{}", source_square),
-            SourceSquareRepresentation::None => String::new(),
-        };
+        let source_square_string = format!("{}", source_square);
         let piece_type_string = match self.get_piece_type() {
             PieceType::Pawn => String::new(),
             p => format!("{}", p),
         };
-        let capture_string = if self.get_capture() { "x" } else { "" };
         write!(
             f,
-            "{}{}{}{}{}",
+            "{}{}{}{}",
             piece_type_string,
             source_square_string,
-            capture_string,
             self.get_destination_square(),
             promotion_string,
         )
@@ -86,9 +72,22 @@ impl ChessMove {
                     None => None,
                 }
             },
-            is_capture: false,
-            source_square_representation: SourceSquareRepresentation::Full,
         }
+    }
+
+    pub fn is_capture_on_board(&self, board: &ChessBoard) -> Result<bool, ChessBoardError> {
+        if board.get_legal_moves().contains(self) {
+            if (BitBoard::from_square(self.get_destination_square())
+                & board.get_color_mask(!board.get_side_to_move()))
+            .count_ones()
+                > 0
+            {
+                return Ok(true);
+            } else {
+                return Ok(false);
+            }
+        }
+        return Err(ChessBoardError::IllegalMoveDetected);
     }
 
     #[inline]
@@ -110,36 +109,23 @@ impl ChessMove {
     pub fn get_promotion(&self) -> Option<PieceType> {
         self.promotion
     }
-
-    #[inline]
-    pub fn get_capture(&self) -> bool {
-        self.is_capture
-    }
-
-    #[inline]
-    pub fn get_source_square_representation(&self) -> SourceSquareRepresentation {
-        self.source_square_representation
-    }
-
-    #[inline]
-    pub fn set_source_square_representation(&mut self, representation: SourceSquareRepresentation) {
-        self.source_square_representation = representation;
-    }
 }
 
+#[macro_export]
 macro_rules! mv {
     ($piece_type:expr, $square_from:expr, $square_to:expr) => {
         ChessMove::new($piece_type, $square_from, $square_to, None)
     };
 
     ($piece_type:expr, $square_from:expr, $square_to:expr, $promotion:expr) => {
-        ChessMove::new($piece_type, $square_from, $square_to, $promotion)
+        ChessMove::new($piece_type, $square_from, $square_to, Some($promotion))
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn move_representation() {
@@ -150,26 +136,21 @@ mod tests {
             PieceType::Pawn,
             Square::E7,
             Square::E8,
-            Some(PromotionPieceType::Queen)
+            PromotionPieceType::Queen
         );
         assert_eq!(format!("{}", chess_move), "e7e8->Q");
 
-        let mut chess_move = mv!(
-            PieceType::Pawn,
-            Square::E7,
-            Square::D8,
-            Some(PromotionPieceType::Rook)
-        );
-        chess_move.is_capture = true;
-        assert_eq!(format!("{}", chess_move), "e7xd8->R");
-
-        let mut chess_move = mv!(PieceType::Queen, Square::A1, Square::A8);
+        let chess_move = mv!(PieceType::Queen, Square::A1, Square::A8);
         assert_eq!(format!("{}", chess_move), "Qa1a8");
-        chess_move.set_source_square_representation(SourceSquareRepresentation::None);
-        assert_eq!(format!("{}", chess_move), "Qa8");
-        chess_move.set_source_square_representation(SourceSquareRepresentation::OnlyRank);
-        assert_eq!(format!("{}", chess_move), "Q1a8");
-        chess_move.set_source_square_representation(SourceSquareRepresentation::OnlyFile);
-        assert_eq!(format!("{}", chess_move), "Qaa8");
+    }
+
+    #[test]
+    fn capture() {
+        let board = ChessBoard::from_str("k7/1q6/8/8/8/8/6Q1/5K2 w - - 0 1").unwrap();
+        let chess_move = mv!(PieceType::Queen, Square::G2, Square::B7);
+        assert_eq!(chess_move.is_capture_on_board(&board).unwrap(), true);
+
+        let chess_move = mv!(PieceType::Queen, Square::G2, Square::C6);
+        assert_eq!(chess_move.is_capture_on_board(&board).unwrap(), false);
     }
 }

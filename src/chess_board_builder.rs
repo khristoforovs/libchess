@@ -339,12 +339,12 @@ impl BoardBuilder {
         self
     }
 
-    pub fn set_en_passant(&mut self, file: Option<Square>) -> *mut Self {
-        self.en_passant = file;
+    pub fn set_en_passant(&mut self, square: Option<Square>) -> &mut Self {
+        self.en_passant = square;
         self
     }
 
-    pub fn set_square<'a>(&'a mut self, square: Square, piece: Option<Piece>) -> &'a mut Self {
+    pub fn set_square(&mut self, square: Square, piece: Option<Piece>) -> &mut Self {
         self[square] = piece;
         self
     }
@@ -365,6 +365,9 @@ mod tests {
         assert_eq!(format!("{}", BoardBuilder::from_str(fen).unwrap()), fen);
 
         let fen = "8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1";
+        assert_eq!(format!("{}", BoardBuilder::from_str(fen).unwrap()), fen);
+
+        let fen = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1";
         assert_eq!(format!("{}", BoardBuilder::from_str(fen).unwrap()), fen);
     }
 }

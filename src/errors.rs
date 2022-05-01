@@ -61,4 +61,22 @@ pub enum ChessBoardError {
 
     #[fail(display = "Invalid board: inconsistent castling rights")]
     InvalidBoardInconsistentCastlingRights,
+
+    #[fail(display = "Illegal move detected")]
+    IllegalMoveDetected,
+}
+
+#[derive(Debug, Clone, Fail)]
+pub enum GameError {
+    #[fail(display = "Illegal action detected")]
+    IllegalActionDetected,
+
+    #[fail(display = "Need to answer the draw offer")]
+    DrawOfferNeedsAnswer,
+
+    #[fail(display = "No draw offer detected")]
+    DrawOfferNotDetected,
+
+    #[fail(display = "Game is already finished")]
+    GameIsAlreadyFinished,
 }
