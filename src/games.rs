@@ -4,6 +4,7 @@ use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::fmt;
 
 const HISTORY_CAPACITY: usize = 100;
 const UNIQUE_POSITIONS_CAPACITY: usize = 100;
@@ -22,9 +23,23 @@ pub enum GameStatus {
     Ongoing,
     CheckMated(Color),
     Resigned(Color),
-    DrawDeclared,
+    RepetitionDrawDeclared,
     DrawAccepted,
     Stalemate,
+}
+
+impl fmt::Display for GameStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let status_string = match self {
+            GameStatus::Ongoing => String::from("the game is ongoing"),
+            GameStatus::CheckMated(color) => format!("{} won by checkmate", !*color),
+            GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
+            GameStatus::RepetitionDrawDeclared => String::from("draw declared by repetition of moves"),
+            GameStatus::DrawAccepted => String::from("draw declared by agreement"),
+            GameStatus::Stalemate => String::from("stalemate"),
+        };
+        write!(f, "{}", status_string)
+    }
 }
 
 pub struct Game {
@@ -123,7 +138,7 @@ impl Game {
                         }
                     } else {
                         if self.get_position_counter(position) == 3 {
-                            GameStatus::DrawDeclared
+                            GameStatus::RepetitionDrawDeclared
                         } else {
                             GameStatus::Ongoing
                         }
@@ -132,12 +147,16 @@ impl Game {
                 Action::OfferDraw => GameStatus::Ongoing,
                 Action::DeclineDraw => GameStatus::Ongoing,
                 Action::AcceptDraw => GameStatus::DrawAccepted,
-                Action::Resign => GameStatus::Resigned(!self.get_side_to_move()),
+                Action::Resign => GameStatus::Resigned(self.get_side_to_move()),
             },
             None => GameStatus::Ongoing,
         });
-        self
 
+        if self.get_game_status() != GameStatus::Ongoing {
+            println!("{}", self.get_game_status())
+        }
+
+        self
         //TODO Theoretical draws processing
     }
 
@@ -261,6 +280,13 @@ mod tests {
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
         }
-        assert_eq!(game.get_game_status(), GameStatus::DrawDeclared);
+        assert_eq!(game.get_game_status(), GameStatus::RepetitionDrawDeclared);
+    }
+
+    #[test]
+    fn resignation() {
+        let mut game = Game::default();
+        game.make_move(Action::Resign).unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
     }
 }
