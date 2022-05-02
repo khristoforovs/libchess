@@ -1,8 +1,8 @@
 use crate::bitboards::{BitBoard, BLANK};
+use crate::board_builders::BoardBuilder;
 use crate::board_files::FILES;
 use crate::board_ranks::{Rank, RANKS};
 use crate::castling::CastlingRights;
-use crate::board_builders::BoardBuilder;
 use crate::chess_moves::{ChessMove, PromotionPieceType};
 use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::ChessBoardError as Error;
@@ -172,7 +172,7 @@ impl Default for ChessBoard {
 }
 
 impl ChessBoard {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut result = ChessBoard {
             pieces_mask: [BLANK; NUMBER_PIECE_TYPES],
             colors_mask: [BLANK; COLORS_NUMBER],
@@ -255,59 +255,47 @@ impl ChessBoard {
         }
 
         // validate castling rights
-        let rook_mask =
+        let white_rook_mask =
             self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::White);
-        let king_square = self.get_king_square(Color::White);
-        match self.get_castle_rights(Color::White) {
-            CastlingRights::Neither => {}
-            CastlingRights::QueenSide => {
-                if (king_square != Square::E1)
-                    & (rook_mask & BitBoard::from_square(Square::A1) != BLANK)
-                {
-                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+        if self.get_king_square(Color::White) == Square::E1 {
+            let validation_mask = match self.get_castle_rights(Color::White) {
+                CastlingRights::Neither => BLANK,
+                CastlingRights::QueenSide => BitBoard::from_square(Square::A1),
+                CastlingRights::KingSide => BitBoard::from_square(Square::H1),
+                CastlingRights::BothSides => {
+                    BitBoard::from_square(Square::A1) | BitBoard::from_square(Square::H1)
                 }
+            };
+            if (white_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
+                return Some(Error::InvalidBoardInconsistentCastlingRights);
             }
-            CastlingRights::KingSide => {
-                if (king_square != Square::E1)
-                    & (rook_mask & BitBoard::from_square(Square::H1) != BLANK)
-                {
-                    return Some(Error::InvalidBoardInconsistentCastlingRights);
-                }
-            }
-            CastlingRights::BothSides => {
-                if (king_square != Square::E1)
-                    & (rook_mask & BitBoard::from_square(Square::A1) != BLANK)
-                    & (rook_mask & BitBoard::from_square(Square::H1) != BLANK)
-                {
+        } else {
+            match self.get_castle_rights(Color::White) {
+                CastlingRights::Neither => {}
+                _ => {
                     return Some(Error::InvalidBoardInconsistentCastlingRights);
                 }
             }
         }
 
-        let rook_mask =
+        let black_rook_mask =
             self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::Black);
-        let king_square = self.get_king_square(Color::Black);
-        match self.get_castle_rights(Color::Black) {
-            CastlingRights::Neither => {}
-            CastlingRights::QueenSide => {
-                if (king_square != Square::E8)
-                    & (rook_mask & BitBoard::from_square(Square::A8) != BLANK)
-                {
-                    return Some(Error::InvalidBoardInconsistentCastlingRights);
+        if self.get_king_square(Color::Black) == Square::E8 {
+            let validation_mask = match self.get_castle_rights(Color::Black) {
+                CastlingRights::Neither => BLANK,
+                CastlingRights::QueenSide => BitBoard::from_square(Square::A8),
+                CastlingRights::KingSide => BitBoard::from_square(Square::H8),
+                CastlingRights::BothSides => {
+                    BitBoard::from_square(Square::A8) | BitBoard::from_square(Square::H8)
                 }
+            };
+            if (black_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
+                return Some(Error::InvalidBoardInconsistentCastlingRights);
             }
-            CastlingRights::KingSide => {
-                if (king_square != Square::E8)
-                    & (rook_mask & BitBoard::from_square(Square::H8) != BLANK)
-                {
-                    return Some(Error::InvalidBoardInconsistentCastlingRights);
-                }
-            }
-            CastlingRights::BothSides => {
-                if (king_square != Square::E8)
-                    & (rook_mask & BitBoard::from_square(Square::A8) != BLANK)
-                    & (rook_mask & BitBoard::from_square(Square::H8) != BLANK)
-                {
+        } else {
+            match self.get_castle_rights(Color::Black) {
+                CastlingRights::Neither => {}
+                _ => {
                     return Some(Error::InvalidBoardInconsistentCastlingRights);
                 }
             }
@@ -448,13 +436,13 @@ impl ChessBoard {
         let mut next_position = self.clone();
         if self.get_legal_moves().contains(&next_move) {
             // TODO castling processing
-            // TODO Promotion processing
 
             next_position
                 .update_black_moved_counter()
                 .update_moves_since_capture(next_move)
                 .apply_move(next_move)
                 .set_side_to_move(!self.side_to_move)
+                .update_en_passant(next_move)
                 .update_pins_and_checks()
                 .update_legal_moves();
         } else {
@@ -530,7 +518,7 @@ impl ChessBoard {
     }
 
     fn update_moves_since_capture(&mut self, last_move: ChessMove) -> &mut Self {
-        if (last_move.get_piece_type() == PieceType::Pawn) 
+        if (last_move.get_piece_type() == PieceType::Pawn)
             | last_move.is_capture_on_board(self).unwrap()
         {
             self.moves_since_capture_counter = 0;
@@ -585,9 +573,31 @@ impl ChessBoard {
         self
     }
 
+    fn update_en_passant(&mut self, last_move: ChessMove) -> &mut Self {
+        let source_rank_index = last_move.get_source_square().get_rank().to_index();
+        let destination_rank_index = last_move.get_destination_square().get_rank().to_index();
+
+        if (last_move.get_piece_type() == PieceType::Pawn)
+            & (source_rank_index.abs_diff(destination_rank_index) == 2)
+        {
+            let en_passant_square = Square::from_rank_file(
+                Rank::from_index((source_rank_index + destination_rank_index) / 2).unwrap(),
+                last_move.get_destination_square().get_file(),
+            );
+            self.set_en_passant(Some(en_passant_square));
+        } else {
+            self.set_en_passant(None);
+        }
+        self
+    }
+
     fn update_legal_moves(&mut self) -> &mut Self {
         let mut moves = LegalMoves::new();
         let color_mask = self.get_color_mask(self.side_to_move);
+        let en_passant_mask = match self.get_en_passant() {
+            Some(sq) => BitBoard::from_square(sq),
+            None => BLANK,
+        };
 
         for i in 0..NUMBER_PIECE_TYPES {
             let piece_type = PieceType::from_index(i).unwrap();
@@ -599,7 +609,7 @@ impl ChessBoard {
                     PieceType::Pawn => {
                         (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
                             | (PAWN.get_captures(square, self.side_to_move)
-                                & self.get_color_mask(!self.side_to_move))
+                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask))
                     }
                     PieceType::Knight => KNIGHT.get_moves(square) & !color_mask,
                     PieceType::King => KING.get_moves(square) & !color_mask,
@@ -667,9 +677,6 @@ impl ChessBoard {
                         moves.insert(one);
                     }
                 }
-
-                // TODO castling processing
-                // TODO en passant processing
             }
         }
 
@@ -889,5 +896,22 @@ mod tests {
         }
 
         assert_eq!(board.get_legal_moves().len(), 11);
+    }
+
+    #[test]
+    fn en_passant() {
+        let board =
+            ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1")
+                .unwrap();
+
+        let next_board = board
+            .make_move(mv![PieceType::Pawn, Square::D7, Square::D5])
+            .unwrap();
+
+        assert!(next_board.get_legal_moves().contains(&mv![
+            PieceType::Pawn,
+            Square::E5,
+            Square::D6
+        ]));
     }
 }

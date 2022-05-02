@@ -1,10 +1,10 @@
 use std::fs;
 
 pub mod bitboards;
+pub mod board_builders;
 pub mod board_files;
 pub mod board_ranks;
 pub mod castling;
-pub mod board_builders;
 pub mod chess_boards;
 #[macro_use]
 pub mod chess_moves;

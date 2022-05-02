@@ -3,8 +3,8 @@ use crate::chess_moves::ChessMove;
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::fmt;
+use std::str::FromStr;
 
 const HISTORY_CAPACITY: usize = 100;
 const UNIQUE_POSITIONS_CAPACITY: usize = 100;
