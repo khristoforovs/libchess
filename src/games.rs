@@ -1,7 +1,9 @@
+use crate::bitboards::BLANK;
 use crate::chess_boards::ChessBoard;
 use crate::chess_moves::ChessMove;
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
+use crate::pieces::PieceType;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -24,7 +26,7 @@ pub enum GameStatus {
     CheckMated(Color),
     Resigned(Color),
     FiftyMovesDrawDeclared,
-    NoEnoughPiecesDeclared,
+    TheoreticalDrawDeclared,
     RepetitionDrawDeclared,
     DrawAccepted,
     Stalemate,
@@ -38,8 +40,10 @@ impl fmt::Display for GameStatus {
             GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
             GameStatus::DrawAccepted => String::from("draw declared by agreement"),
             GameStatus::FiftyMovesDrawDeclared => String::from("draw declared by a 50 moves rule"),
-            GameStatus::NoEnoughPiecesDeclared => String::from("draw: no enough pieces"),
-            GameStatus::RepetitionDrawDeclared => String::from("draw declared by repetition of moves"),
+            GameStatus::TheoreticalDrawDeclared => String::from("draw: no enough pieces"),
+            GameStatus::RepetitionDrawDeclared => {
+                String::from("draw declared by repetition of moves")
+            }
             GameStatus::Stalemate => String::from("stalemate"),
         };
         write!(f, "{}", status_string)
@@ -132,31 +136,30 @@ impl Game {
 
     fn update_game_status(&mut self) -> &mut Self {
         self.set_game_status(match self.get_last_action() {
-            Some(a) => match a {
-                Action::MakeMove(_) => {
-                    let position = self.get_position();
-                    if position.get_legal_moves().len() == 0 {
-                        if position.get_check_mask().count_ones() > 0 {
-                            GameStatus::CheckMated(self.get_side_to_move())
-                        } else {
-                            GameStatus::Stalemate
-                        }
+            None | Some(Action::MakeMove(_)) => {
+                let position = self.get_position();
+                if position.get_legal_moves().len() == 0 {
+                    if position.get_check_mask().count_ones() > 0 {
+                        GameStatus::CheckMated(self.get_side_to_move())
                     } else {
-                        if self.get_position_counter(position) == 3 {
-                            GameStatus::RepetitionDrawDeclared
-                        } else if position.get_moves_since_capture() >= 100 {
-                            GameStatus::FiftyMovesDrawDeclared
-                        } else {
-                            GameStatus::Ongoing
-                        }
+                        GameStatus::Stalemate
+                    }
+                } else {
+                    if self.get_position_counter(position) == 3 {
+                        GameStatus::RepetitionDrawDeclared
+                    } else if position.get_moves_since_capture() >= 100 {
+                        GameStatus::FiftyMovesDrawDeclared
+                    } else if self.is_theoretical_draw_on_board() {
+                        GameStatus::TheoreticalDrawDeclared
+                    } else {
+                        GameStatus::Ongoing
                     }
                 }
-                Action::OfferDraw => GameStatus::Ongoing,
-                Action::DeclineDraw => GameStatus::Ongoing,
-                Action::AcceptDraw => GameStatus::DrawAccepted,
-                Action::Resign => GameStatus::Resigned(self.get_side_to_move()),
-            },
-            None => GameStatus::Ongoing,
+            }
+            Some(Action::OfferDraw) => GameStatus::Ongoing,
+            Some(Action::DeclineDraw) => GameStatus::Ongoing,
+            Some(Action::AcceptDraw) => GameStatus::DrawAccepted,
+            Some(Action::Resign) => GameStatus::Resigned(self.get_side_to_move()),
         });
 
         if self.get_game_status() != GameStatus::Ongoing {
@@ -164,7 +167,32 @@ impl Game {
         }
 
         self
-        //TODO Theoretical draws processing
+    }
+
+    fn is_theoretical_draw_on_board(&self) -> bool {
+        let white_pieces_number = self.position.get_color_mask(Color::White).count_ones();
+        let black_pieces_number = self.position.get_color_mask(Color::Black).count_ones();
+
+        if (white_pieces_number <= 2) & (black_pieces_number <= 2) {
+            let bishops_and_knights = self.position.get_piece_type_mask(PieceType::Knight)
+                | self.position.get_piece_type_mask(PieceType::Bishop);
+
+            let white_can_not_checkmate = match white_pieces_number {
+                1 => true,
+                2 => self.position.get_color_mask(Color::White) & bishops_and_knights != BLANK,
+                _ => unreachable!(),
+            };
+            let black_can_not_checkmate = match black_pieces_number {
+                1 => true,
+                2 => self.position.get_color_mask(Color::Black) & bishops_and_knights != BLANK,
+                _ => unreachable!(),
+            };
+            if white_can_not_checkmate & black_can_not_checkmate {
+                return true;
+            }
+        }
+
+        false
     }
 
     #[inline]
@@ -185,10 +213,6 @@ impl Game {
     fn push_action_to_history(&mut self, action: Action) -> &mut Self {
         self.history.push(action);
         self
-    }
-
-    fn as_pgn(&self) -> String {
-        todo!()
     }
 
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, GameError> {
@@ -295,5 +319,11 @@ mod tests {
         let mut game = Game::default();
         game.make_move(Action::Resign).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
+    }
+
+    #[test]
+    fn theoretical_draw() {
+        let game = Game::from_fen("4k3/8/6b1/8/8/3NK3/8/8 w - - 0 1").unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::TheoreticalDrawDeclared);
     }
 }
