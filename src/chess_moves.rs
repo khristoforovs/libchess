@@ -25,14 +25,14 @@ impl From<PromotionPieceType> for PieceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ChessMove {
+pub struct PieceMove {
     piece_type: PieceType,
     square_from: Square,
     square_to: Square,
     promotion: Option<PieceType>,
 }
 
-impl fmt::Display for ChessMove {
+impl fmt::Display for PieceMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let promotion_string = match self.get_promotion() {
             Some(piece_type) => format!("->{}", piece_type),
@@ -53,14 +53,14 @@ impl fmt::Display for ChessMove {
     }
 }
 
-impl ChessMove {
+impl PieceMove {
     pub fn new(
         piece_type: PieceType,
         square_from: Square,
         square_to: Square,
         promotion: Option<PromotionPieceType>,
     ) -> Self {
-        ChessMove {
+        PieceMove {
             piece_type,
             square_from,
             square_to,
@@ -73,19 +73,16 @@ impl ChessMove {
         }
     }
 
-    pub fn is_capture_on_board(&self, board: &ChessBoard) -> Result<bool, ChessBoardError> {
-        if board.get_legal_moves().contains(self) {
-            if (BitBoard::from_square(self.get_destination_square())
-                & board.get_color_mask(!board.get_side_to_move()))
-            .count_ones()
-                > 0
-            {
-                return Ok(true);
-            } else {
-                return Ok(false);
-            }
+    pub fn is_capture_on_board(&self, board: &ChessBoard) -> bool {
+        if (BitBoard::from_square(self.get_destination_square())
+            & board.get_color_mask(!board.get_side_to_move()))
+        .count_ones()
+            > 0
+        {
+            true
+        } else {
+            false
         }
-        return Err(ChessBoardError::IllegalMoveDetected);
     }
 
     #[inline]
@@ -109,14 +106,70 @@ impl ChessMove {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ChessMove {
+    MovePiece(PieceMove),
+    CastleKingSide,
+    CastleQueenSide,
+}
+
+impl fmt::Display for ChessMove {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ChessMove::MovePiece(m) => write!(f, "{}", m),
+            ChessMove::CastleKingSide => write!(f, "O-O"),
+            ChessMove::CastleQueenSide => write!(f, "O-O-O"),
+        }
+    }
+}
+
+impl ChessMove {
+    pub fn piece_move(&self) -> Option<PieceMove> {
+        match self {
+            ChessMove::MovePiece(m) => Some(*m),
+            ChessMove::CastleKingSide => None,
+            ChessMove::CastleQueenSide => None,
+        }
+    }
+
+    pub fn is_capture_on_board(&self, board: &ChessBoard) -> Result<bool, ChessBoardError> {
+        if !board.get_legal_moves().contains(self) {
+            return Err(ChessBoardError::IllegalMoveDetected);
+        }
+        match self {
+            ChessMove::MovePiece(m) => Ok(m.is_capture_on_board(board)),
+            ChessMove::CastleKingSide | ChessMove::CastleQueenSide => Ok(false),
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! mv {
     ($piece_type:expr, $square_from:expr, $square_to:expr) => {
-        ChessMove::new($piece_type, $square_from, $square_to, None)
+        ChessMove::MovePiece(PieceMove::new($piece_type, $square_from, $square_to, None))
     };
 
     ($piece_type:expr, $square_from:expr, $square_to:expr, $promotion:expr) => {
-        ChessMove::new($piece_type, $square_from, $square_to, Some($promotion))
+        ChessMove::MovePiece(PieceMove::new(
+            $piece_type,
+            $square_from,
+            $square_to,
+            Some($promotion),
+        ))
+    };
+}
+
+#[macro_export]
+macro_rules! castle_king_side {
+    () => {
+        ChessMove::CastleKingSide
+    };
+}
+
+#[macro_export]
+macro_rules! castle_queen_side {
+    () => {
+        ChessMove::CastleQueenSide
     };
 }
 
@@ -140,6 +193,9 @@ mod tests {
 
         let chess_move = mv!(PieceType::Queen, Square::A1, Square::A8);
         assert_eq!(format!("{}", chess_move), "Qa1a8");
+
+        let chess_move = castle_queen_side!();
+        assert_eq!(format!("{}", chess_move), "O-O-O");
     }
 
     #[test]
