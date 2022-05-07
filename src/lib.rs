@@ -1,43 +1,37 @@
-use std::fs;
+mod bitboards;
+pub use bitboards::BitBoard;
 
-pub mod bitboards;
-pub mod board_builders;
-pub mod board_files;
-pub mod board_ranks;
-pub mod castling;
-pub mod chess_boards;
+mod board_builders;
+pub use board_builders::BoardBuilder;
+
+mod board_files;
+pub use board_files::{File, FILES, FILES_NUMBER}; 
+
+mod board_ranks;
+pub use board_ranks::{Rank, RANKS, RANKS_NUMBER};
+
+mod castling;
+pub use castling::CastlingRights;
+
+mod chess_boards;
+pub use chess_boards::{ChessBoard, LegalMoves};
+
 #[macro_use]
-pub mod chess_moves;
-pub mod colors;
+mod chess_moves;
+pub use chess_moves::{PieceMove, ChessMove, PromotionPieceType};
+
+mod colors;
+pub use colors::{Color, COLORS_NUMBER};
+
 pub mod errors;
-pub mod games;
+
+mod games;
+pub use games::{Action, Game, GameStatus};
+
 pub mod move_masks;
-pub mod pieces;
-pub mod squares;
 
-pub fn hello_world() {
-    println!("Hello, world from the example!");
-}
+mod pieces;
+pub use pieces::{PieceType, NUMBER_PIECE_TYPES, Piece};
 
-pub fn read_print_moves(path: String) {
-    let contents = fs::read_to_string(path).expect("Something went wrong reading the file");
-    println!("{}", contents);
-
-    use regex::Regex;
-    let re = Regex::new(
-        r"(?x)
-        (\d+)\.  # move number
-        \s+
-        (\S+)  # white's move
-        \s+
-        (\S+)  # black's move
-        \s+
-    ",
-    )
-    .unwrap();
-
-    println!();
-    for cap in re.captures_iter(&contents) {
-        println!("Move: {} White: {} Black: {};", &cap[1], &cap[2], &cap[3]);
-    }
-}
+mod squares;
+pub use squares::{Square, SQUARES_NUMBER};
