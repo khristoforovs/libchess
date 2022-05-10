@@ -23,6 +23,33 @@ use std::str::FromStr;
 
 pub type LegalMoves = HashSet<ChessMove>;
 
+/// The Chess Board. No more, no less
+/// 
+/// Represents any available board position. Can be initialized by the FEN-
+/// string (most recommended) or directly from a BoardBuilder struct. Checks
+/// the sanity of the position, so if the struct is created the position is valid. 
+/// If the initial position is not the terminal (stalemate or checkmate),
+/// you can generate another valid board after calling .make_move(&self, next_move: ChessMove)
+/// (of course the move should be legal).
+/// 
+/// After each move the new instance of the ChessBoard updates the whole set of available
+/// moves (maybe it is not the fastest approach). You cen get it by calling .get_legal_moves()
+/// 
+/// Also it implements the board visualization (in terminal)
+/// 
+/// ## Examples
+/// ```
+/// use libchess::boards::{ChessBoard, Square};
+/// use libchess::{mv, PieceType, PieceMove, ChessMove};
+/// use std::str::FromStr;
+/// 
+/// println!("{}", ChessBoard::default());
+/// 
+/// let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
+/// println!("{}", board);
+/// println!("{}", board.as_fen());
+/// println!("{}", board.make_move(mv!(PieceType::King, Square::F4, Square::G5)).unwrap());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
     pieces_mask: [BitBoard; NUMBER_PIECE_TYPES],
@@ -304,46 +331,60 @@ impl ChessBoard {
         None
     }
 
+    /// Returns a FEN string of current position 
     #[inline]
     pub fn as_fen(&self) -> String {
         format!("{}", BoardBuilder::try_from(self).unwrap())
     }
 
+    /// Returns a Bitboard mask of same-color pieces
     #[inline]
     pub fn get_color_mask(&self, color: Color) -> BitBoard {
         self.colors_mask[color.to_index()]
     }
 
+    /// Returns a Bitboard mask for all pieces on the board
     #[inline]
     pub fn get_combined_mask(&self) -> BitBoard {
         self.combined_mask
     }
 
+    /// Returns a square for king-piece of specified color
     #[inline]
     pub fn get_king_square(&self, color: Color) -> Square {
         (self.get_piece_type_mask(PieceType::King) & self.get_color_mask(color)).to_square()
     }
 
+    /// Returns a Bitboard mask for all pieces of the same  specified type
     #[inline]
     pub fn get_piece_type_mask(&self, piece_type: PieceType) -> BitBoard {
         self.pieces_mask[piece_type.to_index()]
     }
 
+    /// Returns a Bitboard mask for all pieces which pins the king with
+    /// color defined by ``board.get_side_to_move()``
     #[inline]
     pub fn get_pin_mask(&self) -> BitBoard {
         self.pinned
     }
 
+    /// Returns a number of moves done since the first board was created
     #[inline]
     pub fn get_black_moved_counter(&self) -> usize {
         self.black_moved_counter
     }
 
+    /// Returns a number of moves since last capture or pawn move (is used
+    /// to determine the game termination by the 50-move rule)
     #[inline]
     pub fn get_moves_since_capture(&self) -> usize {
         self.moves_since_capture_counter
     }
 
+    /// Returns the castling rights for specified color.
+    /// 
+    /// The presence of castling rights does not mean that king can castle at
+    /// this move (checks, extra pieces on backrank, etc.).
     #[inline]
     pub fn get_castle_rights(&self, color: Color) -> CastlingRights {
         self.castle_rights[color.to_index()]
@@ -359,6 +400,8 @@ impl ChessBoard {
         self.en_passant
     }
 
+    /// Returns a Bitboard mask for all pieces which check the king with
+    /// color defined by ``board.get_side_to_move()``
     #[inline]
     pub fn get_check_mask(&self) -> BitBoard {
         self.checks
@@ -373,15 +416,19 @@ impl ChessBoard {
         false
     }
 
+    /// Returns true if enabled the option of flipped print 
     #[inline]
-    pub fn get_flipped_view(&mut self) -> bool {
+    pub fn get_print_flipped(&mut self) -> bool {
         self.flipped_view
     }
 
-    pub fn set_flipped_view(&mut self, flipped: bool) {
+    /// Sets the flipped view for the visualization via ``fmt::Display``
+    #[inline]
+    pub fn set_print_flipped(&mut self, flipped: bool) {
         self.flipped_view = flipped
     }
 
+    /// Returns a PieceType object if the square is not empty, None otherwise
     pub fn get_piece_type_on(&self, square: Square) -> Option<PieceType> {
         let bitboard = BitBoard::from_square(square);
         if self.get_combined_mask() & bitboard == BLANK {
@@ -412,6 +459,7 @@ impl ChessBoard {
         }
     }
 
+    /// Returns a Color object if the square is not empty, None otherwise
     pub fn get_piece_color_on(&self, square: Square) -> Option<Color> {
         if (self.get_color_mask(Color::White) & BitBoard::from_square(square)) != BLANK {
             Some(Color::White)
@@ -422,16 +470,19 @@ impl ChessBoard {
         }
     }
 
+    /// Returns a HashSet of all legal moves for current board
     pub fn get_legal_moves(&self) -> &LegalMoves {
         &self.legal_moves
     }
 
+    /// Returns the hash of the position. Is used to detect the repetition draw
     pub fn get_hash(&self) -> u64 {
         let mut h = DefaultHasher::new();
         self.hash(&mut h);
         h.finish()
     }
 
+    /// This method is needed to represent the chess move without any ambiguity in PGN-like strings
     pub fn get_move_ambiguity_type(
         &self,
         piece_move: PieceMove,
@@ -552,6 +603,20 @@ impl ChessBoard {
         Ok(AmbiguityResolveType::Neither)
     }
 
+    /// The method which allows to make moves on the board. Returns a new board instance
+    /// if the move is legal
+    /// 
+    /// The simplest way to generate moves is by picking one from a set of available moves:
+    /// ``board.get_legal_moves()`` or by simply creating a new move via macros: ``mv!()``,
+    /// ``castle_king_side!()`` and ``castle_queen_side!()``
+    /// 
+    /// ```
+    /// use libchess::{mv, PieceType, PieceMove, ChessMove};
+    /// use libchess::boards::{ChessBoard, Square};
+    /// let board = ChessBoard::default();
+    /// let next_board = board.make_move(mv!(PieceType::Pawn, Square::E2, Square::E4)).unwrap();
+    /// println!("{}", next_board);
+    /// ```
     pub fn make_move(&self, next_move: ChessMove) -> Result<Self, Error> {
         let mut next_position = self.clone();
         if !self.get_legal_moves().contains(&next_move) {
@@ -982,7 +1047,7 @@ mod tests {
         );
 
         let mut board = ChessBoard::default();
-        board.set_flipped_view(true);
+        board.set_print_flipped(true);
         let board_str =         
         "   white  KQkq
             ╔════════════════════════╗

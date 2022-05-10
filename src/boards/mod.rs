@@ -1,3 +1,10 @@
+//! The chess board module
+//! 
+//! The module implements the board itself, board's coordinates
+//! (files and ranks), the low-level part of board calculations -
+//! bitboard and the builder-module which prepares the board's
+//! initialization data
+
 mod bitboards;
 pub use bitboards::{BitBoard, BLANK};
 

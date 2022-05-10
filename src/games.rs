@@ -1,3 +1,8 @@
+//! This module implements the game of chess 
+//! 
+//! Rules of the game, terminating conditions and recording
+//! the history of the game also implemented here  
+
 use crate::boards::BLANK;
 use crate::boards::{ChessBoard, LegalMoves};
 use crate::chess_moves::ChessMove;
@@ -11,6 +16,7 @@ use std::str::FromStr;
 
 const UNIQUE_POSITIONS_CAPACITY: usize = 100;
 
+/// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     MakeMove(ChessMove),
@@ -20,6 +26,7 @@ pub enum Action {
     Resign,
 }
 
+/// Represents the status of the game
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     Ongoing,
@@ -51,6 +58,28 @@ impl fmt::Display for GameStatus {
     }
 }
 
+/// The Game of Chess object
+/// 
+/// ## Examples
+/// ```
+/// use libchess::{Game, Action, GameStatus, Color};
+/// use libchess::{mv, PieceType, PieceMove, ChessMove};
+/// use libchess::boards::Square;
+/// 
+/// let mut game = Game::default();
+/// let moves = vec![
+///    mv!(PieceType::Pawn, Square::E2, Square::E4),
+///    mv!(PieceType::Pawn, Square::E7, Square::E5),
+///    mv!(PieceType::Queen, Square::D1, Square::H5),
+///    mv!(PieceType::King, Square::E8, Square::E7),
+///    mv!(PieceType::Queen, Square::H5, Square::E5),
+/// ];
+/// 
+/// for one in moves.iter() {
+///     game.make_move(Action::MakeMove(*one)).unwrap();
+/// }
+/// assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
+/// ```
 #[derive(Debug, Clone)]
 pub struct Game {
     position: ChessBoard,
@@ -97,26 +126,33 @@ impl Game {
         }
     }
 
+    /// Returns the GameHistory object which represents a sequence of moves
+    /// in PGN-like string
     #[inline]
     pub fn get_action_history(&self) -> &GameHistory {
         &self.history
     }
 
+    /// Returns the current game position 
     #[inline]
     pub fn get_position(&self) -> &ChessBoard {
         &self.position
     }
 
+    /// Returns the game status. Only ``GameStatus::Ongoing`` and ``GameStatus::DrawOffered``
+    /// are not terminal
     #[inline]
     pub fn get_game_status(&self) -> GameStatus {
         self.status
     }
 
+    /// Returns the side to make move
     #[inline]
     pub fn get_side_to_move(&self) -> Color {
         self.get_position().get_side_to_move()
     }
 
+    /// Returns number of times current position was arise
     #[inline]
     pub fn get_position_counter(&self, position: &ChessBoard) -> usize {
         match self.unique_positions_counter.get(&position.get_hash()) {
@@ -125,6 +161,8 @@ impl Game {
         }
     }
 
+    /// Returns a set of legal moves in current position. Duplicates the
+    /// functionality of the ``ChessBoard::get_legal_moves()``
     #[inline]
     pub fn get_legal_moves(&self) -> &LegalMoves {
         self.position.get_legal_moves()
@@ -211,6 +249,7 @@ impl Game {
         false
     }
 
+    /// The method to make moves during the game
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, GameError> {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
