@@ -1,19 +1,18 @@
+use super::BoardBuilder;
+use super::{BitBoard, BLANK};
+use super::{File, Rank, FILES, RANKS};
+use super::{Square, SQUARES_NUMBER};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
 use crate::AmbiguityResolveType;
-use crate::BoardBuilder;
 use crate::CastlingRights;
 use crate::{castle_king_side, castle_queen_side, mv};
-use crate::{BitBoard, BLANK};
 use crate::{ChessMove, PieceMove, PromotionPieceType};
 use crate::{Color, COLORS_NUMBER};
-use crate::{File, FILES};
 use crate::{Piece, PieceType, NUMBER_PIECE_TYPES};
-use crate::{Rank, RANKS};
-use crate::{Square, SQUARES_NUMBER};
 use colored::Colorize;
 use either::Either;
 use std::collections::hash_map::DefaultHasher;

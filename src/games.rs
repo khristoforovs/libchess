@@ -1,5 +1,5 @@
-use crate::bitboards::BLANK;
-use crate::chess_boards::{ChessBoard, LegalMoves};
+use crate::boards::BLANK;
+use crate::boards::{ChessBoard, LegalMoves};
 use crate::chess_moves::ChessMove;
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
@@ -136,6 +136,20 @@ impl Game {
         self
     }
 
+    #[inline]
+    fn set_position(&mut self, position: ChessBoard) {
+        self.position = position;
+    }
+
+    #[inline]
+    fn position_counter_increment(&mut self) -> &mut Self {
+        self.unique_positions_counter.insert(
+            self.get_position().get_hash(),
+            self.get_position_counter(self.get_position()) + 1,
+        );
+        self
+    }
+
     fn update_game_status(&mut self, last_action: Option<Action>) -> &mut Self {
         self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
@@ -197,20 +211,6 @@ impl Game {
         false
     }
 
-    #[inline]
-    fn set_position(&mut self, position: ChessBoard) {
-        self.position = position;
-    }
-
-    #[inline]
-    fn position_counter_increment(&mut self) -> &mut Self {
-        self.unique_positions_counter.insert(
-            self.get_position().get_hash(),
-            self.get_position_counter(self.get_position()) + 1,
-        );
-        self
-    }
-
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, GameError> {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
@@ -249,8 +249,8 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
+    use crate::boards::Square;
     use crate::chess_moves::PieceMove;
-    use crate::squares::Square;
 
     use super::*;
 

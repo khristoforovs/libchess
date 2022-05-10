@@ -1,8 +1,6 @@
-use crate::BitBoard;
-use crate::ChessBoard;
+use crate::boards::{BitBoard, ChessBoard, Square};
 use crate::errors::ChessBoardError;
 use crate::PieceType;
-use crate::Square;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy)]

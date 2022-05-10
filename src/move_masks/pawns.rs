@@ -1,6 +1,6 @@
-use crate::{BitBoard, BLANK};
+use crate::boards::{BitBoard, BLANK};
+use crate::boards::{Square, SQUARES_NUMBER};
 use crate::{Color, COLORS_NUMBER};
-use crate::{Square, SQUARES_NUMBER};
 
 pub struct PawnMoveTable {
     moves: [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],

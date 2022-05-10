@@ -1,11 +1,11 @@
-use crate::{File, FILES};
-use crate::{Rank, RANKS};
-use crate::CastlingRights;
-use crate::ChessBoard;
-use crate::{Color, COLORS_NUMBER};
+use super::ChessBoard;
+use super::{File, FILES};
+use super::{Rank, RANKS};
+use super::{Square, SQUARES_NUMBER};
 use crate::errors::ChessBoardError as Error;
+use crate::CastlingRights;
+use crate::{Color, COLORS_NUMBER};
 use crate::{Piece, PieceType};
-use crate::{Square, SQUARES_NUMBER};
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str;
