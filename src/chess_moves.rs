@@ -35,7 +35,7 @@ pub struct PieceMove {
 impl fmt::Display for PieceMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let promotion_string = match self.get_promotion() {
-            Some(piece_type) => format!("->{}", piece_type),
+            Some(piece_type) => format!("={}", piece_type),
             None => String::new(),
         };
         let piece_type_string = match self.get_piece_type() {
@@ -189,7 +189,7 @@ mod tests {
             Square::E8,
             PromotionPieceType::Queen
         );
-        assert_eq!(format!("{}", chess_move), "e7e8->Q");
+        assert_eq!(format!("{}", chess_move), "e7e8=Q");
 
         let chess_move = mv!(PieceType::Queen, Square::A1, Square::A8);
         assert_eq!(format!("{}", chess_move), "Qa1a8");

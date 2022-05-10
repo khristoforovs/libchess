@@ -35,3 +35,6 @@ pub use pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
 
 mod squares;
 pub use squares::{Square, SQUARES_NUMBER};
+
+mod game_history;
+pub use game_history::{AmbiguityResolveType, GameHistory, HistoryChessMove};

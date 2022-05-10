@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
-const HISTORY_CAPACITY: usize = 100;
 const UNIQUE_POSITIONS_CAPACITY: usize = 100;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -24,6 +23,7 @@ pub enum Action {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     Ongoing,
+    DrawOffered,
     CheckMated(Color),
     Resigned(Color),
     FiftyMovesDrawDeclared,
@@ -36,7 +36,7 @@ pub enum GameStatus {
 impl fmt::Display for GameStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let status_string = match self {
-            GameStatus::Ongoing => String::from("the game is ongoing"),
+            GameStatus::Ongoing | GameStatus::DrawOffered => String::from("the game is ongoing"),
             GameStatus::CheckMated(color) => format!("{} won by checkmate", !*color),
             GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
             GameStatus::DrawAccepted => String::from("draw declared by agreement"),
@@ -54,7 +54,7 @@ impl fmt::Display for GameStatus {
 #[derive(Debug, Clone)]
 pub struct Game {
     position: ChessBoard,
-    history: Vec<Action>,
+    history: GameHistory,
     unique_positions_counter: HashMap<u64, usize>,
     status: GameStatus,
 }
@@ -62,14 +62,15 @@ pub struct Game {
 impl Default for Game {
     #[inline]
     fn default() -> Self {
+        let board = ChessBoard::default();
         let mut result = Self {
-            position: ChessBoard::default(),
-            history: Vec::with_capacity(HISTORY_CAPACITY),
+            position: board.clone(),
+            history: GameHistory::from_position(board),
             unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
             status: GameStatus::Ongoing,
         };
 
-        result.update_game_status().position_counter_increment();
+        result.update_game_status(None).position_counter_increment();
         result
     }
 }
@@ -78,13 +79,13 @@ impl Game {
     #[inline]
     pub fn from_board(board: ChessBoard) -> Self {
         let mut result = Self {
-            position: board,
-            history: Vec::with_capacity(HISTORY_CAPACITY),
+            position: board.clone(),
+            history: GameHistory::from_position(board),
             unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
             status: GameStatus::Ongoing,
         };
 
-        result.update_game_status().position_counter_increment();
+        result.update_game_status(None).position_counter_increment();
         result
     }
 
@@ -97,7 +98,7 @@ impl Game {
     }
 
     #[inline]
-    pub fn get_action_history(&self) -> &Vec<Action> {
+    pub fn get_action_history(&self) -> &GameHistory {
         &self.history
     }
 
@@ -114,11 +115,6 @@ impl Game {
     #[inline]
     pub fn get_side_to_move(&self) -> Color {
         self.get_position().get_side_to_move()
-    }
-
-    #[inline]
-    pub fn get_last_action(&self) -> Option<Action> {
-        self.get_action_history().last().cloned()
     }
 
     #[inline]
@@ -140,8 +136,8 @@ impl Game {
         self
     }
 
-    fn update_game_status(&mut self) -> &mut Self {
-        self.set_game_status(match self.get_last_action() {
+    fn update_game_status(&mut self, last_action: Option<Action>) -> &mut Self {
+        self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
                 let position = self.get_position();
                 if position.get_legal_moves().len() == 0 {
@@ -162,7 +158,7 @@ impl Game {
                     }
                 }
             }
-            Some(Action::OfferDraw) => GameStatus::Ongoing,
+            Some(Action::OfferDraw) => GameStatus::DrawOffered,
             Some(Action::DeclineDraw) => GameStatus::Ongoing,
             Some(Action::AcceptDraw) => GameStatus::DrawAccepted,
             Some(Action::Resign) => GameStatus::Resigned(self.get_side_to_move()),
@@ -215,41 +211,38 @@ impl Game {
         self
     }
 
-    #[inline]
-    fn push_action_to_history(&mut self, action: Action) -> &mut Self {
-        self.history.push(action);
-        self
-    }
-
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, GameError> {
-        if self.get_game_status() != GameStatus::Ongoing {
+        let game_status = self.get_game_status();
+        if game_status == GameStatus::Ongoing {
+            match action {
+                Action::MakeMove(m) => match self.get_position().make_move(m) {
+                    Ok(next_position) => {
+                        self.set_position(next_position);
+                        self.position_counter_increment();
+                        self.history.push(m, self.position.clone());
+                    }
+                    Err(_) => {
+                        return Err(GameError::IllegalActionDetected);
+                    }
+                },
+                Action::AcceptDraw | Action::DeclineDraw => {
+                    return Err(GameError::IllegalActionDetected);
+                }
+                Action::OfferDraw | Action::Resign => {}
+            }
+        } else if game_status == GameStatus::DrawOffered {
+            match action {
+                Action::MakeMove(_) | Action::OfferDraw => {
+                    return Err(GameError::IllegalActionDetected);
+                }
+                Action::AcceptDraw | Action::DeclineDraw => {}
+                Action::Resign => {}
+            }
+        } else {
             return Err(GameError::GameIsAlreadyFinished);
         }
 
-        match action {
-            Action::MakeMove(next_move) => match self.get_position().make_move(next_move) {
-                Ok(next_position) => {
-                    self.set_position(next_position);
-                    self.position_counter_increment();
-                }
-                Err(_) => {
-                    return Err(GameError::IllegalActionDetected);
-                }
-            },
-            Action::DeclineDraw | Action::AcceptDraw => {
-                if let Some(last) = self.get_last_action() {
-                    if last != Action::OfferDraw {
-                        return Err(GameError::DrawOfferNeedsAnswer);
-                    }
-                } else {
-                    return Err(GameError::IllegalActionDetected);
-                }
-            }
-            Action::OfferDraw | Action::Resign => {}
-        };
-
-        self.push_action_to_history(action);
-        self.update_game_status();
+        self.update_game_status(Some(action));
         Ok(self)
     }
 }
@@ -387,6 +380,7 @@ mod tests {
             game.make_move(Action::MakeMove(*one)).unwrap();
         }
         game.make_move(Action::Resign).unwrap();
+
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
     }
 }
