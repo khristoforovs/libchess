@@ -1,5 +1,5 @@
-use crate::board_files::File;
-use crate::board_ranks::Rank;
+use crate::File;
+use crate::Rank;
 use crate::errors::ChessBoardCoordinatesError as Error;
 use std::fmt;
 use std::str::FromStr;

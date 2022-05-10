@@ -3,6 +3,7 @@ use crate::chess_boards::{ChessBoard, LegalMoves};
 use crate::chess_moves::ChessMove;
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
+use crate::game_history::GameHistory;
 use crate::pieces::PieceType;
 use std::collections::HashMap;
 use std::fmt;

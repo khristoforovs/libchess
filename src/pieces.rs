@@ -1,4 +1,4 @@
-use crate::colors::Color;
+use crate::Color;
 use crate::errors::PieceRepresentationError as Error;
 use std::fmt;
 

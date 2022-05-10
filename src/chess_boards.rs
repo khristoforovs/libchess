@@ -1,18 +1,19 @@
-use crate::bitboards::{BitBoard, BLANK};
-use crate::board_builders::BoardBuilder;
-use crate::board_files::{File, FILES};
-use crate::board_ranks::{Rank, RANKS};
-use crate::castling::CastlingRights;
-use crate::chess_moves::{ChessMove, PieceMove, PromotionPieceType};
-use crate::colors::{Color, COLORS_NUMBER};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
-use crate::pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
-use crate::squares::{Square, SQUARES_NUMBER};
+use crate::AmbiguityResolveType;
+use crate::BoardBuilder;
+use crate::CastlingRights;
 use crate::{castle_king_side, castle_queen_side, mv};
+use crate::{BitBoard, BLANK};
+use crate::{ChessMove, PieceMove, PromotionPieceType};
+use crate::{Color, COLORS_NUMBER};
+use crate::{File, FILES};
+use crate::{Piece, PieceType, NUMBER_PIECE_TYPES};
+use crate::{Rank, RANKS};
+use crate::{Square, SQUARES_NUMBER};
 use colored::Colorize;
 use either::Either;
 use std::collections::hash_map::DefaultHasher;
