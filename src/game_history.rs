@@ -26,6 +26,7 @@ impl HistoryChessMove {
         previous_board: &ChessBoard,
         current_board: &ChessBoard,
     ) -> Self {
+        let is_check = current_board.get_check_mask().count_ones() > 0;
         HistoryChessMove {
             chess_move,
             is_capture: match chess_move {
@@ -33,8 +34,8 @@ impl HistoryChessMove {
                 ChessMove::CastleKingSide => false,
                 ChessMove::CastleQueenSide => false,
             },
-            is_check: current_board.get_check_mask().count_ones() > 0,
-            is_checkmate: current_board.get_legal_moves().len() == 0,
+            is_check: is_check,
+            is_checkmate: current_board.is_terminal() & is_check,
             ambiguity_type: {
                 match chess_move {
                     ChessMove::MovePiece(m) => match m.get_piece_type() {

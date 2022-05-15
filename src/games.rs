@@ -1,5 +1,5 @@
-//! This module implements the game of chess 
-//! 
+//! This module implements the game of chess
+//!
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
@@ -59,13 +59,13 @@ impl fmt::Display for GameStatus {
 }
 
 /// The Game of Chess object
-/// 
+///
 /// ## Examples
 /// ```
 /// use libchess::{Game, Action, GameStatus, Color};
 /// use libchess::{mv, PieceType, PieceMove, ChessMove};
 /// use libchess::boards::Square;
-/// 
+///
 /// let mut game = Game::default();
 /// let moves = vec![
 ///    mv!(PieceType::Pawn, Square::E2, Square::E4),
@@ -74,7 +74,7 @@ impl fmt::Display for GameStatus {
 ///    mv!(PieceType::King, Square::E8, Square::E7),
 ///    mv!(PieceType::Queen, Square::H5, Square::E5),
 /// ];
-/// 
+///
 /// for one in moves.iter() {
 ///     game.make_move(Action::MakeMove(*one)).unwrap();
 /// }
@@ -133,7 +133,7 @@ impl Game {
         &self.history
     }
 
-    /// Returns the current game position 
+    /// Returns the current game position
     #[inline]
     pub fn get_position(&self) -> &ChessBoard {
         &self.position
@@ -164,7 +164,7 @@ impl Game {
     /// Returns a set of legal moves in current position. Duplicates the
     /// functionality of the ``ChessBoard::get_legal_moves()``
     #[inline]
-    pub fn get_legal_moves(&self) -> &LegalMoves {
+    pub fn get_legal_moves(&self) -> LegalMoves {
         self.position.get_legal_moves()
     }
 
@@ -192,7 +192,7 @@ impl Game {
         self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
                 let position = self.get_position();
-                if position.get_legal_moves().len() == 0 {
+                if position.is_terminal() {
                     if position.get_check_mask().count_ones() > 0 {
                         GameStatus::CheckMated(self.get_side_to_move())
                     } else {

@@ -24,27 +24,24 @@ use std::str::FromStr;
 pub type LegalMoves = HashSet<ChessMove>;
 
 /// The Chess Board. No more, no less
-/// 
+///
 /// Represents any available board position. Can be initialized by the FEN-
 /// string (most recommended) or directly from a BoardBuilder struct. Checks
-/// the sanity of the position, so if the struct is created the position is valid. 
+/// the sanity of the position, so if the struct is created the position is valid.
 /// If the initial position is not the terminal (stalemate or checkmate),
 /// you can generate another valid board after calling .make_move(&self, next_move: ChessMove)
 /// (of course the move should be legal).
-/// 
-/// After each move the new instance of the ChessBoard updates the whole set of available
-/// moves (maybe it is not the fastest approach). You cen get it by calling .get_legal_moves()
-/// 
+///
 /// Also it implements the board visualization (in terminal)
-/// 
+///
 /// ## Examples
 /// ```
 /// use libchess::boards::{ChessBoard, Square};
 /// use libchess::{mv, PieceType, PieceMove, ChessMove};
 /// use std::str::FromStr;
-/// 
+///
 /// println!("{}", ChessBoard::default());
-/// 
+///
 /// let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
 /// println!("{}", board);
 /// println!("{}", board.as_fen());
@@ -63,7 +60,7 @@ pub struct ChessBoard {
     moves_since_capture_counter: usize,
     black_moved_counter: usize,
     flipped_view: bool,
-    legal_moves: LegalMoves,
+    is_terminal_position: bool,
 }
 
 impl Hash for ChessBoard {
@@ -97,7 +94,7 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
             .set_black_moved_counter(builder.get_black_moved_counter())
             .set_moves_since_capture(builder.get_moves_since_capture())
             .update_pins_and_checks()
-            .update_legal_moves();
+            .update_terminal_status();
 
         match board.validate() {
             None => Ok(board),
@@ -200,7 +197,7 @@ impl Default for ChessBoard {
 
 impl ChessBoard {
     fn new() -> Self {
-        let mut result = ChessBoard {
+        ChessBoard {
             pieces_mask: [BLANK; NUMBER_PIECE_TYPES],
             colors_mask: [BLANK; COLORS_NUMBER],
             combined_mask: BLANK,
@@ -212,11 +209,8 @@ impl ChessBoard {
             moves_since_capture_counter: 0,
             black_moved_counter: 0,
             flipped_view: false,
-            legal_moves: LegalMoves::new(),
-        };
-
-        result.update_legal_moves();
-        result
+            is_terminal_position: false,
+        }
     }
 
     pub fn validate(&self) -> Option<Error> {
@@ -331,7 +325,7 @@ impl ChessBoard {
         None
     }
 
-    /// Returns a FEN string of current position 
+    /// Returns a FEN string of current position
     #[inline]
     pub fn as_fen(&self) -> String {
         format!("{}", BoardBuilder::try_from(self).unwrap())
@@ -382,7 +376,7 @@ impl ChessBoard {
     }
 
     /// Returns the castling rights for specified color.
-    /// 
+    ///
     /// The presence of castling rights does not mean that king can castle at
     /// this move (checks, extra pieces on backrank, etc.).
     #[inline]
@@ -416,7 +410,7 @@ impl ChessBoard {
         false
     }
 
-    /// Returns true if enabled the option of flipped print 
+    /// Returns true if enabled the option of flipped print
     #[inline]
     pub fn get_print_flipped(&mut self) -> bool {
         self.flipped_view
@@ -470,9 +464,273 @@ impl ChessBoard {
         }
     }
 
+    /// Returns true if specified move is legal for current position
+    pub fn is_legal_move(&self, chess_move: ChessMove) -> bool {
+        match chess_move {
+            ChessMove::MovePiece(m) => {
+                // Check source square
+                let source_square = m.get_source_square();
+                if (self.get_piece_type_mask(m.get_piece_type())
+                    & self.get_color_mask(self.side_to_move)
+                    & !self.get_pin_mask()
+                    & BitBoard::from_square(source_square))
+                .count_ones()
+                    != 1
+                {
+                    return false;
+                }
+
+                // Check destination square availability
+                let destination_square = m.get_destination_square();
+                let destination_mask = match m.get_piece_type() {
+                    PieceType::Pawn => {
+                        PAWN.get_moves(source_square, self.side_to_move)
+                            & !self.get_color_mask(self.side_to_move)
+                            | PAWN.get_captures(source_square, self.side_to_move)
+                                & self.get_color_mask(!self.side_to_move)
+                    }
+                    PieceType::Knight => {
+                        KNIGHT.get_moves(source_square) & !self.get_color_mask(self.side_to_move)
+                    }
+                    PieceType::Bishop => {
+                        let between = BETWEEN.get(source_square, destination_square);
+                        if between.is_none()
+                            | ((between.unwrap() & self.get_combined_mask()).count_ones() > 0)
+                        {
+                            return false;
+                        }
+                        BISHOP.get_moves(source_square) & !self.get_color_mask(self.side_to_move)
+                    }
+                    PieceType::Rook => {
+                        let between = BETWEEN.get(source_square, destination_square);
+                        if between.is_none()
+                            | ((between.unwrap() & self.get_combined_mask()).count_ones() > 0)
+                        {
+                            return false;
+                        }
+                        ROOK.get_moves(source_square) & !self.get_color_mask(self.side_to_move)
+                    }
+                    PieceType::Queen => {
+                        let between = BETWEEN.get(source_square, destination_square);
+                        if between.is_none()
+                            | ((between.unwrap() & self.get_combined_mask()).count_ones() > 0)
+                        {
+                            return false;
+                        }
+                        QUEEN.get_moves(source_square) & !self.get_color_mask(self.side_to_move)
+                    }
+                    PieceType::King => {
+                        KING.get_moves(source_square) & !self.get_color_mask(self.side_to_move)
+                    }
+                };
+                if (destination_mask & BitBoard::from_square(destination_square)).count_ones() != 1
+                {
+                    return false;
+                }
+
+                // Check promotions
+                if (m.get_promotion().is_some())
+                    & (m.get_piece_type() != PieceType::Pawn)
+                    & (destination_square.get_rank() != self.side_to_move.get_back_rank())
+                {
+                    return false;
+                }
+
+                // Checks
+                if self
+                    .clone()
+                    .move_piece(m)
+                    .update_pins_and_checks()
+                    .get_check_mask()
+                    .count_ones()
+                    != 0
+                {
+                    return false;
+                }
+            }
+            ChessMove::CastleKingSide => {
+                let is_not_check = self.get_check_mask().count_ones() == 0;
+                if !self.get_castle_rights(self.side_to_move).has_kingside() {
+                    return false;
+                }
+                let (square_king_side_1, square_king_side_2) = match self.side_to_move {
+                    Color::White => (Square::F1, Square::G1),
+                    Color::Black => (Square::F8, Square::G8),
+                };
+                let is_king_side_under_attack = self.is_under_attack(square_king_side_1)
+                    | self.is_under_attack(square_king_side_2);
+                let king_side_between_mask = match self.side_to_move {
+                    Color::White => BETWEEN.get(Square::E1, Square::H1).unwrap(),
+                    Color::Black => BETWEEN.get(Square::E8, Square::H8).unwrap(),
+                };
+                let is_empty_king_side =
+                    (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+                if !(is_not_check & !is_king_side_under_attack & is_empty_king_side) {
+                    return false;
+                }
+            }
+            ChessMove::CastleQueenSide => {
+                let is_not_check = self.get_check_mask().count_ones() == 0;
+                if !self.get_castle_rights(self.side_to_move).has_queenside() {
+                    return false;
+                }
+
+                let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
+                    Color::White => (Square::D1, Square::C1),
+                    Color::Black => (Square::D8, Square::C8),
+                };
+                let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
+                    | self.is_under_attack(square_queen_side_2);
+                let queen_side_between_mask = match self.side_to_move {
+                    Color::White => BETWEEN.get(Square::E1, Square::A1).unwrap(),
+                    Color::Black => BETWEEN.get(Square::E8, Square::A8).unwrap(),
+                };
+                let is_empty_queen_side =
+                    (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+                if !(is_not_check & !is_queen_side_under_attack & is_empty_queen_side) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+
+    /// Returns true if current side has at least one legal move
+    pub fn is_terminal(&self) -> bool {
+        self.is_terminal_position
+    }
+
     /// Returns a HashSet of all legal moves for current board
-    pub fn get_legal_moves(&self) -> &LegalMoves {
-        &self.legal_moves
+    pub fn get_legal_moves(&self) -> LegalMoves {
+        let mut moves = LegalMoves::new();
+        let color_mask = self.get_color_mask(self.side_to_move);
+        let en_passant_mask = match self.get_en_passant() {
+            Some(sq) => BitBoard::from_square(sq),
+            None => BLANK,
+        };
+
+        for i in 0..NUMBER_PIECE_TYPES {
+            let piece_type = PieceType::from_index(i).unwrap();
+            let free_pieces_mask =
+                color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
+
+            for square in free_pieces_mask {
+                let mut full = match piece_type {
+                    PieceType::Pawn => {
+                        (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
+                            | (PAWN.get_captures(square, self.side_to_move)
+                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask))
+                    }
+                    PieceType::Knight => KNIGHT.get_moves(square) & !color_mask,
+                    PieceType::King => KING.get_moves(square) & !color_mask,
+                    PieceType::Bishop => BISHOP.get_moves(square),
+                    PieceType::Rook => ROOK.get_moves(square),
+                    PieceType::Queen => QUEEN.get_moves(square),
+                };
+
+                match piece_type {
+                    PieceType::Pawn | PieceType::Knight | PieceType::King => {}
+                    _ => {
+                        let mut legals = BLANK;
+                        for destination in full {
+                            let destination_mask = BitBoard::from_square(destination);
+                            let between_mask = BETWEEN.get(square, destination).unwrap();
+
+                            match ((between_mask | destination_mask) & self.combined_mask)
+                                .count_ones()
+                            {
+                                0 => {
+                                    legals |= destination_mask;
+                                }
+                                1 => match self.get_piece_color_on(destination) {
+                                    Some(c) => {
+                                        if c == !self.side_to_move {
+                                            legals |= destination_mask;
+                                        }
+                                    }
+                                    None => {}
+                                },
+                                _ => {}
+                            }
+                        }
+                        full = legals;
+                    }
+                }
+
+                for one in full
+                    .into_iter()
+                    .map(|s| mv!(piece_type, square, s))
+                    .filter(|m| {
+                        self.clone()
+                            .move_piece(m.piece_move().unwrap())
+                            .update_pins_and_checks()
+                            .get_check_mask()
+                            .count_ones()
+                            == 0
+                    })
+                {
+                    let m = one.piece_move().unwrap();
+                    if (m.get_piece_type() == PieceType::Pawn) & {
+                        let destination_rank = m.get_destination_square().get_rank();
+                        match self.side_to_move {
+                            Color::White => destination_rank == Rank::Eighth,
+                            Color::Black => destination_rank == Rank::First,
+                        }
+                    } {
+                        // Generate promotion moves
+                        let s = m.get_source_square();
+                        let d = m.get_destination_square();
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Knight));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Bishop));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Rook));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Queen));
+                    } else {
+                        moves.insert(one);
+                    }
+                }
+            }
+        }
+
+        // Check if castling is legal
+        let is_not_check = self.get_check_mask().count_ones() == 0;
+        if self.get_castle_rights(self.side_to_move).has_kingside() {
+            let (square_king_side_1, square_king_side_2) = match self.side_to_move {
+                Color::White => (Square::F1, Square::G1),
+                Color::Black => (Square::F8, Square::G8),
+            };
+            let is_king_side_under_attack =
+                self.is_under_attack(square_king_side_1) | self.is_under_attack(square_king_side_2);
+            let king_side_between_mask = match self.side_to_move {
+                Color::White => BETWEEN.get(Square::E1, Square::H1).unwrap(),
+                Color::Black => BETWEEN.get(Square::E8, Square::H8).unwrap(),
+            };
+            let is_empty_king_side =
+                (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+            if is_not_check & !is_king_side_under_attack & is_empty_king_side {
+                moves.insert(castle_king_side!());
+            }
+        }
+
+        if self.get_castle_rights(self.side_to_move).has_queenside() {
+            let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
+                Color::White => (Square::D1, Square::C1),
+                Color::Black => (Square::D8, Square::C8),
+            };
+            let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
+                | self.is_under_attack(square_queen_side_2);
+            let queen_side_between_mask = match self.side_to_move {
+                Color::White => BETWEEN.get(Square::E1, Square::A1).unwrap(),
+                Color::Black => BETWEEN.get(Square::E8, Square::A8).unwrap(),
+            };
+            let is_empty_queen_side =
+                (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+            if is_not_check & !is_queen_side_under_attack & is_empty_queen_side {
+                moves.insert(castle_queen_side!());
+            }
+        }
+
+        moves
     }
 
     /// Returns the hash of the position. Is used to detect the repetition draw
@@ -487,10 +745,7 @@ impl ChessBoard {
         &self,
         piece_move: PieceMove,
     ) -> Result<AmbiguityResolveType, Error> {
-        if !self
-            .get_legal_moves()
-            .contains(&ChessMove::MovePiece(piece_move))
-        {
+        if !self.is_legal_move(ChessMove::MovePiece(piece_move)) {
             return Err(Error::IllegalMoveDetected);
         }
 
@@ -605,11 +860,11 @@ impl ChessBoard {
 
     /// The method which allows to make moves on the board. Returns a new board instance
     /// if the move is legal
-    /// 
+    ///
     /// The simplest way to generate moves is by picking one from a set of available moves:
     /// ``board.get_legal_moves()`` or by simply creating a new move via macros: ``mv!()``,
     /// ``castle_king_side!()`` and ``castle_queen_side!()``
-    /// 
+    ///
     /// ```
     /// use libchess::{mv, PieceType, PieceMove, ChessMove};
     /// use libchess::boards::{ChessBoard, Square};
@@ -619,7 +874,7 @@ impl ChessBoard {
     /// ```
     pub fn make_move(&self, next_move: ChessMove) -> Result<Self, Error> {
         let mut next_position = self.clone();
-        if !self.get_legal_moves().contains(&next_move) {
+        if !self.is_legal_move(next_move) {
             return Err(Error::IllegalMoveDetected);
         }
 
@@ -672,7 +927,7 @@ impl ChessBoard {
             .set_side_to_move(!self.side_to_move)
             .update_en_passant(next_move)
             .update_pins_and_checks()
-            .update_legal_moves();
+            .update_terminal_status();
 
         Ok(next_position)
     }
@@ -812,57 +1067,7 @@ impl ChessBoard {
         self
     }
 
-    fn get_pins_and_checks(&self, square: Square) -> (BitBoard, BitBoard) {
-        let mut pinned = BLANK;
-        let mut checks = BLANK;
-
-        let opposite_color = !self.side_to_move;
-        let bishops_and_queens = self.get_piece_type_mask(PieceType::Bishop)
-            | self.get_piece_type_mask(PieceType::Queen);
-        let rooks_and_queens =
-            self.get_piece_type_mask(PieceType::Rook) | self.get_piece_type_mask(PieceType::Queen);
-
-        let (bishop_mask, rook_mask) = (BISHOP.get_moves(square), ROOK.get_moves(square));
-        let pinners = self.get_color_mask(opposite_color)
-            & (bishop_mask & bishops_and_queens | rook_mask & rooks_and_queens);
-
-        for pinner_square in pinners {
-            let between = self.get_combined_mask() & BETWEEN.get(square, pinner_square).unwrap();
-            if between == BLANK {
-                checks |= BitBoard::from_square(pinner_square);
-            } else if between.count_ones() == 1 {
-                pinned |= between;
-            }
-        }
-
-        checks |= self.get_color_mask(opposite_color)
-            & KNIGHT.get_moves(square)
-            & self.get_piece_type_mask(PieceType::Knight);
-
-        checks |= {
-            let mut all_pawn_attacks = BLANK;
-            for attacked_square in
-                self.get_color_mask(opposite_color) & self.get_piece_type_mask(PieceType::Pawn)
-            {
-                all_pawn_attacks |= PAWN.get_captures(attacked_square, opposite_color);
-            }
-            all_pawn_attacks & BitBoard::from_square(square)
-        };
-
-        checks |= self.get_color_mask(opposite_color)
-            & KING.get_moves(square)
-            & self.get_piece_type_mask(PieceType::King);
-
-        (pinned, checks)
-    }
-
-    fn is_under_attack(&self, square: Square) -> bool {
-        let (_, attacks) = self.get_pins_and_checks(square);
-        attacks.count_ones() > 0
-    }
-
-    fn update_legal_moves(&mut self) -> &mut Self {
-        let mut moves = LegalMoves::new();
+    fn update_terminal_status(&mut self) -> &mut Self {
         let color_mask = self.get_color_mask(self.side_to_move);
         let en_passant_mask = match self.get_en_passant() {
             Some(sq) => BitBoard::from_square(sq),
@@ -917,7 +1122,7 @@ impl ChessBoard {
                     }
                 }
 
-                for one in full
+                for _ in full
                     .into_iter()
                     .map(|s| mv!(piece_type, square, s))
                     .filter(|m| {
@@ -929,24 +1134,8 @@ impl ChessBoard {
                             == 0
                     })
                 {
-                    let m = one.piece_move().unwrap();
-                    if (m.get_piece_type() == PieceType::Pawn) & {
-                        let destination_rank = m.get_destination_square().get_rank();
-                        match self.side_to_move {
-                            Color::White => destination_rank == Rank::Eighth,
-                            Color::Black => destination_rank == Rank::First,
-                        }
-                    } {
-                        // Generate promotion moves
-                        let s = m.get_source_square();
-                        let d = m.get_destination_square();
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Knight));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Bishop));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Rook));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Queen));
-                    } else {
-                        moves.insert(one);
-                    }
+                    self.is_terminal_position = false;
+                    return self;
                 }
             }
         }
@@ -967,7 +1156,8 @@ impl ChessBoard {
             let is_empty_king_side =
                 (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
             if is_not_check & !is_king_side_under_attack & is_empty_king_side {
-                moves.insert(castle_king_side!());
+                self.is_terminal_position = false;
+                return self;
             }
         }
 
@@ -985,12 +1175,62 @@ impl ChessBoard {
             let is_empty_queen_side =
                 (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
             if is_not_check & !is_queen_side_under_attack & is_empty_queen_side {
-                moves.insert(castle_queen_side!());
+                self.is_terminal_position = false;
+                return self;
             }
         }
 
-        self.legal_moves = moves;
-        self
+        self.is_terminal_position = true;
+        return self;
+    }
+
+    fn get_pins_and_checks(&self, square: Square) -> (BitBoard, BitBoard) {
+        let mut pinned = BLANK;
+        let mut checks = BLANK;
+
+        let opposite_color = !self.side_to_move;
+        let bishops_and_queens = self.get_piece_type_mask(PieceType::Bishop)
+            | self.get_piece_type_mask(PieceType::Queen);
+        let rooks_and_queens =
+            self.get_piece_type_mask(PieceType::Rook) | self.get_piece_type_mask(PieceType::Queen);
+
+        let (bishop_mask, rook_mask) = (BISHOP.get_moves(square), ROOK.get_moves(square));
+        let pinners = self.get_color_mask(opposite_color)
+            & (bishop_mask & bishops_and_queens | rook_mask & rooks_and_queens);
+
+        for pinner_square in pinners {
+            let between = self.get_combined_mask() & BETWEEN.get(square, pinner_square).unwrap();
+            if between == BLANK {
+                checks |= BitBoard::from_square(pinner_square);
+            } else if between.count_ones() == 1 {
+                pinned |= between;
+            }
+        }
+
+        checks |= self.get_color_mask(opposite_color)
+            & KNIGHT.get_moves(square)
+            & self.get_piece_type_mask(PieceType::Knight);
+
+        checks |= {
+            let mut all_pawn_attacks = BLANK;
+            for attacked_square in
+                self.get_color_mask(opposite_color) & self.get_piece_type_mask(PieceType::Pawn)
+            {
+                all_pawn_attacks |= PAWN.get_captures(attacked_square, opposite_color);
+            }
+            all_pawn_attacks & BitBoard::from_square(square)
+        };
+
+        checks |= self.get_color_mask(opposite_color)
+            & KING.get_moves(square)
+            & self.get_piece_type_mask(PieceType::King);
+
+        (pinned, checks)
+    }
+
+    fn is_under_attack(&self, square: Square) -> bool {
+        let (_, attacks) = self.get_pins_and_checks(square);
+        attacks.count_ones() > 0
     }
 }
 
@@ -1195,6 +1435,13 @@ mod tests {
                 .len(),
             0
         );
+
+        let board =
+            ChessBoard::from_str("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1")
+                .unwrap();
+        for one in board.get_legal_moves() {
+            assert_eq!(board.is_legal_move(one), true);
+        }
     }
 
     #[test]

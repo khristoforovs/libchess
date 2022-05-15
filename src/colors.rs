@@ -1,3 +1,4 @@
+use crate::boards::Rank;
 use crate::errors::PieceRepresentationError as Error;
 use std::fmt;
 use std::ops::Not;
@@ -43,6 +44,13 @@ impl Color {
             0 => Ok(Color::White),
             1 => Ok(Color::Black),
             _ => Err(Error::InvalidColorIndex { n }),
+        }
+    }
+
+    pub fn get_back_rank(&self) -> Rank {
+        match self {
+            Color::White => Rank::First,
+            Color::Black => Rank::Eighth,
         }
     }
 }

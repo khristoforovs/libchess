@@ -131,7 +131,7 @@ impl ChessMove {
     }
 
     pub fn is_capture_on_board(&self, board: &ChessBoard) -> Result<bool, ChessBoardError> {
-        if !board.get_legal_moves().contains(self) {
+        if !board.is_legal_move(*self) {
             return Err(ChessBoardError::IllegalMoveDetected);
         }
         match self {

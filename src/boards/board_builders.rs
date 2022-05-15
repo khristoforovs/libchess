@@ -12,19 +12,19 @@ use std::str;
 use std::str::FromStr;
 
 /// The board builder is used for initializing the ChessBoard without position checks
-/// 
-/// It does not check the sanity of position, moves ordering etc. 
+///
+/// It does not check the sanity of position, moves ordering etc.
 /// Actually it just implements the parser of FEN strings and easy representation
 /// of ChessBoard's inner parameters. There is no need to create this object
 /// manually because ChessBoard implements initialization via BoardBuilder
 /// under the hood.
 /// Also this struct implements the default starting position of chess board
-/// 
+///
 /// ## Examples
 /// ```
 /// use libchess::boards::BoardBuilder;
 /// use std::str::FromStr;
-/// 
+///
 /// assert_eq!(
 ///     format!("{}", BoardBuilder::default()),
 ///     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
