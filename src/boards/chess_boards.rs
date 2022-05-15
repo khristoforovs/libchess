@@ -749,112 +749,53 @@ impl ChessBoard {
             return Err(Error::IllegalMoveDetected);
         }
 
-        match piece_move.get_piece_type() {
-            PieceType::Pawn => {
-                if piece_move.get_source_square().get_file()
-                    != piece_move.get_destination_square().get_file()
-                {
+        let piece_type = piece_move.get_piece_type();
+        let source_square = piece_move.get_source_square();
+        let destination_square = piece_move.get_destination_square();
+
+        if piece_type == PieceType::Pawn {
+            if source_square.get_file() != destination_square.get_file() {
+                return Ok(AmbiguityResolveType::ExtraFile);
+            }
+        } else if piece_type == PieceType::King {
+            return Ok(AmbiguityResolveType::Neither);
+        } else {
+            let pieces_mask =
+                self.get_piece_type_mask(piece_type) & self.get_color_mask(self.side_to_move);
+            let piece_moves = match piece_type {
+                PieceType::Knight => KNIGHT.get_moves(destination_square),
+                PieceType::Bishop => BISHOP.get_moves(destination_square),
+                PieceType::Rook => ROOK.get_moves(destination_square),
+                PieceType::Queen => QUEEN.get_moves(destination_square),
+                _ => BLANK,
+            };
+
+            let between_filter: Box<dyn Fn(&Square) -> bool> = match piece_type {
+                PieceType::Knight => Box::new(|_: &Square| true),
+                _ => Box::new(|x: &Square| {
+                    (BETWEEN
+                        .get(*x, piece_move.get_destination_square())
+                        .unwrap()
+                        & self.combined_mask)
+                        .count_ones()
+                        == 0
+                }),
+            };
+
+            let candidates: Vec<Square> = (piece_moves & pieces_mask)
+                .into_iter()
+                .filter(between_filter)
+                .collect();
+
+            if candidates.len() > 1 {
+                if (BitBoard::from_file(source_square.get_file()) & pieces_mask).count_ones() > 1 {
+                    return Ok(AmbiguityResolveType::ExtraSquare);
+                } else {
                     return Ok(AmbiguityResolveType::ExtraFile);
                 }
             }
-            PieceType::Knight => {
-                let knights = self.get_piece_type_mask(PieceType::Knight)
-                    & self.get_color_mask(self.side_to_move);
-                let candidates: Vec<Square> =
-                    (KNIGHT.get_moves(piece_move.get_destination_square()) & knights)
-                        .into_iter()
-                        .collect();
-                if candidates.len() > 1 {
-                    if (BitBoard::from_file(piece_move.get_source_square().get_file()) & knights)
-                        .count_ones()
-                        > 1
-                    {
-                        return Ok(AmbiguityResolveType::ExtraSquare);
-                    } else {
-                        return Ok(AmbiguityResolveType::ExtraFile);
-                    }
-                }
-            }
-            PieceType::Bishop => {
-                let bishops = self.get_piece_type_mask(PieceType::Bishop)
-                    & self.get_color_mask(self.side_to_move);
-                let candidates: Vec<Square> =
-                    (BISHOP.get_moves(piece_move.get_destination_square()) & bishops)
-                        .into_iter()
-                        .filter(|x| {
-                            (BETWEEN
-                                .get(*x, piece_move.get_destination_square())
-                                .unwrap()
-                                & self.combined_mask)
-                                .count_ones()
-                                == 0
-                        })
-                        .collect();
-                if candidates.len() > 1 {
-                    if (BitBoard::from_file(piece_move.get_source_square().get_file()) & bishops)
-                        .count_ones()
-                        > 1
-                    {
-                        return Ok(AmbiguityResolveType::ExtraSquare);
-                    } else {
-                        return Ok(AmbiguityResolveType::ExtraFile);
-                    }
-                }
-            }
-            PieceType::Rook => {
-                let rooks = self.get_piece_type_mask(PieceType::Rook)
-                    & self.get_color_mask(self.side_to_move);
-                let candidates: Vec<Square> = (ROOK.get_moves(piece_move.get_destination_square())
-                    & rooks)
-                    .into_iter()
-                    .filter(|x| {
-                        (BETWEEN
-                            .get(*x, piece_move.get_destination_square())
-                            .unwrap()
-                            & self.combined_mask)
-                            .count_ones()
-                            == 0
-                    })
-                    .collect();
-                if candidates.len() > 1 {
-                    if (BitBoard::from_file(piece_move.get_source_square().get_file()) & rooks)
-                        .count_ones()
-                        > 1
-                    {
-                        return Ok(AmbiguityResolveType::ExtraSquare);
-                    } else {
-                        return Ok(AmbiguityResolveType::ExtraFile);
-                    }
-                }
-            }
-            PieceType::Queen => {
-                let queens = self.get_piece_type_mask(PieceType::Queen)
-                    & self.get_color_mask(self.side_to_move);
-                let candidates: Vec<Square> =
-                    (QUEEN.get_moves(piece_move.get_destination_square()) & queens)
-                        .into_iter()
-                        .filter(|x| {
-                            (BETWEEN
-                                .get(*x, piece_move.get_destination_square())
-                                .unwrap()
-                                & self.combined_mask)
-                                .count_ones()
-                                == 0
-                        })
-                        .collect();
-                if candidates.len() > 1 {
-                    if (BitBoard::from_file(piece_move.get_source_square().get_file()) & queens)
-                        .count_ones()
-                        > 1
-                    {
-                        return Ok(AmbiguityResolveType::ExtraSquare);
-                    } else {
-                        return Ok(AmbiguityResolveType::ExtraFile);
-                    }
-                }
-            }
-            PieceType::King => {}
         }
+
         Ok(AmbiguityResolveType::Neither)
     }
 
