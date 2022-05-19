@@ -1,5 +1,5 @@
 mod castling;
-pub use castling::CastlingRights;
+pub use castling::{CastlingRights, CASTLING_RIGHTS_NUMBER};
 
 #[macro_use]
 mod chess_moves;
@@ -16,7 +16,7 @@ pub use games::{Action, Game, GameStatus};
 pub mod move_masks;
 
 mod pieces;
-pub use pieces::{Piece, PieceType, NUMBER_PIECE_TYPES};
+pub use pieces::{Piece, PieceType, PIECE_TYPES_NUMBER};
 
 pub mod boards;
 

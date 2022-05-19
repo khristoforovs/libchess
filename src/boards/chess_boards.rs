@@ -1,6 +1,7 @@
 use super::BoardBuilder;
 use super::{BitBoard, BLANK};
 use super::{File, Rank, FILES, RANKS};
+use super::{PositionHashValueType, ZOBRIST_TABLES as ZOBRIST};
 use super::{Square, SQUARES_NUMBER};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
@@ -12,13 +13,11 @@ use crate::CastlingRights;
 use crate::{castle_king_side, castle_queen_side, mv};
 use crate::{ChessMove, PieceMove, PromotionPieceType};
 use crate::{Color, COLORS_NUMBER};
-use crate::{Piece, PieceType, NUMBER_PIECE_TYPES};
+use crate::{Piece, PieceType, PIECE_TYPES_NUMBER};
 use colored::Colorize;
 use either::Either;
-use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_set::HashSet;
 use std::fmt;
-use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 pub type LegalMoves = HashSet<ChessMove>;
@@ -49,7 +48,7 @@ pub type LegalMoves = HashSet<ChessMove>;
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
-    pieces_mask: [BitBoard; NUMBER_PIECE_TYPES],
+    pieces_mask: [BitBoard; PIECE_TYPES_NUMBER],
     colors_mask: [BitBoard; COLORS_NUMBER],
     combined_mask: BitBoard,
     side_to_move: Color,
@@ -61,16 +60,7 @@ pub struct ChessBoard {
     black_moved_counter: usize,
     flipped_view: bool,
     is_terminal_position: bool,
-}
-
-impl Hash for ChessBoard {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.pieces_mask.hash(state);
-        self.colors_mask.hash(state);
-        self.side_to_move.hash(state);
-        self.castle_rights.hash(state);
-        self.en_passant.hash(state);
-    }
+    hash: PositionHashValueType,
 }
 
 impl TryFrom<&BoardBuilder> for ChessBoard {
@@ -95,6 +85,8 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
             .set_moves_since_capture(builder.get_moves_since_capture())
             .update_pins_and_checks()
             .update_terminal_status();
+
+        board.hash = ZOBRIST.calculate_position_hash(&board);
 
         match board.validate() {
             None => Ok(board),
@@ -198,7 +190,7 @@ impl Default for ChessBoard {
 impl ChessBoard {
     fn new() -> Self {
         ChessBoard {
-            pieces_mask: [BLANK; NUMBER_PIECE_TYPES],
+            pieces_mask: [BLANK; PIECE_TYPES_NUMBER],
             colors_mask: [BLANK; COLORS_NUMBER],
             combined_mask: BLANK,
             side_to_move: Color::White,
@@ -210,6 +202,7 @@ impl ChessBoard {
             black_moved_counter: 0,
             flipped_view: false,
             is_terminal_position: false,
+            hash: 0,
         }
     }
 
@@ -220,8 +213,8 @@ impl ChessBoard {
         };
 
         // check overlapping of piece type masks
-        for i in 0..(NUMBER_PIECE_TYPES - 1) {
-            for j in i + 1..NUMBER_PIECE_TYPES {
+        for i in 0..(PIECE_TYPES_NUMBER - 1) {
+            for j in i + 1..PIECE_TYPES_NUMBER {
                 if (self.get_piece_type_mask(PieceType::from_index(i).unwrap())
                     & self.get_piece_type_mask(PieceType::from_index(j).unwrap()))
                     != BLANK
@@ -233,7 +226,7 @@ impl ChessBoard {
 
         // make sure that each square has only 0 or 1 piece
         let calculated_combined = {
-            (0..NUMBER_PIECE_TYPES).fold(BLANK, |current, i| {
+            (0..PIECE_TYPES_NUMBER).fold(BLANK, |current, i| {
                 current | self.get_piece_type_mask(PieceType::from_index(i).unwrap())
             })
         };
@@ -610,7 +603,7 @@ impl ChessBoard {
             None => BLANK,
         };
 
-        for i in 0..NUMBER_PIECE_TYPES {
+        for i in 0..PIECE_TYPES_NUMBER {
             let piece_type = PieceType::from_index(i).unwrap();
             let free_pieces_mask =
                 color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
@@ -734,10 +727,8 @@ impl ChessBoard {
     }
 
     /// Returns the hash of the position. Is used to detect the repetition draw
-    pub fn get_hash(&self) -> u64 {
-        let mut h = DefaultHasher::new();
-        self.hash(&mut h);
-        h.finish()
+    pub fn get_hash(&self) -> PositionHashValueType {
+        self.hash
     }
 
     /// This method is needed to represent the chess move without any ambiguity in PGN-like strings
@@ -896,16 +887,34 @@ impl ChessBoard {
     }
 
     fn set_side_to_move(&mut self, color: Color) -> &mut Self {
+        if color != self.side_to_move {
+            self.hash ^= ZOBRIST.get_black_to_move_value();
+        }
+
         self.side_to_move = color;
         self
     }
 
     fn set_castling_rights(&mut self, color: Color, rights: CastlingRights) -> &mut Self {
+        let current_rights = self.castle_rights[color.to_index()];
+        if current_rights != rights {
+            self.hash ^= ZOBRIST.get_castling_rights_value(current_rights, color);
+            self.hash ^= ZOBRIST.get_castling_rights_value(rights, color);
+        }
+
         self.castle_rights[color.to_index()] = rights;
         self
     }
 
     fn set_en_passant(&mut self, square: Option<Square>) -> &mut Self {
+        let current_ep = self.get_en_passant();
+        if let Some(sq) = current_ep {
+            self.hash ^= ZOBRIST.get_en_passant_value(sq);
+        }
+        if let Some(sq) = square {
+            self.hash ^= ZOBRIST.get_en_passant_value(sq);
+        }
+
         self.en_passant = square;
         self
     }
@@ -916,6 +925,8 @@ impl ChessBoard {
         self.combined_mask |= square_bitboard;
         self.pieces_mask[piece.0.to_index()] |= square_bitboard;
         self.colors_mask[piece.1.to_index()] |= square_bitboard;
+
+        self.hash ^= ZOBRIST.get_piece_square_value(piece, square);
         self
     }
 
@@ -928,6 +939,8 @@ impl ChessBoard {
                 self.combined_mask &= mask;
                 self.pieces_mask[piece_type.to_index()] &= mask;
                 self.colors_mask[color.to_index()] &= mask;
+
+                self.hash ^= ZOBRIST.get_piece_square_value(Piece(piece_type, color), square);
             }
             None => {}
         }
@@ -1015,7 +1028,7 @@ impl ChessBoard {
             None => BLANK,
         };
 
-        for i in 0..NUMBER_PIECE_TYPES {
+        for i in 0..PIECE_TYPES_NUMBER {
             let piece_type = PieceType::from_index(i).unwrap();
             let free_pieces_mask =
                 color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();

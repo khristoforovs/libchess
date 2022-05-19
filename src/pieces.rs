@@ -15,7 +15,7 @@ pub enum PieceType {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Piece(pub PieceType, pub Color);
 
-pub const NUMBER_PIECE_TYPES: usize = 6;
+pub const PIECE_TYPES_NUMBER: usize = 6;
 
 impl fmt::Display for PieceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -9,6 +9,8 @@ pub enum CastlingRights {
     BothSides,
 }
 
+pub const CASTLING_RIGHTS_NUMBER: usize = 4;
+
 impl Add for CastlingRights {
     type Output = CastlingRights;
 

@@ -289,6 +289,7 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use crate::boards::Square;
+    use crate::boards::ZOBRIST_TABLES as ZOBRIST;
     use crate::chess_moves::PieceMove;
 
     use super::*;
@@ -421,5 +422,63 @@ mod tests {
         game.make_move(Action::Resign).unwrap();
 
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
+    }
+
+    #[test]
+    fn hashes() {
+        let mut game = Game::default();
+        let moves = vec![
+            mv!(PieceType::Pawn, Square::E2, Square::E4), // 1.
+            mv!(PieceType::Pawn, Square::E7, Square::E5),
+            mv!(PieceType::Knight, Square::G1, Square::F3), // 2.
+            mv!(PieceType::Knight, Square::B8, Square::C6),
+            mv!(PieceType::Bishop, Square::F1, Square::C4), // 3.
+            mv!(PieceType::Bishop, Square::F8, Square::C5),
+            mv!(PieceType::Pawn, Square::C2, Square::C3), // 4.
+            mv!(PieceType::Knight, Square::G8, Square::F6),
+            castle_king_side!(), // 5.
+            mv!(PieceType::Knight, Square::F6, Square::E4),
+            mv!(PieceType::Bishop, Square::C4, Square::D5), // 6.
+            mv!(PieceType::Knight, Square::E4, Square::F2),
+            mv!(PieceType::Rook, Square::F1, Square::F2), // 7.
+            mv!(PieceType::Bishop, Square::C5, Square::F2),
+            mv!(PieceType::King, Square::G1, Square::F2), // 8.
+            mv!(PieceType::Knight, Square::C6, Square::E7),
+            mv!(PieceType::Queen, Square::D1, Square::B3), // 9.
+            castle_king_side!(),
+            mv!(PieceType::Bishop, Square::D5, Square::E4), // 10.
+            mv!(PieceType::Pawn, Square::D7, Square::D5),
+            mv!(PieceType::Bishop, Square::E4, Square::C2), // 11.
+            mv!(PieceType::Pawn, Square::E5, Square::E4),
+            mv!(PieceType::Knight, Square::F3, Square::E1), // 12.
+            mv!(PieceType::Knight, Square::E7, Square::G6),
+            mv!(PieceType::Pawn, Square::C3, Square::C4), // 13.
+            mv!(PieceType::Pawn, Square::D5, Square::D4),
+            mv!(PieceType::Queen, Square::B3, Square::G3), // 14.
+            mv!(PieceType::Pawn, Square::F7, Square::F5),
+            mv!(PieceType::King, Square::F2, Square::G1), // 15.
+            mv!(PieceType::Pawn, Square::C7, Square::C5),
+            mv!(PieceType::Pawn, Square::D2, Square::D3), // 16.
+            mv!(PieceType::Pawn, Square::F5, Square::F4),
+            mv!(PieceType::Queen, Square::G3, Square::F2), // 17.
+            mv!(PieceType::Pawn, Square::E4, Square::E3),
+            mv!(PieceType::Queen, Square::F2, Square::F3), // 18.
+            mv!(PieceType::Queen, Square::D8, Square::H4),
+            mv!(PieceType::Queen, Square::F3, Square::D5), // 19.
+            mv!(PieceType::King, Square::G8, Square::H8),
+            mv!(PieceType::Knight, Square::E1, Square::F3), // 20.
+            mv!(PieceType::Queen, Square::H4, Square::F2),
+            mv!(PieceType::King, Square::G1, Square::H1), // 21.
+            mv!(PieceType::Knight, Square::G6, Square::H4),
+            mv!(PieceType::Queen, Square::D5, Square::G5), // 22.
+            mv!(PieceType::Bishop, Square::C8, Square::H3),
+        ];
+        for one in moves.iter() {
+            game.make_move(Action::MakeMove(*one)).unwrap();
+        }
+
+        let direct_calculated_hash = ZOBRIST.calculate_position_hash(&game.get_position());
+        let live_updating_hash = game.get_position().get_hash();
+        assert_eq!(direct_calculated_hash, live_updating_hash);
     }
 }

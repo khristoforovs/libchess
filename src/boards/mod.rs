@@ -22,3 +22,6 @@ pub use squares::{Square, SQUARES_NUMBER};
 
 mod chess_boards;
 pub use chess_boards::{ChessBoard, LegalMoves};
+
+mod zobrist;
+pub use zobrist::{PositionHashValueType, ZOBRIST_TABLES};
