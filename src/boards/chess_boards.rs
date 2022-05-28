@@ -34,8 +34,9 @@ pub type LegalMoves = HashSet<BoardMove>;
 ///
 /// ## Examples
 /// ```
-/// use libchess::boards::{ChessBoard, Square};
-/// use libchess::{mv, PieceType, PieceMove, ChessMove};
+/// use libchess::boards::{ChessBoard, Square, BoardMove, BoardMoveOption, PieceMove};
+/// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::{PieceType};
 /// use std::str::FromStr;
 ///
 /// println!("{}", ChessBoard::default());
@@ -797,8 +798,9 @@ impl ChessBoard {
     /// ``castle_king_side!()`` and ``castle_queen_side!()``
     ///
     /// ```
-    /// use libchess::{mv, PieceType, PieceMove, ChessMove};
-    /// use libchess::boards::{ChessBoard, Square};
+    /// use libchess::boards::{ChessBoard, Square, BoardMove, BoardMoveOption, PieceMove};
+    /// use libchess::{castle_king_side, castle_queen_side, mv, PieceType};
+    ///
     /// let board = ChessBoard::default();
     /// let next_board = board.make_move(mv!(PieceType::Pawn, Square::E2, Square::E4)).unwrap();
     /// println!("{}", next_board);
