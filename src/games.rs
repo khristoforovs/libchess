@@ -63,8 +63,9 @@ impl fmt::Display for GameStatus {
 /// ## Examples
 /// ```
 /// use libchess::{Game, Action, GameStatus, Color};
-/// use libchess::boards::{ChessBoard, Square, BoardMove, BoardMoveOption, PieceMove};
-/// use libchess::{castle_king_side, castle_queen_side, mv, PieceType};
+/// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
+/// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::PieceType::*;
 ///
 /// let mut game = Game::default();
 /// let moves = vec![

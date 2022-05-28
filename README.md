@@ -9,10 +9,7 @@ This library implements the game of chess: chess board, pieces, rules and legal 
 The easiest way to initialize the board is to use the FEN-string. Also, if you
 need a default starting chess position you can use the default method:
 ```rust
-use libchess::boards::{ChessBoard, Square};
-use libchess::{mv, PieceType, PieceMove, ChessMove};
-use std::str::FromStr;
- 
+use libchess::boards::ChessBoard; 
 println!("{}", ChessBoard::default());
 
 let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
@@ -23,16 +20,17 @@ println!("{}", board.as_fen());
 ### Making moves:
 ```rust
 use libchess::{Game, Action, GameStatus, Color};
-use libchess::{mv, PieceType, PieceMove, ChessMove};
-use libchess::boards::Square;
+use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
+use libchess::{castle_king_side, castle_queen_side, mv};
+use libchess::PieceType::*;
 
 let mut game = Game::default();
 let moves = vec![
-   mv!(PieceType::Pawn, Square::E2, Square::E4),
-   mv!(PieceType::Pawn, Square::E7, Square::E5),
-   mv!(PieceType::Queen, Square::D1, Square::H5),
-   mv!(PieceType::King, Square::E8, Square::E7),
-   mv!(PieceType::Queen, Square::H5, Square::E5),
+   mv!(Pawn, E2, E4),
+   mv!(Pawn, E7, E5),
+   mv!(Queen, D1, H5),
+   mv!(King, E8, E7),
+   mv!(Queen, H5, E5),
 ];
 
 for one in moves.iter() {

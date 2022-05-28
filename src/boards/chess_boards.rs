@@ -34,9 +34,9 @@ pub type LegalMoves = HashSet<BoardMove>;
 ///
 /// ## Examples
 /// ```
-/// use libchess::boards::{ChessBoard, Square, BoardMove, BoardMoveOption, PieceMove};
+/// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
 /// use libchess::{castle_king_side, castle_queen_side, mv};
-/// use libchess::{PieceType};
+/// use libchess::PieceType::*;
 /// use std::str::FromStr;
 ///
 /// println!("{}", ChessBoard::default());
@@ -44,7 +44,7 @@ pub type LegalMoves = HashSet<BoardMove>;
 /// let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
 /// println!("{}", board);
 /// println!("{}", board.as_fen());
-/// println!("{}", board.make_move(mv!(PieceType::King, Square::F4, Square::G5)).unwrap());
+/// println!("{}", board.make_move(mv!(King, F4, G5)).unwrap());
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
@@ -793,11 +793,12 @@ impl ChessBoard {
     /// ``castle_king_side!()`` and ``castle_queen_side!()``
     ///
     /// ```
-    /// use libchess::boards::{ChessBoard, Square, BoardMove, BoardMoveOption, PieceMove};
-    /// use libchess::{castle_king_side, castle_queen_side, mv, PieceType};
+    /// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
+    /// use libchess::{castle_king_side, castle_queen_side, mv};
+    /// use libchess::PieceType::*;
     ///
     /// let board = ChessBoard::default();
-    /// let next_board = board.make_move(mv!(PieceType::Pawn, Square::E2, Square::E4)).unwrap();
+    /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
     /// println!("{}", next_board);
     /// ```
     pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
