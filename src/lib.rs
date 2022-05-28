@@ -1,10 +1,6 @@
 mod castling;
 pub use castling::{CastlingRights, CASTLING_RIGHTS_NUMBER};
 
-#[macro_use]
-mod chess_moves;
-pub use chess_moves::{ChessMove, PieceMove, PromotionPieceType};
-
 mod colors;
 pub use colors::{Color, COLORS_NUMBER};
 
@@ -21,4 +17,4 @@ pub use pieces::{Piece, PieceType, PIECE_TYPES_NUMBER};
 pub mod boards;
 
 mod game_history;
-pub use game_history::{AmbiguityResolveType, GameHistory, HistoryChessMove};
+pub use game_history::GameHistory;

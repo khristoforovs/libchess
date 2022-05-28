@@ -64,6 +64,9 @@ pub enum ChessBoardError {
 
     #[fail(display = "Illegal move detected")]
     IllegalMoveDetected,
+
+    #[fail(display = "Chess move was not associated with the board")]
+    NotAssociatedBoardMove,
 }
 
 #[derive(Debug, Clone, Fail)]

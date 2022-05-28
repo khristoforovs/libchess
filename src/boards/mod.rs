@@ -25,3 +25,9 @@ pub use chess_boards::{ChessBoard, LegalMoves};
 
 mod zobrist;
 pub use zobrist::{PositionHashValueType, ZOBRIST_TABLES};
+
+#[macro_use]
+mod board_moves;
+pub use board_moves::{
+    BoardMove, BoardMoveOption, DisplayAmbiguityType, PieceMove, PromotionPieceType,
+};

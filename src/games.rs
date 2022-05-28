@@ -3,9 +3,9 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
+use crate::boards::BoardMove;
 use crate::boards::BLANK;
 use crate::boards::{ChessBoard, LegalMoves};
-use crate::chess_moves::ChessMove;
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
@@ -19,7 +19,7 @@ const UNIQUE_POSITIONS_CAPACITY: usize = 100;
 /// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
-    MakeMove(ChessMove),
+    MakeMove(BoardMove),
     OfferDraw,
     AcceptDraw,
     DeclineDraw,
@@ -288,9 +288,10 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::boards::Square;
     use crate::boards::ZOBRIST_TABLES as ZOBRIST;
-    use crate::chess_moves::PieceMove;
+    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, Square};
+    use crate::PieceType;
+    use crate::{castle_king_side, castle_queen_side, mv};
 
     use super::*;
 

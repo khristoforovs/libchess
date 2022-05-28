@@ -129,8 +129,9 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::{Square, ZOBRIST_TABLES as ZOBRIST};
-    use crate::{ChessMove, PieceMove, PieceType};
+    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, Square, ZOBRIST_TABLES as ZOBRIST};
+    use crate::PieceType;
+    use crate::{castle_king_side, castle_queen_side, mv};
 
     #[test]
     fn calculate_hash() {

@@ -1,5 +1,6 @@
 use super::BoardBuilder;
 use super::{BitBoard, BLANK};
+use super::{BoardMove, BoardMoveOption, DisplayAmbiguityType, PieceMove, PromotionPieceType};
 use super::{File, Rank, FILES, RANKS};
 use super::{PositionHashValueType, ZOBRIST_TABLES as ZOBRIST};
 use super::{Square, SQUARES_NUMBER};
@@ -8,10 +9,8 @@ use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
-use crate::AmbiguityResolveType;
 use crate::CastlingRights;
 use crate::{castle_king_side, castle_queen_side, mv};
-use crate::{ChessMove, PieceMove, PromotionPieceType};
 use crate::{Color, COLORS_NUMBER};
 use crate::{Piece, PieceType, PIECE_TYPES_NUMBER};
 use colored::Colorize;
@@ -20,7 +19,7 @@ use std::collections::hash_set::HashSet;
 use std::fmt;
 use std::str::FromStr;
 
-pub type LegalMoves = HashSet<ChessMove>;
+pub type LegalMoves = HashSet<BoardMove>;
 
 /// The Chess Board. No more, no less
 ///
@@ -458,9 +457,9 @@ impl ChessBoard {
     }
 
     /// Returns true if specified move is legal for current position
-    pub fn is_legal_move(&self, chess_move: ChessMove) -> bool {
-        match chess_move {
-            ChessMove::MovePiece(m) => {
+    pub fn is_legal_move(&self, chess_move: BoardMove) -> bool {
+        match chess_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
                 // Check source square
                 let source_square = m.get_source_square();
                 if (self.get_piece_type_mask(m.get_piece_type())
@@ -541,7 +540,7 @@ impl ChessBoard {
                     return false;
                 }
             }
-            ChessMove::CastleKingSide => {
+            BoardMoveOption::CastleKingSide => {
                 let is_not_check = self.get_check_mask().count_ones() == 0;
                 if !self.get_castle_rights(self.side_to_move).has_kingside() {
                     return false;
@@ -562,7 +561,7 @@ impl ChessBoard {
                     return false;
                 }
             }
-            ChessMove::CastleQueenSide => {
+            BoardMoveOption::CastleQueenSide => {
                 let is_not_check = self.get_check_mask().count_ones() == 0;
                 if !self.get_castle_rights(self.side_to_move).has_queenside() {
                     return false;
@@ -735,8 +734,8 @@ impl ChessBoard {
     pub fn get_move_ambiguity_type(
         &self,
         piece_move: PieceMove,
-    ) -> Result<AmbiguityResolveType, Error> {
-        if !self.is_legal_move(ChessMove::MovePiece(piece_move)) {
+    ) -> Result<DisplayAmbiguityType, Error> {
+        if !self.is_legal_move(BoardMove::new(BoardMoveOption::MovePiece(piece_move))) {
             return Err(Error::IllegalMoveDetected);
         }
 
@@ -746,10 +745,10 @@ impl ChessBoard {
 
         if piece_type == PieceType::Pawn {
             if source_square.get_file() != destination_square.get_file() {
-                return Ok(AmbiguityResolveType::ExtraFile);
+                return Ok(DisplayAmbiguityType::ExtraFile);
             }
         } else if piece_type == PieceType::King {
-            return Ok(AmbiguityResolveType::Neither);
+            return Ok(DisplayAmbiguityType::Neither);
         } else {
             let pieces_mask =
                 self.get_piece_type_mask(piece_type) & self.get_color_mask(self.side_to_move);
@@ -780,14 +779,14 @@ impl ChessBoard {
 
             if candidates.len() > 1 {
                 if (BitBoard::from_file(source_square.get_file()) & pieces_mask).count_ones() > 1 {
-                    return Ok(AmbiguityResolveType::ExtraSquare);
+                    return Ok(DisplayAmbiguityType::ExtraSquare);
                 } else {
-                    return Ok(AmbiguityResolveType::ExtraFile);
+                    return Ok(DisplayAmbiguityType::ExtraFile);
                 }
             }
         }
 
-        Ok(AmbiguityResolveType::Neither)
+        Ok(DisplayAmbiguityType::Neither)
     }
 
     /// The method which allows to make moves on the board. Returns a new board instance
@@ -804,7 +803,7 @@ impl ChessBoard {
     /// let next_board = board.make_move(mv!(PieceType::Pawn, Square::E2, Square::E4)).unwrap();
     /// println!("{}", next_board);
     /// ```
-    pub fn make_move(&self, next_move: ChessMove) -> Result<Self, Error> {
+    pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
         let mut next_position = self.clone();
         if !self.is_legal_move(next_move) {
             return Err(Error::IllegalMoveDetected);
@@ -813,11 +812,11 @@ impl ChessBoard {
         next_position
             .update_black_moved_counter()
             .update_moves_since_capture(next_move);
-        match next_move {
-            ChessMove::MovePiece(m) => {
+        match next_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
                 next_position.move_piece(m);
             }
-            ChessMove::CastleKingSide => {
+            BoardMoveOption::CastleKingSide => {
                 let king_rank = match self.side_to_move {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
@@ -835,7 +834,7 @@ impl ChessBoard {
                     None,
                 ));
             }
-            ChessMove::CastleQueenSide => {
+            BoardMoveOption::CastleQueenSide => {
                 let king_rank = match self.side_to_move {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
@@ -954,16 +953,16 @@ impl ChessBoard {
         self
     }
 
-    fn update_moves_since_capture(&mut self, last_move: ChessMove) -> &mut Self {
-        match last_move {
-            ChessMove::MovePiece(m) => {
+    fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
+        match last_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
                 if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(self) {
                     self.moves_since_capture_counter = 0;
                 } else {
                     self.moves_since_capture_counter += 1;
                 }
             }
-            ChessMove::CastleKingSide | ChessMove::CastleQueenSide => {
+            _ => {
                 self.moves_since_capture_counter = 0;
             }
         }
@@ -976,9 +975,9 @@ impl ChessBoard {
         self
     }
 
-    fn update_en_passant(&mut self, last_move: ChessMove) -> &mut Self {
-        match last_move {
-            ChessMove::MovePiece(m) => {
+    fn update_en_passant(&mut self, last_move: BoardMove) -> &mut Self {
+        match last_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
                 let source_rank_index = m.get_source_square().get_rank().to_index();
                 let destination_rank_index = m.get_destination_square().get_rank().to_index();
                 if (m.get_piece_type() == PieceType::Pawn)
@@ -993,19 +992,19 @@ impl ChessBoard {
                     self.set_en_passant(None);
                 }
             }
-            ChessMove::CastleKingSide | ChessMove::CastleQueenSide => {
+            _ => {
                 self.set_en_passant(None);
             }
         }
         self
     }
 
-    fn update_castling_rights(&mut self, last_move: ChessMove) -> &mut Self {
+    fn update_castling_rights(&mut self, last_move: BoardMove) -> &mut Self {
         self.set_castling_rights(
             self.side_to_move,
             self.get_castle_rights(self.side_to_move)
-                - match last_move {
-                    ChessMove::MovePiece(m) => match m.get_piece_type() {
+                - match last_move.get_move_option() {
+                    BoardMoveOption::MovePiece(m) => match m.get_piece_type() {
                         PieceType::Rook => match m.get_source_square().get_file() {
                             File::H => CastlingRights::KingSide,
                             File::A => CastlingRights::QueenSide,
@@ -1014,8 +1013,7 @@ impl ChessBoard {
                         PieceType::King => CastlingRights::BothSides,
                         _ => CastlingRights::Neither,
                     },
-                    ChessMove::CastleKingSide => CastlingRights::BothSides,
-                    ChessMove::CastleQueenSide => CastlingRights::BothSides,
+                    _ => CastlingRights::BothSides,
                 },
         );
         self
