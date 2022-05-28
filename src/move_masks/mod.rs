@@ -23,6 +23,12 @@ impl PieceMoveTable {
     }
 }
 
+impl Default for PieceMoveTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 mod bishops;
 pub use bishops::generate_bishop_moves;
 

@@ -103,7 +103,7 @@ impl fmt::Display for BitBoard {
                     s.push_str(". ");
                 }
             }
-            s.push_str("\n");
+            s.push('\n');
         }
         write!(f, "{}", s)
     }

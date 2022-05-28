@@ -1,9 +1,9 @@
 use super::BoardBuilder;
+use super::{squares, Square, SQUARES_NUMBER};
 use super::{BitBoard, BLANK};
 use super::{BoardMove, BoardMoveOption, DisplayAmbiguityType, PieceMove, PromotionPieceType};
 use super::{File, Rank, FILES, RANKS};
 use super::{PositionHashValueType, ZOBRIST_TABLES as ZOBRIST};
-use super::{Square, SQUARES_NUMBER};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
@@ -115,7 +115,7 @@ impl FromStr for ChessBoard {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        Ok(BoardBuilder::from_str(value)?.try_into()?)
+        BoardBuilder::from_str(value)?.try_into()
     }
 }
 
@@ -271,13 +271,13 @@ impl ChessBoard {
         // validate castling rights
         let white_rook_mask =
             self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::White);
-        if self.get_king_square(Color::White) == Square::E1 {
+        if self.get_king_square(Color::White) == squares::E1 {
             let validation_mask = match self.get_castle_rights(Color::White) {
                 CastlingRights::Neither => BLANK,
-                CastlingRights::QueenSide => BitBoard::from_square(Square::A1),
-                CastlingRights::KingSide => BitBoard::from_square(Square::H1),
+                CastlingRights::QueenSide => BitBoard::from_square(squares::A1),
+                CastlingRights::KingSide => BitBoard::from_square(squares::H1),
                 CastlingRights::BothSides => {
-                    BitBoard::from_square(Square::A1) | BitBoard::from_square(Square::H1)
+                    BitBoard::from_square(squares::A1) | BitBoard::from_square(squares::H1)
                 }
             };
             if (white_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
@@ -294,13 +294,13 @@ impl ChessBoard {
 
         let black_rook_mask =
             self.get_piece_type_mask(PieceType::Rook) & self.get_color_mask(Color::Black);
-        if self.get_king_square(Color::Black) == Square::E8 {
+        if self.get_king_square(Color::Black) == squares::E8 {
             let validation_mask = match self.get_castle_rights(Color::Black) {
                 CastlingRights::Neither => BLANK,
-                CastlingRights::QueenSide => BitBoard::from_square(Square::A8),
-                CastlingRights::KingSide => BitBoard::from_square(Square::H8),
+                CastlingRights::QueenSide => BitBoard::from_square(squares::A8),
+                CastlingRights::KingSide => BitBoard::from_square(squares::H8),
                 CastlingRights::BothSides => {
-                    BitBoard::from_square(Square::A8) | BitBoard::from_square(Square::H8)
+                    BitBoard::from_square(squares::A8) | BitBoard::from_square(squares::H8)
                 }
             };
             if (black_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
@@ -420,29 +420,25 @@ impl ChessBoard {
         let bitboard = BitBoard::from_square(square);
         if self.get_combined_mask() & bitboard == BLANK {
             None
-        } else {
-            if (self.get_piece_type_mask(PieceType::Pawn)
-                | self.get_piece_type_mask(PieceType::Knight)
-                | self.get_piece_type_mask(PieceType::Bishop))
-                & bitboard
-                != BLANK
-            {
-                if self.get_piece_type_mask(PieceType::Pawn) & bitboard != BLANK {
-                    Some(PieceType::Pawn)
-                } else if self.get_piece_type_mask(PieceType::Knight) & bitboard != BLANK {
-                    Some(PieceType::Knight)
-                } else {
-                    Some(PieceType::Bishop)
-                }
+        } else if (self.get_piece_type_mask(PieceType::Pawn)
+            | self.get_piece_type_mask(PieceType::Knight)
+            | self.get_piece_type_mask(PieceType::Bishop))
+            & bitboard
+            != BLANK
+        {
+            if self.get_piece_type_mask(PieceType::Pawn) & bitboard != BLANK {
+                Some(PieceType::Pawn)
+            } else if self.get_piece_type_mask(PieceType::Knight) & bitboard != BLANK {
+                Some(PieceType::Knight)
             } else {
-                if self.get_piece_type_mask(PieceType::Rook) & bitboard != BLANK {
-                    Some(PieceType::Rook)
-                } else if self.get_piece_type_mask(PieceType::Queen) & bitboard != BLANK {
-                    Some(PieceType::Queen)
-                } else {
-                    Some(PieceType::King)
-                }
+                Some(PieceType::Bishop)
             }
+        } else if self.get_piece_type_mask(PieceType::Rook) & bitboard != BLANK {
+            Some(PieceType::Rook)
+        } else if self.get_piece_type_mask(PieceType::Queen) & bitboard != BLANK {
+            Some(PieceType::Queen)
+        } else {
+            Some(PieceType::King)
         }
     }
 
@@ -547,14 +543,14 @@ impl ChessBoard {
                     return false;
                 }
                 let (square_king_side_1, square_king_side_2) = match self.side_to_move {
-                    Color::White => (Square::F1, Square::G1),
-                    Color::Black => (Square::F8, Square::G8),
+                    Color::White => (squares::F1, squares::G1),
+                    Color::Black => (squares::F8, squares::G8),
                 };
                 let is_king_side_under_attack = self.is_under_attack(square_king_side_1)
                     | self.is_under_attack(square_king_side_2);
                 let king_side_between_mask = match self.side_to_move {
-                    Color::White => BETWEEN.get(Square::E1, Square::H1).unwrap(),
-                    Color::Black => BETWEEN.get(Square::E8, Square::H8).unwrap(),
+                    Color::White => BETWEEN.get(squares::E1, squares::H1).unwrap(),
+                    Color::Black => BETWEEN.get(squares::E8, squares::H8).unwrap(),
                 };
                 let is_empty_king_side =
                     (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -569,14 +565,14 @@ impl ChessBoard {
                 }
 
                 let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
-                    Color::White => (Square::D1, Square::C1),
-                    Color::Black => (Square::D8, Square::C8),
+                    Color::White => (squares::D1, squares::C1),
+                    Color::Black => (squares::D8, squares::C8),
                 };
                 let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
                     | self.is_under_attack(square_queen_side_2);
                 let queen_side_between_mask = match self.side_to_move {
-                    Color::White => BETWEEN.get(Square::E1, Square::A1).unwrap(),
-                    Color::Black => BETWEEN.get(Square::E8, Square::A8).unwrap(),
+                    Color::White => BETWEEN.get(squares::E1, squares::A1).unwrap(),
+                    Color::Black => BETWEEN.get(squares::E8, squares::A8).unwrap(),
                 };
                 let is_empty_queen_side =
                     (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -689,14 +685,14 @@ impl ChessBoard {
         let is_not_check = self.get_check_mask().count_ones() == 0;
         if self.get_castle_rights(self.side_to_move).has_kingside() {
             let (square_king_side_1, square_king_side_2) = match self.side_to_move {
-                Color::White => (Square::F1, Square::G1),
-                Color::Black => (Square::F8, Square::G8),
+                Color::White => (squares::F1, squares::G1),
+                Color::Black => (squares::F8, squares::G8),
             };
             let is_king_side_under_attack =
                 self.is_under_attack(square_king_side_1) | self.is_under_attack(square_king_side_2);
             let king_side_between_mask = match self.side_to_move {
-                Color::White => BETWEEN.get(Square::E1, Square::H1).unwrap(),
-                Color::Black => BETWEEN.get(Square::E8, Square::H8).unwrap(),
+                Color::White => BETWEEN.get(squares::E1, squares::H1).unwrap(),
+                Color::Black => BETWEEN.get(squares::E8, squares::H8).unwrap(),
             };
             let is_empty_king_side =
                 (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -707,14 +703,14 @@ impl ChessBoard {
 
         if self.get_castle_rights(self.side_to_move).has_queenside() {
             let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
-                Color::White => (Square::D1, Square::C1),
-                Color::Black => (Square::D8, Square::C8),
+                Color::White => (squares::D1, squares::C1),
+                Color::Black => (squares::D8, squares::C8),
             };
             let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
                 | self.is_under_attack(square_queen_side_2);
             let queen_side_between_mask = match self.side_to_move {
-                Color::White => BETWEEN.get(Square::E1, Square::A1).unwrap(),
-                Color::Black => BETWEEN.get(Square::E8, Square::A8).unwrap(),
+                Color::White => BETWEEN.get(squares::E1, squares::A1).unwrap(),
+                Color::Black => BETWEEN.get(squares::E8, squares::A8).unwrap(),
             };
             let is_empty_queen_side =
                 (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -773,12 +769,11 @@ impl ChessBoard {
                 }),
             };
 
-            let candidates: Vec<Square> = (piece_moves & pieces_mask)
+            let candidates = (piece_moves & pieces_mask)
                 .into_iter()
-                .filter(between_filter)
-                .collect();
+                .filter(between_filter);
 
-            if candidates.len() > 1 {
+            if candidates.count() > 1 {
                 if (BitBoard::from_file(source_square.get_file()) & pieces_mask).count_ones() > 1 {
                     return Ok(DisplayAmbiguityType::ExtraSquare);
                 } else {
@@ -1076,7 +1071,7 @@ impl ChessBoard {
                     }
                 }
 
-                for _ in full
+                if full
                     .into_iter()
                     .map(|s| mv!(piece_type, square, s))
                     .filter(|m| {
@@ -1087,6 +1082,8 @@ impl ChessBoard {
                             .count_ones()
                             == 0
                     })
+                    .count()
+                    > 0
                 {
                     self.is_terminal_position = false;
                     return self;
@@ -1098,14 +1095,14 @@ impl ChessBoard {
         let is_not_check = self.get_check_mask().count_ones() == 0;
         if self.get_castle_rights(self.side_to_move).has_kingside() {
             let (square_king_side_1, square_king_side_2) = match self.side_to_move {
-                Color::White => (Square::F1, Square::G1),
-                Color::Black => (Square::F8, Square::G8),
+                Color::White => (squares::F1, squares::G1),
+                Color::Black => (squares::F8, squares::G8),
             };
             let is_king_side_under_attack =
                 self.is_under_attack(square_king_side_1) | self.is_under_attack(square_king_side_2);
             let king_side_between_mask = match self.side_to_move {
-                Color::White => BETWEEN.get(Square::E1, Square::H1).unwrap(),
-                Color::Black => BETWEEN.get(Square::E8, Square::H8).unwrap(),
+                Color::White => BETWEEN.get(squares::E1, squares::H1).unwrap(),
+                Color::Black => BETWEEN.get(squares::E8, squares::H8).unwrap(),
             };
             let is_empty_king_side =
                 (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -1117,14 +1114,14 @@ impl ChessBoard {
 
         if self.get_castle_rights(self.side_to_move).has_queenside() {
             let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
-                Color::White => (Square::D1, Square::C1),
-                Color::Black => (Square::D8, Square::C8),
+                Color::White => (squares::D1, squares::C1),
+                Color::Black => (squares::D8, squares::C8),
             };
             let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
                 | self.is_under_attack(square_queen_side_2);
             let queen_side_between_mask = match self.side_to_move {
-                Color::White => BETWEEN.get(Square::E1, Square::A1).unwrap(),
-                Color::Black => BETWEEN.get(Square::E8, Square::A8).unwrap(),
+                Color::White => BETWEEN.get(squares::E1, squares::A1).unwrap(),
+                Color::Black => BETWEEN.get(squares::E8, squares::A8).unwrap(),
             };
             let is_empty_queen_side =
                 (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
@@ -1135,7 +1132,7 @@ impl ChessBoard {
         }
 
         self.is_terminal_position = true;
-        return self;
+        self
     }
 
     fn get_pins_and_checks(&self, square: Square) -> (BitBoard, BitBoard) {
@@ -1191,6 +1188,8 @@ impl ChessBoard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::boards::{squares::*, Square};
+    use crate::PieceType::*;
     use unindent::unindent;
 
     #[test]
@@ -1207,8 +1206,8 @@ mod tests {
     #[test]
     fn square_emptiness() {
         let board = ChessBoard::default();
-        let a1 = Square::A1;
-        let a3 = Square::A3;
+        let a1 = A1;
+        let a3 = A3;
         assert_eq!(board.is_empty_square(a1), false);
         assert_eq!(board.is_empty_square(a3), true);
     }
@@ -1269,7 +1268,7 @@ mod tests {
     #[test]
     fn kings_position() {
         let color = Color::White;
-        assert_eq!(ChessBoard::default().get_king_square(color), Square::E1);
+        assert_eq!(ChessBoard::default().get_king_square(color), E1);
     }
 
     #[rustfmt::skip]
@@ -1330,9 +1329,7 @@ mod tests {
         assert_eq!(board.get_hash(), board.get_hash());
 
         let mut another_board = ChessBoard::default();
-        another_board = another_board
-            .make_move(mv!(PieceType::Pawn, Square::E2, Square::E4))
-            .unwrap();
+        another_board = another_board.make_move(mv!(Pawn, E2, E4)).unwrap();
         assert_ne!(board.get_hash(), another_board.get_hash());
     }
 
@@ -1346,11 +1343,11 @@ mod tests {
 
         let board = ChessBoard::from_str("8/8/5k2/8/3Q2N1/5K2/8/8 b - - 0 1").unwrap();
         let checkers: Vec<Square> = board.get_check_mask().into_iter().collect();
-        assert_eq!(checkers, vec![Square::D4, Square::G4]);
+        assert_eq!(checkers, vec![D4, G4]);
 
         let board = ChessBoard::from_str("8/8/5k2/4p3/8/2Q2K2/8/8 b - - 0 1").unwrap();
         let pinned = board.get_pin_mask().to_square();
-        assert_eq!(pinned, Square::E5);
+        assert_eq!(pinned, E5);
     }
 
     #[test]
@@ -1414,15 +1411,9 @@ mod tests {
             ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1")
                 .unwrap();
 
-        let next_board = board
-            .make_move(mv![PieceType::Pawn, Square::D7, Square::D5])
-            .unwrap();
+        let next_board = board.make_move(mv![Pawn, D7, D5]).unwrap();
 
-        assert!(next_board.get_legal_moves().contains(&mv![
-            PieceType::Pawn,
-            Square::E5,
-            Square::D6
-        ]));
+        assert!(next_board.get_legal_moves().contains(&mv![Pawn, E5, D6]));
     }
 
     #[test]

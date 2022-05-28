@@ -9,7 +9,7 @@ use crate::boards::{ChessBoard, LegalMoves};
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
-use crate::pieces::PieceType;
+use crate::pieces::PieceType::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -68,11 +68,11 @@ impl fmt::Display for GameStatus {
 ///
 /// let mut game = Game::default();
 /// let moves = vec![
-///    mv!(PieceType::Pawn, Square::E2, Square::E4),
-///    mv!(PieceType::Pawn, Square::E7, Square::E5),
-///    mv!(PieceType::Queen, Square::D1, Square::H5),
-///    mv!(PieceType::King, Square::E8, Square::E7),
-///    mv!(PieceType::Queen, Square::H5, Square::E5),
+///    mv!(Pawn, E2, E4),
+///    mv!(Pawn, E7, E5),
+///    mv!(Queen, D1, H5),
+///    mv!(King, E8, E7),
+///    mv!(Queen, H5, E5),
 /// ];
 ///
 /// for one in moves.iter() {
@@ -120,7 +120,7 @@ impl Game {
 
     #[inline]
     pub fn from_fen(fen: &str) -> Result<Self, ChessBoardError> {
-        match ChessBoard::from_str(&fen) {
+        match ChessBoard::from_str(fen) {
             Ok(board) => Ok(Self::from_board(board)),
             Err(e) => Err(e),
         }
@@ -198,16 +198,14 @@ impl Game {
                     } else {
                         GameStatus::Stalemate
                     }
+                } else if self.get_position_counter(position) == 3 {
+                    GameStatus::RepetitionDrawDeclared
+                } else if position.get_moves_since_capture() >= 100 {
+                    GameStatus::FiftyMovesDrawDeclared
+                } else if self.is_theoretical_draw_on_board() {
+                    GameStatus::TheoreticalDrawDeclared
                 } else {
-                    if self.get_position_counter(position) == 3 {
-                        GameStatus::RepetitionDrawDeclared
-                    } else if position.get_moves_since_capture() >= 100 {
-                        GameStatus::FiftyMovesDrawDeclared
-                    } else if self.is_theoretical_draw_on_board() {
-                        GameStatus::TheoreticalDrawDeclared
-                    } else {
-                        GameStatus::Ongoing
-                    }
+                    GameStatus::Ongoing
                 }
             }
             Some(Action::OfferDraw) => GameStatus::DrawOffered,
@@ -228,8 +226,8 @@ impl Game {
         let black_pieces_number = self.position.get_color_mask(Color::Black).count_ones();
 
         if (white_pieces_number <= 2) & (black_pieces_number <= 2) {
-            let bishops_and_knights = self.position.get_piece_type_mask(PieceType::Knight)
-                | self.position.get_piece_type_mask(PieceType::Bishop);
+            let bishops_and_knights = self.position.get_piece_type_mask(Knight)
+                | self.position.get_piece_type_mask(Bishop);
 
             let white_can_not_checkmate = match white_pieces_number {
                 1 => true,
@@ -288,22 +286,21 @@ impl Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::boards::ZOBRIST_TABLES as ZOBRIST;
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, Square};
-    use crate::PieceType;
-    use crate::{castle_king_side, castle_queen_side, mv};
-
     use super::*;
+    use crate::boards::squares::*;
+    use crate::boards::ZOBRIST_TABLES as ZOBRIST;
+    use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
+    use crate::{castle_king_side, castle_queen_side, mv};
 
     #[test]
     fn simple_check_mate() {
         let mut game = Game::default();
         let moves = vec![
-            mv!(PieceType::Pawn, Square::E2, Square::E4),
-            mv!(PieceType::Pawn, Square::E7, Square::E5),
-            mv!(PieceType::Queen, Square::D1, Square::H5),
-            mv!(PieceType::King, Square::E8, Square::E7),
-            mv!(PieceType::Queen, Square::H5, Square::E5),
+            mv!(Pawn, E2, E4),
+            mv!(Pawn, E7, E5),
+            mv!(Queen, D1, H5),
+            mv!(King, E8, E7),
+            mv!(Queen, H5, E5),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
@@ -312,13 +309,13 @@ mod tests {
 
         let mut game = Game::default();
         let moves = vec![
-            mv!(PieceType::Pawn, Square::E2, Square::E4),
-            mv!(PieceType::Pawn, Square::E7, Square::E5),
-            mv!(PieceType::Bishop, Square::F1, Square::C4),
-            mv!(PieceType::Knight, Square::B8, Square::C6),
-            mv!(PieceType::Queen, Square::D1, Square::F3),
-            mv!(PieceType::Knight, Square::C6, Square::D4),
-            mv!(PieceType::Queen, Square::F3, Square::F7),
+            mv!(Pawn, E2, E4),
+            mv!(Pawn, E7, E5),
+            mv!(Bishop, F1, C4),
+            mv!(Knight, B8, C6),
+            mv!(Queen, D1, F3),
+            mv!(Knight, C6, D4),
+            mv!(Queen, F3, F7),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
@@ -329,7 +326,7 @@ mod tests {
     #[test]
     fn stalemate() {
         let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
-        let moves = vec![mv!(PieceType::King, Square::E6, Square::D6)];
+        let moves = vec![mv!(King, E6, D6)];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
         }
@@ -340,14 +337,14 @@ mod tests {
     fn draw_declaration() {
         let mut game = Game::from_fen("8/8/8/p3k3/P7/4K3/8/8 w - - 0 1").unwrap();
         let moves = vec![
-            mv!(PieceType::King, Square::E3, Square::D3),
-            mv!(PieceType::King, Square::E5, Square::D5),
-            mv!(PieceType::King, Square::D3, Square::E3),
-            mv!(PieceType::King, Square::D5, Square::E5),
-            mv!(PieceType::King, Square::E3, Square::D3),
-            mv!(PieceType::King, Square::E5, Square::D5),
-            mv!(PieceType::King, Square::D3, Square::E3),
-            mv!(PieceType::King, Square::D5, Square::E5),
+            mv!(King, E3, D3),
+            mv!(King, E5, D5),
+            mv!(King, D3, E3),
+            mv!(King, D5, E5),
+            mv!(King, E3, D3),
+            mv!(King, E5, D5),
+            mv!(King, D3, E3),
+            mv!(King, D5, E5),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
@@ -372,50 +369,50 @@ mod tests {
     fn albin_winawer_1896() {
         let mut game = Game::default();
         let moves = vec![
-            mv!(PieceType::Pawn, Square::E2, Square::E4), // 1.
-            mv!(PieceType::Pawn, Square::E7, Square::E5),
-            mv!(PieceType::Knight, Square::G1, Square::F3), // 2.
-            mv!(PieceType::Knight, Square::B8, Square::C6),
-            mv!(PieceType::Bishop, Square::F1, Square::C4), // 3.
-            mv!(PieceType::Bishop, Square::F8, Square::C5),
-            mv!(PieceType::Pawn, Square::C2, Square::C3), // 4.
-            mv!(PieceType::Knight, Square::G8, Square::F6),
+            mv!(Pawn, E2, E4), // 1.
+            mv!(Pawn, E7, E5),
+            mv!(Knight, G1, F3), // 2.
+            mv!(Knight, B8, C6),
+            mv!(Bishop, F1, C4), // 3.
+            mv!(Bishop, F8, C5),
+            mv!(Pawn, C2, C3), // 4.
+            mv!(Knight, G8, F6),
             castle_king_side!(), // 5.
-            mv!(PieceType::Knight, Square::F6, Square::E4),
-            mv!(PieceType::Bishop, Square::C4, Square::D5), // 6.
-            mv!(PieceType::Knight, Square::E4, Square::F2),
-            mv!(PieceType::Rook, Square::F1, Square::F2), // 7.
-            mv!(PieceType::Bishop, Square::C5, Square::F2),
-            mv!(PieceType::King, Square::G1, Square::F2), // 8.
-            mv!(PieceType::Knight, Square::C6, Square::E7),
-            mv!(PieceType::Queen, Square::D1, Square::B3), // 9.
+            mv!(Knight, F6, E4),
+            mv!(Bishop, C4, D5), // 6.
+            mv!(Knight, E4, F2),
+            mv!(Rook, F1, F2), // 7.
+            mv!(Bishop, C5, F2),
+            mv!(King, G1, F2), // 8.
+            mv!(Knight, C6, E7),
+            mv!(Queen, D1, B3), // 9.
             castle_king_side!(),
-            mv!(PieceType::Bishop, Square::D5, Square::E4), // 10.
-            mv!(PieceType::Pawn, Square::D7, Square::D5),
-            mv!(PieceType::Bishop, Square::E4, Square::C2), // 11.
-            mv!(PieceType::Pawn, Square::E5, Square::E4),
-            mv!(PieceType::Knight, Square::F3, Square::E1), // 12.
-            mv!(PieceType::Knight, Square::E7, Square::G6),
-            mv!(PieceType::Pawn, Square::C3, Square::C4), // 13.
-            mv!(PieceType::Pawn, Square::D5, Square::D4),
-            mv!(PieceType::Queen, Square::B3, Square::G3), // 14.
-            mv!(PieceType::Pawn, Square::F7, Square::F5),
-            mv!(PieceType::King, Square::F2, Square::G1), // 15.
-            mv!(PieceType::Pawn, Square::C7, Square::C5),
-            mv!(PieceType::Pawn, Square::D2, Square::D3), // 16.
-            mv!(PieceType::Pawn, Square::F5, Square::F4),
-            mv!(PieceType::Queen, Square::G3, Square::F2), // 17.
-            mv!(PieceType::Pawn, Square::E4, Square::E3),
-            mv!(PieceType::Queen, Square::F2, Square::F3), // 18.
-            mv!(PieceType::Queen, Square::D8, Square::H4),
-            mv!(PieceType::Queen, Square::F3, Square::D5), // 19.
-            mv!(PieceType::King, Square::G8, Square::H8),
-            mv!(PieceType::Knight, Square::E1, Square::F3), // 20.
-            mv!(PieceType::Queen, Square::H4, Square::F2),
-            mv!(PieceType::King, Square::G1, Square::H1), // 21.
-            mv!(PieceType::Knight, Square::G6, Square::H4),
-            mv!(PieceType::Queen, Square::D5, Square::G5), // 22.
-            mv!(PieceType::Bishop, Square::C8, Square::H3),
+            mv!(Bishop, D5, E4), // 10.
+            mv!(Pawn, D7, D5),
+            mv!(Bishop, E4, C2), // 11.
+            mv!(Pawn, E5, E4),
+            mv!(Knight, F3, E1), // 12.
+            mv!(Knight, E7, G6),
+            mv!(Pawn, C3, C4), // 13.
+            mv!(Pawn, D5, D4),
+            mv!(Queen, B3, G3), // 14.
+            mv!(Pawn, F7, F5),
+            mv!(King, F2, G1), // 15.
+            mv!(Pawn, C7, C5),
+            mv!(Pawn, D2, D3), // 16.
+            mv!(Pawn, F5, F4),
+            mv!(Queen, G3, F2), // 17.
+            mv!(Pawn, E4, E3),
+            mv!(Queen, F2, F3), // 18.
+            mv!(Queen, D8, H4),
+            mv!(Queen, F3, D5), // 19.
+            mv!(King, G8, H8),
+            mv!(Knight, E1, F3), // 20.
+            mv!(Queen, H4, F2),
+            mv!(King, G1, H1), // 21.
+            mv!(Knight, G6, H4),
+            mv!(Queen, D5, G5), // 22.
+            mv!(Bishop, C8, H3),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();
@@ -429,50 +426,50 @@ mod tests {
     fn hashes() {
         let mut game = Game::default();
         let moves = vec![
-            mv!(PieceType::Pawn, Square::E2, Square::E4), // 1.
-            mv!(PieceType::Pawn, Square::E7, Square::E5),
-            mv!(PieceType::Knight, Square::G1, Square::F3), // 2.
-            mv!(PieceType::Knight, Square::B8, Square::C6),
-            mv!(PieceType::Bishop, Square::F1, Square::C4), // 3.
-            mv!(PieceType::Bishop, Square::F8, Square::C5),
-            mv!(PieceType::Pawn, Square::C2, Square::C3), // 4.
-            mv!(PieceType::Knight, Square::G8, Square::F6),
+            mv!(Pawn, E2, E4), // 1.
+            mv!(Pawn, E7, E5),
+            mv!(Knight, G1, F3), // 2.
+            mv!(Knight, B8, C6),
+            mv!(Bishop, F1, C4), // 3.
+            mv!(Bishop, F8, C5),
+            mv!(Pawn, C2, C3), // 4.
+            mv!(Knight, G8, F6),
             castle_king_side!(), // 5.
-            mv!(PieceType::Knight, Square::F6, Square::E4),
-            mv!(PieceType::Bishop, Square::C4, Square::D5), // 6.
-            mv!(PieceType::Knight, Square::E4, Square::F2),
-            mv!(PieceType::Rook, Square::F1, Square::F2), // 7.
-            mv!(PieceType::Bishop, Square::C5, Square::F2),
-            mv!(PieceType::King, Square::G1, Square::F2), // 8.
-            mv!(PieceType::Knight, Square::C6, Square::E7),
-            mv!(PieceType::Queen, Square::D1, Square::B3), // 9.
+            mv!(Knight, F6, E4),
+            mv!(Bishop, C4, D5), // 6.
+            mv!(Knight, E4, F2),
+            mv!(Rook, F1, F2), // 7.
+            mv!(Bishop, C5, F2),
+            mv!(King, G1, F2), // 8.
+            mv!(Knight, C6, E7),
+            mv!(Queen, D1, B3), // 9.
             castle_king_side!(),
-            mv!(PieceType::Bishop, Square::D5, Square::E4), // 10.
-            mv!(PieceType::Pawn, Square::D7, Square::D5),
-            mv!(PieceType::Bishop, Square::E4, Square::C2), // 11.
-            mv!(PieceType::Pawn, Square::E5, Square::E4),
-            mv!(PieceType::Knight, Square::F3, Square::E1), // 12.
-            mv!(PieceType::Knight, Square::E7, Square::G6),
-            mv!(PieceType::Pawn, Square::C3, Square::C4), // 13.
-            mv!(PieceType::Pawn, Square::D5, Square::D4),
-            mv!(PieceType::Queen, Square::B3, Square::G3), // 14.
-            mv!(PieceType::Pawn, Square::F7, Square::F5),
-            mv!(PieceType::King, Square::F2, Square::G1), // 15.
-            mv!(PieceType::Pawn, Square::C7, Square::C5),
-            mv!(PieceType::Pawn, Square::D2, Square::D3), // 16.
-            mv!(PieceType::Pawn, Square::F5, Square::F4),
-            mv!(PieceType::Queen, Square::G3, Square::F2), // 17.
-            mv!(PieceType::Pawn, Square::E4, Square::E3),
-            mv!(PieceType::Queen, Square::F2, Square::F3), // 18.
-            mv!(PieceType::Queen, Square::D8, Square::H4),
-            mv!(PieceType::Queen, Square::F3, Square::D5), // 19.
-            mv!(PieceType::King, Square::G8, Square::H8),
-            mv!(PieceType::Knight, Square::E1, Square::F3), // 20.
-            mv!(PieceType::Queen, Square::H4, Square::F2),
-            mv!(PieceType::King, Square::G1, Square::H1), // 21.
-            mv!(PieceType::Knight, Square::G6, Square::H4),
-            mv!(PieceType::Queen, Square::D5, Square::G5), // 22.
-            mv!(PieceType::Bishop, Square::C8, Square::H3),
+            mv!(Bishop, D5, E4), // 10.
+            mv!(Pawn, D7, D5),
+            mv!(Bishop, E4, C2), // 11.
+            mv!(Pawn, E5, E4),
+            mv!(Knight, F3, E1), // 12.
+            mv!(Knight, E7, G6),
+            mv!(Pawn, C3, C4), // 13.
+            mv!(Pawn, D5, D4),
+            mv!(Queen, B3, G3), // 14.
+            mv!(Pawn, F7, F5),
+            mv!(King, F2, G1), // 15.
+            mv!(Pawn, C7, C5),
+            mv!(Pawn, D2, D3), // 16.
+            mv!(Pawn, F5, F4),
+            mv!(Queen, G3, F2), // 17.
+            mv!(Pawn, E4, E3),
+            mv!(Queen, F2, F3), // 18.
+            mv!(Queen, D8, H4),
+            mv!(Queen, F3, D5), // 19.
+            mv!(King, G8, H8),
+            mv!(Knight, E1, F3), // 20.
+            mv!(Queen, H4, F2),
+            mv!(King, G1, H1), // 21.
+            mv!(Knight, G6, H4),
+            mv!(Queen, D5, G5), // 22.
+            mv!(Bishop, C8, H3),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();

@@ -26,8 +26,8 @@ impl Not for Color {
 impl fmt::Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let display_str = match self {
-            &Color::White => "white",
-            &Color::Black => "black",
+            Color::White => "white",
+            Color::Black => "black",
         };
         write!(f, "{}", display_str)
     }

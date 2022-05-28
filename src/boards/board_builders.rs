@@ -112,10 +112,10 @@ impl FromStr for BoardBuilder {
                     current_file = File::A;
                 }
                 '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' => {
-                    match File::from_index(current_file.to_index() + (c as usize) - ('0' as usize))
+                    if let Ok(f) =
+                        File::from_index(current_file.to_index() + (c as usize) - ('0' as usize))
                     {
-                        Ok(f) => current_file = f,
-                        Err(_) => (),
+                        current_file = f
                     }
                 }
                 'r' | 'R' | 'n' | 'N' | 'b' | 'B' | 'q' | 'Q' | 'k' | 'K' | 'p' | 'P' => {
@@ -136,10 +136,9 @@ impl FromStr for BoardBuilder {
                     };
                     fen[Square::from_rank_file(current_rank, current_file)] =
                         Some(Piece(piece_type, color));
-                    match current_file.right() {
-                        Ok(f) => current_file = f,
-                        Err(_) => (),
-                    };
+                    if let Ok(f) = current_file.right() {
+                        current_file = f
+                    }
                 }
                 _ => {
                     return Err(Error::InvalidFENString {
@@ -159,27 +158,27 @@ impl FromStr for BoardBuilder {
             }
         }
 
-        if castles.contains("K") && castles.contains("Q") {
+        if castles.contains('K') && castles.contains('Q') {
             fen.set_castling_rights(Color::White, CastlingRights::BothSides);
-        } else if castles.contains("K") {
+        } else if castles.contains('K') {
             fen.set_castling_rights(Color::White, CastlingRights::KingSide);
-        } else if castles.contains("Q") {
+        } else if castles.contains('Q') {
             fen.set_castling_rights(Color::White, CastlingRights::QueenSide);
         } else {
             fen.set_castling_rights(Color::White, CastlingRights::Neither);
         }
 
-        if castles.contains("k") && castles.contains("q") {
+        if castles.contains('k') && castles.contains('q') {
             fen.set_castling_rights(Color::Black, CastlingRights::BothSides);
-        } else if castles.contains("k") {
+        } else if castles.contains('k') {
             fen.set_castling_rights(Color::Black, CastlingRights::KingSide);
-        } else if castles.contains("q") {
+        } else if castles.contains('q') {
             fen.set_castling_rights(Color::Black, CastlingRights::QueenSide);
         } else {
             fen.set_castling_rights(Color::Black, CastlingRights::Neither);
         }
 
-        if let Ok(sq) = Square::from_str(&en_passant) {
+        if let Ok(sq) = Square::from_str(en_passant) {
             fen.set_en_passant(Some(sq));
         }
 
@@ -194,7 +193,7 @@ impl fmt::Display for BoardBuilder {
 
         for rank in RANKS.iter().rev() {
             if *rank != Rank::Eighth {
-                pieces_string.push_str("/");
+                pieces_string.push('/');
             }
             for file in FILES.iter() {
                 match self[Square::from_rank_file(*rank, *file)] {
@@ -297,7 +296,7 @@ impl BoardBuilder {
     ) -> BoardBuilder {
         let mut builder = BoardBuilder {
             pieces: [None; SQUARES_NUMBER],
-            side_to_move: side_to_move,
+            side_to_move,
             castle_rights: [white_castle_rights, black_castle_rights],
             en_passant,
             moves_since_capture_counter,

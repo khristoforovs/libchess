@@ -1,6 +1,7 @@
 use crate::errors::PieceRepresentationError as Error;
 use crate::Color;
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceType {
@@ -34,6 +35,29 @@ impl fmt::Display for PieceType {
     }
 }
 
+impl FromStr for PieceType {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value.len() > 1 {
+            return Err(Error::InvalidPeaceRepresentation);
+        }
+
+        if value.is_empty() {
+            return Ok(PieceType::Pawn);
+        }
+        match value.to_uppercase().as_str().chars().next().unwrap() {
+            'P' => Ok(PieceType::Pawn),
+            'N' => Ok(PieceType::Knight),
+            'B' => Ok(PieceType::Bishop),
+            'R' => Ok(PieceType::Rook),
+            'Q' => Ok(PieceType::Queen),
+            'K' => Ok(PieceType::King),
+            _ => Err(Error::InvalidPeaceRepresentation),
+        }
+    }
+}
+
 impl PieceType {
     #[inline]
     pub fn to_index(&self) -> usize {
@@ -49,25 +73,6 @@ impl PieceType {
             4 => Ok(PieceType::Queen),
             5 => Ok(PieceType::King),
             _ => Err(Error::InvalidPeaceIndex { n }),
-        }
-    }
-
-    pub fn from_str(s: &str) -> Result<PieceType, Error> {
-        if s.len() > 1 {
-            return Err(Error::InvalidPeaceRepresentation);
-        }
-
-        if s.len() == 0 {
-            return Ok(PieceType::Pawn);
-        }
-        match s.to_uppercase().as_str().chars().next().unwrap() {
-            'P' => Ok(PieceType::Pawn),
-            'N' => Ok(PieceType::Knight),
-            'B' => Ok(PieceType::Bishop),
-            'R' => Ok(PieceType::Rook),
-            'Q' => Ok(PieceType::Queen),
-            'K' => Ok(PieceType::King),
-            _ => Err(Error::InvalidPeaceRepresentation),
         }
     }
 }

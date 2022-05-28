@@ -9,12 +9,6 @@ pub const SQUARES_NUMBER: usize = 64;
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Square(u8);
 
-macro_rules! define_square {
-    ($square:ident, $index:literal) => {
-        pub const $square: Square = Square($index);
-    };
-}
-
 impl fmt::Display for Square {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -123,6 +117,16 @@ impl Square {
     pub fn is_dark(&self) -> bool {
         !self.is_light()
     }
+}
+
+macro_rules! define_square {
+    ($square:ident, $index:literal) => {
+        pub const $square: Square = Square($index);
+    };
+}
+
+pub mod squares {
+    use super::*;
 
     define_square!(A1, 0);
     define_square!(B1, 1);
@@ -196,7 +200,7 @@ mod tests {
 
     #[test]
     fn create_from_string() {
-        assert_eq!(Square::from_str("e2").unwrap(), Square::E2);
+        assert_eq!(Square::from_str("e2").unwrap(), squares::E2);
     }
 
     #[test]
@@ -209,17 +213,19 @@ mod tests {
 
     #[test]
     fn neighbor_squares() {
-        assert_eq!(Square::E4.up().unwrap(), Square::E5);
-        assert_eq!(Square::E4.down().unwrap(), Square::E3);
-        assert_eq!(Square::E4.left().unwrap(), Square::D4);
-        assert_eq!(Square::E4.right().unwrap(), Square::F4);
+        assert_eq!(squares::E4.up().unwrap(), squares::E5);
+        assert_eq!(squares::E4.down().unwrap(), squares::E3);
+        assert_eq!(squares::E4.left().unwrap(), squares::D4);
+        assert_eq!(squares::E4.right().unwrap(), squares::F4);
     }
 
     #[test]
     fn test_light_dark() {
-        assert_eq!(Square::A1.is_light(), false);
-        assert_eq!(Square::E4.is_light(), true);
-        assert_eq!(Square::A3.is_dark(), true);
-        assert_eq!(Square::E6.is_dark(), false);
+        use squares::*;
+
+        assert_eq!(A1.is_light(), false);
+        assert_eq!(E4.is_light(), true);
+        assert_eq!(A3.is_dark(), true);
+        assert_eq!(E6.is_dark(), false);
     }
 }

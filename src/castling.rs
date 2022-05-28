@@ -57,7 +57,7 @@ impl fmt::Display for CastlingRights {
 
 impl CastlingRights {
     #[inline]
-    fn to_bits(&self) -> [bool; 2] {
+    fn to_bits(self) -> [bool; 2] {
         [self.has_kingside(), self.has_queenside()]
     }
 
@@ -74,8 +74,8 @@ impl CastlingRights {
     }
 
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
+    pub fn to_index(self) -> usize {
+        self as usize
     }
 
     #[inline]
@@ -92,18 +92,12 @@ impl CastlingRights {
 
     #[inline]
     pub fn has_kingside(&self) -> bool {
-        match self {
-            CastlingRights::Neither | CastlingRights::QueenSide => false,
-            _ => true,
-        }
+        matches!(self, CastlingRights::BothSides | CastlingRights::KingSide)
     }
 
     #[inline]
     pub fn has_queenside(&self) -> bool {
-        match self {
-            CastlingRights::Neither | CastlingRights::KingSide => false,
-            _ => true,
-        }
+        matches!(self, CastlingRights::BothSides | CastlingRights::QueenSide)
     }
 }
 

@@ -26,6 +26,12 @@ pub struct ZobristHasher {
     black_to_move_value: PositionHashValueType,
 }
 
+impl Default for ZobristHasher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ZobristHasher {
     pub fn new() -> Self {
         let mut result = Self {
@@ -129,15 +135,16 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, Square, ZOBRIST_TABLES as ZOBRIST};
-    use crate::PieceType;
+    use crate::boards::{squares::*, Square};
+    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
+    use crate::PieceType::*;
     use crate::{castle_king_side, castle_queen_side, mv};
 
     #[test]
     fn calculate_hash() {
         let board = ChessBoard::default();
 
-        let chess_move = mv!(PieceType::Pawn, Square::E2, Square::E4);
+        let chess_move = mv!(Pawn, E2, E4);
         let new_board = board.make_move(chess_move).unwrap();
 
         assert_ne!(

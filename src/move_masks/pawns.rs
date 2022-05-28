@@ -7,6 +7,12 @@ pub struct PawnMoveTable {
     captures: [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],
 }
 
+impl Default for PawnMoveTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PawnMoveTable {
     pub fn new() -> Self {
         Self {
@@ -64,14 +70,14 @@ pub fn generate_pawn_moves(table: &mut PawnMoveTable, color: Color) {
                     if (diffs.0 == -1) & (diffs.1 == 0)
                         | (diffs.0 == -2) & (diffs.1 == 0) & (rank == 1)
                     {
-                        destination_mask = destination_mask | BitBoard::from_square(s_);
+                        destination_mask |= BitBoard::from_square(s_);
                     }
                 }
                 Color::Black => {
                     if (diffs.0 == 1) & (diffs.1 == 0)
                         | (diffs.0 == 2) & (diffs.1 == 0) & (rank == 6)
                     {
-                        destination_mask = destination_mask | BitBoard::from_square(s_);
+                        destination_mask |= BitBoard::from_square(s_);
                     }
                 }
             }
@@ -98,12 +104,12 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
             match color {
                 Color::White => {
                     if (diffs.0 == -1) & (diffs.1.abs() == 1) {
-                        destination_mask = destination_mask | BitBoard::from_square(s_);
+                        destination_mask |= BitBoard::from_square(s_);
                     }
                 }
                 Color::Black => {
                     if (diffs.0 == 1) & (diffs.1.abs() == 1) {
-                        destination_mask = destination_mask | BitBoard::from_square(s_);
+                        destination_mask |= BitBoard::from_square(s_);
                     }
                 }
             }
@@ -117,13 +123,14 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
 mod tests {
     use super::*;
     use unindent::unindent;
+    use crate::boards::squares::*;
 
     #[test]
     fn create() {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_moves(&mut move_table, Color::White);
         generate_pawn_moves(&mut move_table, Color::Black);
-        let square = Square::E4;
+        let square = E4;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -139,7 +146,7 @@ mod tests {
             format!("{}", move_table.get_moves(square, Color::White)), unindent(result_str)
         );
 
-        let square = Square::E5;
+        let square = E5;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -161,7 +168,7 @@ mod tests {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_moves(&mut move_table, Color::White);
         generate_pawn_moves(&mut move_table, Color::Black);
-        let square = Square::E2;
+        let square = E2;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -177,7 +184,7 @@ mod tests {
             format!("{}", move_table.get_moves(square, Color::White)), unindent(result_str)
         );
 
-        let square = Square::E7;
+        let square = E7;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -199,7 +206,7 @@ mod tests {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_captures(&mut move_table, Color::White);
         generate_pawn_captures(&mut move_table, Color::Black);
-        let square = Square::E3;
+        let square = E3;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -215,7 +222,7 @@ mod tests {
             format!("{}", move_table.get_captures(square, Color::White)), unindent(result_str)
         );
 
-        let square = Square::E6;
+        let square = E6;
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 

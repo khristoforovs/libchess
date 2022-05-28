@@ -23,7 +23,7 @@ impl Default for GameHistory {
 
 impl fmt::Display for GameHistory {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.positions.len() == 0 {
+        if self.positions.is_empty() {
             write!(f, "")
         } else {
             let mut game_history_string = String::new();
@@ -85,7 +85,7 @@ impl GameHistory {
 
     fn push_move(&mut self, chess_move: BoardMove) -> &mut Self {
         let positions_seq_len = self.positions.len();
-        let mut history_chess_move = chess_move.clone();
+        let mut history_chess_move = chess_move;
         history_chess_move.associate(
             &self.positions[positions_seq_len - 2],
             &self.positions[positions_seq_len - 1],
@@ -97,55 +97,56 @@ impl GameHistory {
 
 #[cfg(test)]
 mod tests {
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, Square};
+    use crate::boards::squares::*;
+    use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
     use crate::games::{Action, Game};
-    use crate::PieceType;
+    use crate::PieceType::*;
     use crate::{castle_king_side, castle_queen_side, mv};
 
     #[test]
     fn de_riviere_paul_morphy_1863() {
         let mut game = Game::default();
         let moves = vec![
-            mv!(PieceType::Pawn, Square::E2, Square::E4), // 1.
-            mv!(PieceType::Pawn, Square::E7, Square::E5),
-            mv!(PieceType::Knight, Square::G1, Square::F3), // 2.
-            mv!(PieceType::Knight, Square::B8, Square::C6),
-            mv!(PieceType::Bishop, Square::F1, Square::C4), // 3.
-            mv!(PieceType::Knight, Square::G8, Square::F6),
-            mv!(PieceType::Knight, Square::F3, Square::G5), // 4.
-            mv!(PieceType::Pawn, Square::D7, Square::D5),
-            mv!(PieceType::Pawn, Square::E4, Square::D5), // 5.
-            mv!(PieceType::Knight, Square::C6, Square::A5),
-            mv!(PieceType::Pawn, Square::D2, Square::D3), // 6.
-            mv!(PieceType::Pawn, Square::H7, Square::H6),
-            mv!(PieceType::Knight, Square::G5, Square::F3), // 7.
-            mv!(PieceType::Pawn, Square::E5, Square::E4),
-            mv!(PieceType::Queen, Square::D1, Square::E2), // 8.
-            mv!(PieceType::Knight, Square::A5, Square::C4),
-            mv!(PieceType::Pawn, Square::D3, Square::C4), // 9.
-            mv!(PieceType::Bishop, Square::F8, Square::C5),
-            mv!(PieceType::Pawn, Square::H2, Square::H3), // 10.
+            mv!(Pawn, E2, E4), // 1.
+            mv!(Pawn, E7, E5),
+            mv!(Knight, G1, F3), // 2.
+            mv!(Knight, B8, C6),
+            mv!(Bishop, F1, C4), // 3.
+            mv!(Knight, G8, F6),
+            mv!(Knight, F3, G5), // 4.
+            mv!(Pawn, D7, D5),
+            mv!(Pawn, E4, D5), // 5.
+            mv!(Knight, C6, A5),
+            mv!(Pawn, D2, D3), // 6.
+            mv!(Pawn, H7, H6),
+            mv!(Knight, G5, F3), // 7.
+            mv!(Pawn, E5, E4),
+            mv!(Queen, D1, E2), // 8.
+            mv!(Knight, A5, C4),
+            mv!(Pawn, D3, C4), // 9.
+            mv!(Bishop, F8, C5),
+            mv!(Pawn, H2, H3), // 10.
             castle_king_side!(),
-            mv!(PieceType::Knight, Square::F3, Square::H2), // 11.
-            mv!(PieceType::Knight, Square::F6, Square::H7),
-            mv!(PieceType::Knight, Square::B1, Square::D2), // 12.
-            mv!(PieceType::Pawn, Square::F7, Square::F5),
-            mv!(PieceType::Knight, Square::D2, Square::B3), // 13.
-            mv!(PieceType::Bishop, Square::C5, Square::D6),
+            mv!(Knight, F3, H2), // 11.
+            mv!(Knight, F6, H7),
+            mv!(Knight, B1, D2), // 12.
+            mv!(Pawn, F7, F5),
+            mv!(Knight, D2, B3), // 13.
+            mv!(Bishop, C5, D6),
             castle_king_side!(), // 14.
-            mv!(PieceType::Bishop, Square::D6, Square::H2),
-            mv!(PieceType::King, Square::G1, Square::H2), // 15.
-            mv!(PieceType::Pawn, Square::F5, Square::F4),
-            mv!(PieceType::Queen, Square::E2, Square::E4), // 16.
-            mv!(PieceType::Knight, Square::H7, Square::G5),
-            mv!(PieceType::Queen, Square::E4, Square::D4), // 17.
-            mv!(PieceType::Knight, Square::G5, Square::F3),
-            mv!(PieceType::Pawn, Square::G2, Square::F3), // 18.
-            mv!(PieceType::Queen, Square::D8, Square::H4),
-            mv!(PieceType::Rook, Square::F1, Square::H1), // 19.
-            mv!(PieceType::Bishop, Square::C8, Square::H3),
-            mv!(PieceType::Bishop, Square::C1, Square::D2), // 20.
-            mv!(PieceType::Rook, Square::F8, Square::F6),
+            mv!(Bishop, D6, H2),
+            mv!(King, G1, H2), // 15.
+            mv!(Pawn, F5, F4),
+            mv!(Queen, E2, E4), // 16.
+            mv!(Knight, H7, G5),
+            mv!(Queen, E4, D4), // 17.
+            mv!(Knight, G5, F3),
+            mv!(Pawn, G2, F3), // 18.
+            mv!(Queen, D8, H4),
+            mv!(Rook, F1, H1), // 19.
+            mv!(Bishop, C8, H3),
+            mv!(Bishop, C1, D2), // 20.
+            mv!(Rook, F8, F6),
         ];
         for one in moves.iter() {
             game.make_move(Action::MakeMove(*one)).unwrap();

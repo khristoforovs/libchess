@@ -18,7 +18,7 @@ pub fn generate_bishop_moves(table: &mut PieceMoveTable) {
                 (file - s_.get_file().to_index() as i32).abs(),
             );
             if distances.0 == distances.1 {
-                destination_mask = destination_mask | BitBoard::from_square(s_);
+                destination_mask |= BitBoard::from_square(s_);
             }
         }
         let source_mask = BitBoard::from_square(source_square);
@@ -32,12 +32,13 @@ pub fn generate_bishop_moves(table: &mut PieceMoveTable) {
 mod tests {
     use super::*;
     use unindent::unindent;
+    use crate::boards::squares::*;
 
     #[test]
     fn create() {
         let mut move_table = PieceMoveTable::new();
         generate_bishop_moves(&mut move_table);
-        let square = Square::E4;
+        let square = E4;
         let result_str = 
             "X . . . . . . . 
              . X . . . . . X 

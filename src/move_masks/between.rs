@@ -5,6 +5,12 @@ use std::cmp::max;
 
 pub struct BetweenTable([[Option<BitBoard>; SQUARES_NUMBER]; SQUARES_NUMBER]);
 
+impl Default for BetweenTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BetweenTable {
     pub fn new() -> Self {
         Self([[None; SQUARES_NUMBER]; SQUARES_NUMBER])
@@ -76,12 +82,13 @@ pub fn generate_between_masks(table: &mut BetweenTable) {
 mod tests {
     use super::*;
     use unindent::unindent;
+    use crate::boards::squares::*;
 
     #[test]
     fn between_diagonal() {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
-        let (square_a, square_b) = (Square::C3, Square::G7);
+        let (square_a, square_b) = (C3, G7);
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -103,7 +110,7 @@ mod tests {
     fn between_vertical() {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
-        let (square_a, square_b) = (Square::D5, Square::D1);
+        let (square_a, square_b) = (D5, D1);
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -125,7 +132,7 @@ mod tests {
     fn between_point() {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
-        let (square_a, square_b) = (Square::D5, Square::D5);
+        let (square_a, square_b) = (D5, D5);
         let result_str = 
             ". . . . . . . . 
              . . . . . . . . 
@@ -147,7 +154,7 @@ mod tests {
     fn between_empty() {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
-        let (square_a, square_b) = (Square::D5, Square::C3);
+        let (square_a, square_b) = (D5, C3);
         assert!(between_table.get(square_a, square_b).is_none());
     }
 }
