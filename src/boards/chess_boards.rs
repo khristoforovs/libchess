@@ -68,8 +68,6 @@ pub struct ChessBoard {
     en_passant: Option<Square>,
     pinned: BitBoard,
     checks: BitBoard,
-    moves_since_capture_counter: usize,
-    black_moved_counter: usize,
     flipped_view: bool,
     is_terminal_position: bool,
     hash: PositionHashValueType,
@@ -93,8 +91,6 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
             .set_en_passant(builder.get_en_passant())
             .set_castling_rights(Color::White, builder.get_castle_rights(Color::White))
             .set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black))
-            .set_black_moved_counter(builder.get_black_moved_counter())
-            .set_moves_since_capture(builder.get_moves_since_capture())
             .update_pins_and_checks()
             .update_terminal_status();
 
@@ -210,8 +206,6 @@ impl ChessBoard {
             en_passant: None,
             pinned: BLANK,
             checks: BLANK,
-            moves_since_capture_counter: 0,
-            black_moved_counter: 0,
             flipped_view: false,
             is_terminal_position: false,
             hash: 0,
@@ -333,7 +327,7 @@ impl ChessBoard {
     /// Returns a FEN string of current position
     #[inline]
     pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::try_from(self).unwrap())
+        format!("{}", BoardBuilder::from_board(self, 0, 1))
     }
 
     /// Returns a Bitboard mask of same-color pieces
@@ -365,19 +359,6 @@ impl ChessBoard {
     #[inline]
     pub fn get_pin_mask(&self) -> BitBoard {
         self.pinned
-    }
-
-    /// Returns a number of moves done since the first board was created
-    #[inline]
-    pub fn get_black_moved_counter(&self) -> usize {
-        self.black_moved_counter
-    }
-
-    /// Returns a number of moves since last capture or pawn move (is used
-    /// to determine the game termination by the 50-move rule)
-    #[inline]
-    pub fn get_moves_since_capture(&self) -> usize {
-        self.moves_since_capture_counter
     }
 
     /// Returns the castling rights for specified color.
@@ -860,9 +841,6 @@ impl ChessBoard {
             return Err(Error::IllegalMoveDetected);
         }
 
-        next_position
-            .update_black_moved_counter()
-            .update_moves_since_capture(next_move);
         match next_move.get_move_option() {
             BoardMoveOption::MovePiece(m) => {
                 next_position.move_piece(m);
@@ -926,16 +904,6 @@ impl ChessBoard {
             )
     }
 
-    fn set_black_moved_counter(&mut self, value: usize) -> &mut Self {
-        self.black_moved_counter = value;
-        self
-    }
-
-    fn set_moves_since_capture(&mut self, value: usize) -> &mut Self {
-        self.moves_since_capture_counter = value;
-        self
-    }
-
     fn set_side_to_move(&mut self, color: Color) -> &mut Self {
         if color != self.side_to_move {
             self.hash ^= ZOBRIST.get_black_to_move_value();
@@ -993,29 +961,6 @@ impl ChessBoard {
                 self.hash ^= ZOBRIST.get_piece_square_value(Piece(piece_type, color), square);
             }
             None => {}
-        }
-        self
-    }
-
-    fn update_black_moved_counter(&mut self) -> &mut Self {
-        if self.side_to_move == Color::Black {
-            self.black_moved_counter += 1;
-        }
-        self
-    }
-
-    fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
-        match last_move.get_move_option() {
-            BoardMoveOption::MovePiece(m) => {
-                if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(self) {
-                    self.moves_since_capture_counter = 0;
-                } else {
-                    self.moves_since_capture_counter += 1;
-                }
-            }
-            _ => {
-                self.moves_since_capture_counter = 0;
-            }
         }
         self
     }
@@ -1249,10 +1194,7 @@ mod tests {
     #[test]
     fn create_from_string() {
         assert_eq!(
-            format!(
-                "{}",
-                BoardBuilder::try_from(&ChessBoard::default()).unwrap()
-            ),
+            format!("{}", BoardBuilder::from_board(&ChessBoard::default(), 0, 1)),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
     }

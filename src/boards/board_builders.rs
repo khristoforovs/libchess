@@ -40,7 +40,7 @@ pub struct BoardBuilder {
     castle_rights: [CastlingRights; COLORS_NUMBER],
     en_passant: Option<Square>,
     moves_since_capture_counter: usize,
-    black_moved_counter: usize,
+    move_number: usize,
 }
 
 impl Index<Square> for BoardBuilder {
@@ -87,7 +87,7 @@ impl FromStr for BoardBuilder {
                 });
             }
         });
-        fen.set_black_moves_counter(match usize::from_str(tokens[5]) {
+        fen.set_move_number(match usize::from_str(tokens[5]) {
             Ok(c) => c,
             Err(_) => {
                 return Err(Error::InvalidFENString {
@@ -245,13 +245,28 @@ impl fmt::Display for BoardBuilder {
                 None => "-".to_string(),
             },
             self.get_moves_since_capture(),
-            self.get_black_moved_counter(),
+            self.get_move_number(),
         )
     }
 }
 
-impl From<&ChessBoard> for BoardBuilder {
-    fn from(board: &ChessBoard) -> Self {
+impl BoardBuilder {
+    pub fn new() -> BoardBuilder {
+        BoardBuilder {
+            pieces: [None; 64],
+            side_to_move: Color::White,
+            castle_rights: [CastlingRights::Neither, CastlingRights::Neither],
+            en_passant: None,
+            moves_since_capture_counter: 0,
+            move_number: 0,
+        }
+    }
+
+    pub fn from_board(
+        board: &ChessBoard,
+        moves_since_capture_counter: usize,
+        move_number: usize,
+    ) -> Self {
         let mut pieces = vec![];
         for i in 0..SQUARES_NUMBER {
             let square = Square::new(i as u8).unwrap();
@@ -267,22 +282,9 @@ impl From<&ChessBoard> for BoardBuilder {
             board.get_castle_rights(Color::White),
             board.get_castle_rights(Color::Black),
             board.get_en_passant(),
-            board.get_moves_since_capture(),
-            board.get_black_moved_counter(),
+            moves_since_capture_counter,
+            move_number,
         )
-    }
-}
-
-impl BoardBuilder {
-    pub fn new() -> BoardBuilder {
-        BoardBuilder {
-            pieces: [None; 64],
-            side_to_move: Color::White,
-            castle_rights: [CastlingRights::Neither, CastlingRights::Neither],
-            en_passant: None,
-            moves_since_capture_counter: 0,
-            black_moved_counter: 0,
-        }
     }
 
     pub fn setup<'a>(
@@ -292,7 +294,7 @@ impl BoardBuilder {
         black_castle_rights: CastlingRights,
         en_passant: Option<Square>,
         moves_since_capture_counter: usize,
-        black_moved_counter: usize,
+        move_number: usize,
     ) -> BoardBuilder {
         let mut builder = BoardBuilder {
             pieces: [None; SQUARES_NUMBER],
@@ -300,7 +302,7 @@ impl BoardBuilder {
             castle_rights: [white_castle_rights, black_castle_rights],
             en_passant,
             moves_since_capture_counter,
-            black_moved_counter,
+            move_number,
         };
 
         for (s, p) in pieces.into_iter() {
@@ -316,8 +318,8 @@ impl BoardBuilder {
     }
 
     #[inline]
-    pub fn get_black_moved_counter(&self) -> usize {
-        self.black_moved_counter
+    pub fn get_move_number(&self) -> usize {
+        self.move_number
     }
 
     #[inline]
@@ -340,8 +342,8 @@ impl BoardBuilder {
         self.en_passant
     }
 
-    pub fn set_black_moves_counter(&mut self, counter: usize) -> &mut Self {
-        self.black_moved_counter = counter;
+    pub fn set_move_number(&mut self, counter: usize) -> &mut Self {
+        self.move_number = counter;
         self
     }
 

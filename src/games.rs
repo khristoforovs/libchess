@@ -3,8 +3,8 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::{BoardMove, BoardStatus, ChessBoard, LegalMoves};
-use crate::colors::Color;
+use crate::boards::{BoardMove, BoardMoveOption, BoardBuilder, BoardStatus, ChessBoard, LegalMoves};
+use crate::{Color, PieceType};
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
 use std::collections::HashMap;
@@ -84,6 +84,8 @@ pub struct Game {
     history: GameHistory,
     unique_positions_counter: HashMap<u64, usize>,
     status: GameStatus,
+    moves_since_capture_counter: usize,
+    move_number: usize,
 }
 
 impl Default for Game {
@@ -95,6 +97,8 @@ impl Default for Game {
             history: GameHistory::from_position(board),
             unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
             status: GameStatus::Ongoing,
+            moves_since_capture_counter: 0,
+            move_number: 0,
         };
 
         result.update_game_status(None).position_counter_increment();
@@ -104,12 +108,18 @@ impl Default for Game {
 
 impl Game {
     #[inline]
-    pub fn from_board(board: ChessBoard) -> Self {
+    pub fn from_board(
+        board: ChessBoard,
+        moves_since_capture_counter: usize,
+        move_number: usize,
+    ) -> Self {
         let mut result = Self {
             position: board.clone(),
             history: GameHistory::from_position(board),
             unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
             status: GameStatus::Ongoing,
+            moves_since_capture_counter,
+            move_number,
         };
 
         result.update_game_status(None).position_counter_increment();
@@ -118,10 +128,16 @@ impl Game {
 
     #[inline]
     pub fn from_fen(fen: &str) -> Result<Self, ChessBoardError> {
-        match ChessBoard::from_str(fen) {
-            Ok(board) => Ok(Self::from_board(board)),
-            Err(e) => Err(e),
-        }
+        let builder = BoardBuilder::from_str(fen)?;
+        let board = ChessBoard::try_from(builder)?; 
+
+        Ok(
+            Self::from_board(
+                board,
+                builder.get_moves_since_capture(),
+                builder.get_move_number()
+            )
+        )
     }
 
     /// Returns the GameHistory object which represents a sequence of moves
@@ -166,6 +182,19 @@ impl Game {
         self.position.get_legal_moves()
     }
 
+    /// Returns a number of moves done since the first board was created
+    #[inline]
+    pub fn get_move_number(&self) -> usize {
+        self.move_number
+    }
+
+    /// Returns a number of moves since last capture or pawn move (is used
+    /// to determine the game termination by the 50-move rule)
+    #[inline]
+    pub fn get_moves_since_capture(&self) -> usize {
+        self.moves_since_capture_counter
+    }
+
     #[inline]
     fn set_game_status(&mut self, status: GameStatus) -> &mut Self {
         self.status = status;
@@ -186,6 +215,29 @@ impl Game {
         self
     }
 
+    fn increment_move_number(&mut self) -> &mut Self {
+        if self.get_side_to_move() == Color::Black {
+            self.move_number += 1;
+        }
+        self
+    }
+
+    fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
+        match last_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
+                if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(self.get_position()) {
+                    self.moves_since_capture_counter = 0;
+                } else {
+                    self.moves_since_capture_counter += 1;
+                }
+            }
+            _ => {
+                self.moves_since_capture_counter = 0;
+            }
+        }
+        self
+    }
+
     fn update_game_status(&mut self, last_action: Option<Action>) -> &mut Self {
         self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
@@ -197,7 +249,7 @@ impl Game {
                     BoardStatus::Ongoing => {
                         if self.get_position_counter(position) == 3 {
                             GameStatus::RepetitionDrawDeclared
-                        } else if position.get_moves_since_capture() >= 100 {
+                        } else if self.get_moves_since_capture() >= 100 {
                             GameStatus::FiftyMovesDrawDeclared
                         } else {
                             GameStatus::Ongoing
@@ -223,7 +275,13 @@ impl Game {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
             match action {
-                Action::MakeMove(m) => match self.get_position().make_move(m) {
+                Action::MakeMove(m) => match 
+                self
+                    .increment_move_number()
+                    .update_moves_since_capture(m)
+                    .get_position()
+                    .make_move(m)
+                {
                     Ok(next_position) => {
                         self.set_position(next_position);
                         self.position_counter_increment();
