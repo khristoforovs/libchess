@@ -1,18 +1,21 @@
-use super::BoardBuilder;
-use super::{squares, Square, SQUARES_NUMBER};
-use super::{BitBoard, BLANK};
-use super::{BoardMove, BoardMoveOption, DisplayAmbiguityType, PieceMove, PromotionPieceType};
-use super::{File, Rank, FILES, RANKS};
-use super::{PositionHashValueType, ZOBRIST_TABLES as ZOBRIST};
+//! Chess Board module
+//! 
+//! This module defines the representation of position on the board
+//! (including Zobrist hash calculation) Implements the logics of
+//! moving pieces and inferring the board status
+
+use crate::boards::{
+    squares, BitBoard, BoardBuilder, BoardMove, BoardMoveOption, DisplayAmbiguityType, File,
+    PieceMove, PositionHashValueType, PromotionPieceType, Rank, Square, BLANK, FILES, RANKS,
+    SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
+};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
-use crate::CastlingRights;
 use crate::{castle_king_side, castle_queen_side, mv};
-use crate::{Color, COLORS_NUMBER};
-use crate::{Piece, PieceType, PIECE_TYPES_NUMBER};
+use crate::{CastlingRights, Color, Piece, PieceType, COLORS_NUMBER, PIECE_TYPES_NUMBER};
 use colored::Colorize;
 use either::Either;
 use std::collections::hash_set::HashSet;
@@ -20,6 +23,15 @@ use std::fmt;
 use std::str::FromStr;
 
 pub type LegalMoves = HashSet<BoardMove>;
+
+/// Represents the board status
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoardStatus {
+    Ongoing,
+    CheckMated(Color),
+    TheoreticalDrawDeclared,
+    Stalemate,
+}
 
 /// The Chess Board. No more, no less
 ///
@@ -725,6 +737,47 @@ impl ChessBoard {
     /// Returns the hash of the position. Is used to detect the repetition draw
     pub fn get_hash(&self) -> PositionHashValueType {
         self.hash
+    }
+
+    /// Returns position status on the board
+    pub fn get_status(&self) -> BoardStatus {
+        if self.is_terminal_position {
+            if self.checks.count_ones() > 0 {
+                BoardStatus::CheckMated(self.side_to_move)
+            } else {
+                BoardStatus::Stalemate
+            }
+        } else if self.is_theoretical_draw_on_board() {
+            BoardStatus::TheoreticalDrawDeclared
+        } else {
+            BoardStatus::Ongoing
+        }
+    }
+
+    /// Returns true if neither white and black can not checkmate each other
+    pub fn is_theoretical_draw_on_board(&self) -> bool {
+        let white_pieces_number = self.get_color_mask(Color::White).count_ones();
+        let black_pieces_number = self.get_color_mask(Color::Black).count_ones();
+
+        if (white_pieces_number > 2) | (black_pieces_number > 2) {
+            return false;
+        }
+
+        let bishops_and_knights = self.get_piece_type_mask(PieceType::Knight)
+            | self.get_piece_type_mask(PieceType::Bishop);
+
+        let white_can_not_checkmate = match white_pieces_number {
+            1 => true,
+            2 => self.get_color_mask(Color::White) & bishops_and_knights != BLANK,
+            _ => unreachable!(),
+        };
+        let black_can_not_checkmate = match black_pieces_number {
+            1 => true,
+            2 => self.get_color_mask(Color::Black) & bishops_and_knights != BLANK,
+            _ => unreachable!(),
+        };
+
+        white_can_not_checkmate & black_can_not_checkmate
     }
 
     /// This method is needed to represent the chess move without any ambiguity in PGN-like strings

@@ -3,13 +3,10 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::BoardMove;
-use crate::boards::BLANK;
-use crate::boards::{ChessBoard, LegalMoves};
+use crate::boards::{BoardMove, BoardStatus, ChessBoard, LegalMoves};
 use crate::colors::Color;
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
-use crate::pieces::PieceType::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -193,20 +190,19 @@ impl Game {
         self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
                 let position = self.get_position();
-                if position.is_terminal() {
-                    if position.get_check_mask().count_ones() > 0 {
-                        GameStatus::CheckMated(self.get_side_to_move())
-                    } else {
-                        GameStatus::Stalemate
+                match position.get_status() {
+                    BoardStatus::CheckMated(c) => GameStatus::CheckMated(c),
+                    BoardStatus::TheoreticalDrawDeclared => GameStatus::TheoreticalDrawDeclared,
+                    BoardStatus::Stalemate => GameStatus::Stalemate,
+                    BoardStatus::Ongoing => {
+                        if self.get_position_counter(position) == 3 {
+                            GameStatus::RepetitionDrawDeclared
+                        } else if position.get_moves_since_capture() >= 100 {
+                            GameStatus::FiftyMovesDrawDeclared
+                        } else {
+                            GameStatus::Ongoing
+                        }
                     }
-                } else if self.get_position_counter(position) == 3 {
-                    GameStatus::RepetitionDrawDeclared
-                } else if position.get_moves_since_capture() >= 100 {
-                    GameStatus::FiftyMovesDrawDeclared
-                } else if self.is_theoretical_draw_on_board() {
-                    GameStatus::TheoreticalDrawDeclared
-                } else {
-                    GameStatus::Ongoing
                 }
             }
             Some(Action::OfferDraw) => GameStatus::DrawOffered,
@@ -220,32 +216,6 @@ impl Game {
         }
 
         self
-    }
-
-    fn is_theoretical_draw_on_board(&self) -> bool {
-        let white_pieces_number = self.position.get_color_mask(Color::White).count_ones();
-        let black_pieces_number = self.position.get_color_mask(Color::Black).count_ones();
-
-        if (white_pieces_number <= 2) & (black_pieces_number <= 2) {
-            let bishops_and_knights = self.position.get_piece_type_mask(Knight)
-                | self.position.get_piece_type_mask(Bishop);
-
-            let white_can_not_checkmate = match white_pieces_number {
-                1 => true,
-                2 => self.position.get_color_mask(Color::White) & bishops_and_knights != BLANK,
-                _ => unreachable!(),
-            };
-            let black_can_not_checkmate = match black_pieces_number {
-                1 => true,
-                2 => self.position.get_color_mask(Color::Black) & bishops_and_knights != BLANK,
-                _ => unreachable!(),
-            };
-            if white_can_not_checkmate & black_can_not_checkmate {
-                return true;
-            }
-        }
-
-        false
     }
 
     /// The method to make moves during the game
@@ -291,6 +261,7 @@ mod tests {
     use crate::boards::squares::*;
     use crate::boards::ZOBRIST_TABLES as ZOBRIST;
     use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
+    use crate::PieceType::*;
     use crate::{castle_king_side, castle_queen_side, mv};
 
     #[test]

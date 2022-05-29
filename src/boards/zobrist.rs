@@ -135,7 +135,7 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::{squares::*, Square};
+    use crate::boards::squares::*;
     use crate::boards::{BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
     use crate::PieceType::*;
     use crate::{castle_king_side, castle_queen_side, mv};
