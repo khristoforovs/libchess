@@ -10,12 +10,31 @@ The easiest way to initialize the board is to use the FEN-string. Also, if you
 need a default starting chess position you can use the default method:
 ```rust
 use libchess::boards::ChessBoard; 
-println!("{}", ChessBoard::default());
 
-let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
-println!("{}", board);
-println!("{}", board.as_fen());
+println!("{}", ChessBoard::default());  // draw the starting chess position
+
+let fen = "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61";
+let board = ChessBoard::from_str(fen).unwrap();
+println!("{}", board);  // this will draw the board representation in terminal
+
+
+println!("{}", board.as_fen());  // will return "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 0 1"
+// because Board does not store the game-related data
+// but Game struct does
+let game = Game::from_fen(fen).unwrap();
+println!("{}", game.as_fen());  // will return "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
 ```
+
+### Initializing a Game object:
+```rust
+let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
+let moves = vec![mv!(King, E6, D6)];
+for one in moves.iter() {
+    game.make_move(Action::MakeMove(*one)).unwrap();
+}
+assert_eq!(game.get_game_status(), GameStatus::Stalemate);
+```
+
 
 ### Making moves:
 ```rust

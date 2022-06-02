@@ -139,6 +139,17 @@ impl Game {
             )
         )
     }
+    
+    /// Returns a FEN string of current game position
+    #[inline]
+    pub fn as_fen(&self) -> String {
+        format!("{}", BoardBuilder::from_board(
+                &self.position,
+                self.moves_since_capture_counter,
+                self.move_number
+            )
+        )
+    }
 
     /// Returns the GameHistory object which represents a sequence of moves
     /// in PGN-like string
@@ -321,6 +332,13 @@ mod tests {
     use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
     use crate::PieceType::*;
     use crate::{castle_king_side, castle_queen_side, mv};
+
+    #[test]
+    fn as_fen() {
+        let game_fen = "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3";
+        let game = Game::from_fen(game_fen).unwrap();
+        assert_eq!(game.as_fen(), game_fen);
+    }
 
     #[test]
     fn simple_check_mate() {
