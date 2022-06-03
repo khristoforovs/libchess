@@ -3,10 +3,12 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::{BoardMove, BoardMoveOption, BoardBuilder, BoardStatus, ChessBoard, LegalMoves};
-use crate::{Color, PieceType};
+use crate::boards::{
+    BoardBuilder, BoardMove, BoardMoveOption, BoardStatus, ChessBoard, LegalMoves,
+};
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
+use crate::{Color, PieceType};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -129,21 +131,21 @@ impl Game {
     #[inline]
     pub fn from_fen(fen: &str) -> Result<Self, ChessBoardError> {
         let builder = BoardBuilder::from_str(fen)?;
-        let board = ChessBoard::try_from(builder)?; 
+        let board = ChessBoard::try_from(builder)?;
 
-        Ok(
-            Self::from_board(
-                board,
-                builder.get_moves_since_capture(),
-                builder.get_move_number()
-            )
-        )
+        Ok(Self::from_board(
+            board,
+            builder.get_moves_since_capture(),
+            builder.get_move_number(),
+        ))
     }
-    
+
     /// Returns a FEN string of current game position
     #[inline]
     pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::from_board(
+        format!(
+            "{}",
+            BoardBuilder::from_board(
                 &self.position,
                 self.moves_since_capture_counter,
                 self.move_number
@@ -236,7 +238,9 @@ impl Game {
     fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
         match last_move.get_move_option() {
             BoardMoveOption::MovePiece(m) => {
-                if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(self.get_position()) {
+                if (m.get_piece_type() == PieceType::Pawn)
+                    | m.is_capture_on_board(self.get_position())
+                {
                     self.moves_since_capture_counter = 0;
                 } else {
                     self.moves_since_capture_counter += 1;
@@ -286,8 +290,7 @@ impl Game {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
             match action {
-                Action::MakeMove(m) => match 
-                self
+                Action::MakeMove(m) => match self
                     .increment_move_number()
                     .update_moves_since_capture(m)
                     .get_position()

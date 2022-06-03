@@ -16,8 +16,16 @@ pub enum File {
     H,
 }
 
-pub const FILES: [File; 8] =
-    [File::A, File::B, File::C, File::D, File::E, File::F, File::G, File::H];
+pub const FILES: [File; 8] = [
+    File::A,
+    File::B,
+    File::C,
+    File::D,
+    File::E,
+    File::F,
+    File::G,
+    File::H,
+];
 
 impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

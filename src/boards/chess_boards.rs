@@ -1,5 +1,5 @@
 //! Chess Board module
-//! 
+//!
 //! This module defines the representation of position on the board
 //! (including Zobrist hash calculation) Implements the logics of
 //! moving pieces and inferring the board status
