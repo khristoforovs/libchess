@@ -148,8 +148,8 @@ mod tests {
             mv!(Bishop, C1, D2), // 20.
             mv!(Rook, F8, F6),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for m in moves.iter() {
+            game.make_move(Action::MakeMove(*m)).unwrap();
         }
         game.make_move(Action::Resign).unwrap();
 

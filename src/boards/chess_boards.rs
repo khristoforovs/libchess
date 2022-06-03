@@ -1,5 +1,5 @@
 //! Chess Board module
-//! 
+//!
 //! This module defines the representation of position on the board
 //! (including Zobrist hash calculation) Implements the logics of
 //! moving pieces and inferring the board status
@@ -454,7 +454,6 @@ impl ChessBoard {
                 let source_square = m.get_source_square();
                 if (self.get_piece_type_mask(m.get_piece_type())
                     & self.get_color_mask(self.side_to_move)
-                    & !self.get_pin_mask()
                     & BitBoard::from_square(source_square))
                 .count_ones()
                     != 1
@@ -594,8 +593,7 @@ impl ChessBoard {
 
         for i in 0..PIECE_TYPES_NUMBER {
             let piece_type = PieceType::from_index(i).unwrap();
-            let free_pieces_mask =
-                color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
+            let free_pieces_mask = color_mask & self.get_piece_type_mask(piece_type);
 
             for square in free_pieces_mask {
                 let mut full = match piece_type {

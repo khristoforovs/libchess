@@ -3,10 +3,12 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::{BoardMove, BoardMoveOption, BoardBuilder, BoardStatus, ChessBoard, LegalMoves};
-use crate::{Color, PieceType};
+use crate::boards::{
+    BoardBuilder, BoardMove, BoardMoveOption, BoardStatus, ChessBoard, LegalMoves,
+};
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
+use crate::{Color, PieceType};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -129,21 +131,21 @@ impl Game {
     #[inline]
     pub fn from_fen(fen: &str) -> Result<Self, ChessBoardError> {
         let builder = BoardBuilder::from_str(fen)?;
-        let board = ChessBoard::try_from(builder)?; 
+        let board = ChessBoard::try_from(builder)?;
 
-        Ok(
-            Self::from_board(
-                board,
-                builder.get_moves_since_capture(),
-                builder.get_move_number()
-            )
-        )
+        Ok(Self::from_board(
+            board,
+            builder.get_moves_since_capture(),
+            builder.get_move_number(),
+        ))
     }
-    
+
     /// Returns a FEN string of current game position
     #[inline]
     pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::from_board(
+        format!(
+            "{}",
+            BoardBuilder::from_board(
                 &self.position,
                 self.moves_since_capture_counter,
                 self.move_number
@@ -236,7 +238,9 @@ impl Game {
     fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
         match last_move.get_move_option() {
             BoardMoveOption::MovePiece(m) => {
-                if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(self.get_position()) {
+                if (m.get_piece_type() == PieceType::Pawn)
+                    | m.is_capture_on_board(self.get_position())
+                {
                     self.moves_since_capture_counter = 0;
                 } else {
                     self.moves_since_capture_counter += 1;
@@ -286,8 +290,7 @@ impl Game {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
             match action {
-                Action::MakeMove(m) => match 
-                self
+                Action::MakeMove(m) => match self
                     .increment_move_number()
                     .update_moves_since_capture(m)
                     .get_position()
@@ -331,7 +334,7 @@ mod tests {
     use crate::boards::ZOBRIST_TABLES as ZOBRIST;
     use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
     use crate::PieceType::*;
-    use crate::{castle_king_side, castle_queen_side, mv};
+    use crate::{castle_king_side, castle_queen_side, mv, mv_str};
 
     #[test]
     fn as_fen() {
@@ -462,12 +465,52 @@ mod tests {
             mv!(Queen, D5, G5), // 22.
             mv!(Bishop, C8, H3),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for m in moves.iter() {
+            game.make_move(Action::MakeMove(*m)).unwrap();
         }
         game.make_move(Action::Resign).unwrap();
 
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
+    }
+
+    #[test]
+    fn karpov_korchnoi_1974() {
+        let mut game = Game::default();
+        let moves = vec![
+            "e2e4", "c7c5", // 1.
+            "Ng1f3", "d7d6", // 2.
+            "d2d4", "c5d4", // 3.
+            "Nf3d4", "Ng8f6", // 4.
+            "Nb1c3", "g7g6", // 5.
+            "Bc1e3", "Bf8g7", // 6.
+            "f2f3", "Nb8c6", // 7.
+            "Qd1d2", "O-O", // 8.
+            "Bf1c4", "Bc8d7", // 9.
+            "h2h4", "Ra8c8", // 10.
+            "Bc4b3", "Nc6e5", // 11.
+            "O-O-O", "Ne5c4", // 12.
+            "Bb3c4", "Rc8c4", // 13.
+            "h4h5", "Nf6h5", // 14.
+            "g2g4", "Nh5f6", // 15.
+            "Nd4e2", "Qd8a5", // 16.
+            "Be3h6", "Bg7h6", // 17.
+            "Qd2h6", "Rf8c8", // 18.
+            "Rd1d3", "Rc4c5", // 19.
+            "g4g5", "Rc5g5", // 20.
+            "Rd3d5", "Rg5d5", // 21.
+            "Nc3d5", "Rc8e8", // 22.
+            "Ne2f4", "Bd7c6", // 23.
+            "e4e5", "Bc6d5", // 24.
+            "e5f6", "e7f6", // 25.
+            "Qh6h7", "Kg8f8", // 26.
+            "Qh7h8", // 27.
+        ];
+        for m in moves.iter() {
+            game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
+        }
+        game.make_move(Action::Resign).unwrap();
+
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::Black));
     }
 
     #[test]

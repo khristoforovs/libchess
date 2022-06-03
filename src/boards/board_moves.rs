@@ -1,7 +1,9 @@
 use crate::boards::{BitBoard, ChessBoard, Square};
+use crate::errors::BoardMoveRepresentationError as Error;
 use crate::PieceType;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PromotionPieceType {
@@ -9,6 +11,24 @@ pub enum PromotionPieceType {
     Bishop,
     Rook,
     Queen,
+}
+
+impl FromStr for PromotionPieceType {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value.len() != 1 {
+            return Err(Error::InvalidBoardMoveRepresentation);
+        }
+
+        match value.to_uppercase().as_str().chars().next().unwrap() {
+            'N' => Ok(PromotionPieceType::Knight),
+            'B' => Ok(PromotionPieceType::Bishop),
+            'R' => Ok(PromotionPieceType::Rook),
+            'Q' => Ok(PromotionPieceType::Queen),
+            _ => Err(Error::InvalidBoardMoveRepresentation),
+        }
+    }
 }
 
 impl From<PromotionPieceType> for PieceType {
@@ -115,6 +135,57 @@ pub struct BoardMove {
     is_check: Option<bool>,
     is_checkmate: Option<bool>,
     display_ambiguity_type: DisplayAmbiguityType,
+}
+
+impl FromStr for BoardMove {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let tokens: Vec<&str> = value.split('=').collect();
+        match value {
+            "O-O-O" => Ok(Self::new(BoardMoveOption::CastleQueenSide)),
+            "O-O" => Ok(Self::new(BoardMoveOption::CastleKingSide)),
+            _ => {
+                let piece_str = tokens[0];
+                let len = piece_str.len();
+
+                let piece_type = if len == 4 {
+                    PieceType::Pawn
+                } else {
+                    match PieceType::from_str(&piece_str[..1]) {
+                        Ok(p) => p,
+                        Err(_) => {
+                            return Err(Error::InvalidBoardMoveRepresentation);
+                        }
+                    }
+                };
+
+                let source_square = match Square::from_str(&piece_str[(len - 4)..(len - 2)]) {
+                    Ok(s) => s,
+                    Err(_) => {
+                        return Err(Error::InvalidBoardMoveRepresentation);
+                    }
+                };
+                let destination_square = match Square::from_str(&piece_str[(len - 2)..]) {
+                    Ok(s) => s,
+                    Err(_) => {
+                        return Err(Error::InvalidBoardMoveRepresentation);
+                    }
+                };
+
+                Ok(BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                    piece_type,
+                    source_square,
+                    destination_square,
+                    if tokens.len() > 1 {
+                        Some(PromotionPieceType::from_str(tokens[1]).unwrap())
+                    } else {
+                        None
+                    },
+                ))))
+            }
+        }
+    }
 }
 
 impl fmt::Display for BoardMove {
@@ -273,6 +344,13 @@ macro_rules! mv {
 }
 
 #[macro_export]
+macro_rules! mv_str {
+    ($board_move_str:expr) => {
+        BoardMove::from_str($board_move_str).unwrap()
+    };
+}
+
+#[macro_export]
 macro_rules! castle_king_side {
     () => {
         BoardMove::new(BoardMoveOption::CastleKingSide)
@@ -321,5 +399,63 @@ mod tests {
         let next_board = board.make_move(board_move).unwrap();
         board_move.associate(&board, &next_board);
         assert_eq!(board_move.is_capture().unwrap(), false);
+    }
+
+    #[test]
+    fn str_representation() {
+        assert_eq!(
+            BoardMove::from_str("e2e4").unwrap(),
+            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                Pawn, E2, E4, None
+            )))
+        );
+
+        assert_eq!(
+            BoardMove::from_str("e7e8=Q").unwrap(),
+            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                Pawn,
+                E7,
+                E8,
+                Some(PromotionPieceType::Queen)
+            )))
+        );
+
+        assert_eq!(
+            BoardMove::from_str("Pe7e8=Q").unwrap(),
+            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                Pawn,
+                E7,
+                E8,
+                Some(PromotionPieceType::Queen)
+            )))
+        );
+
+        assert_eq!(
+            BoardMove::from_str("Ra1a8").unwrap(),
+            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                Rook, A1, A8, None
+            )))
+        );
+
+        assert_eq!(
+            BoardMove::from_str("O-O-O").unwrap(),
+            BoardMove::new(BoardMoveOption::CastleQueenSide)
+        );
+
+        assert_eq!(
+            BoardMove::from_str("O-O").unwrap(),
+            BoardMove::new(BoardMoveOption::CastleKingSide)
+        );
+
+        assert_eq!(
+            BoardMove::from_str("bc1h6").unwrap(),
+            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
+                Bishop, C1, H6, None
+            )))
+        );
+
+        assert!(BoardMove::from_str("gc1h6").is_err());
+        assert!(BoardMove::from_str("Bz1h6").is_err());
+        assert!(BoardMove::from_str("Bc1h61").is_err());
     }
 }

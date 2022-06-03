@@ -37,6 +37,12 @@ pub enum PieceRepresentationError {
 }
 
 #[derive(Debug, Clone, Fail)]
+pub enum BoardMoveRepresentationError {
+    #[fail(display = "Invalid move representation string")]
+    InvalidBoardMoveRepresentation,
+}
+
+#[derive(Debug, Clone, Fail)]
 pub enum ChessBoardError {
     #[fail(display = "Invalid FEN string: {}", s)]
     InvalidFENString { s: String },
