@@ -40,7 +40,7 @@ assert_eq!(game.get_game_status(), GameStatus::Stalemate);
 ```rust
 use libchess::{Game, Action, GameStatus, Color};
 use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-use libchess::{castle_king_side, castle_queen_side, mv};
+use libchess::{castle_king_side, castle_queen_side, mv, mv_str};
 use libchess::PieceType::*;
 
 let mut game = Game::default();
@@ -57,6 +57,28 @@ for one in moves.iter() {
 }
 assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
 ```
+
+Also you can define moves by str: 
+```rust
+use libchess::{Game, Action, Color};
+use libchess::boards::{ChessBoard, BoardMove};
+use libchess::mv_str;
+use std::str::FromStr;
+
+let mut game = Game::default();
+let moves = vec![
+    "e2e4", "c7c5",
+    "Ng1f3", "d7d6",
+    "d2d4", "c5d4",
+    "Nf3d4", "Ng8f6",
+];
+
+for m in moves.iter() {
+    game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
+}
+println!("{}", game.get_position());
+```
+
 
 ### Game history representation:
 ```rust

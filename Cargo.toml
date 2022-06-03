@@ -1,6 +1,6 @@
 [package]
 name = "libchess"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
 description = "Simple Rust library to simulate the game of chess. No engine so far, just rules and legal moves"

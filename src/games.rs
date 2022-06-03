@@ -60,12 +60,13 @@ impl fmt::Display for GameStatus {
 /// The Game of Chess object
 ///
 /// ## Examples
+/// Making moves by creating Action structs:
 /// ```
 /// use libchess::{Game, Action, GameStatus, Color};
 /// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
 /// use libchess::{castle_king_side, castle_queen_side, mv};
 /// use libchess::PieceType::*;
-///
+/// 
 /// let mut game = Game::default();
 /// let moves = vec![
 ///    mv!(Pawn, E2, E4),
@@ -79,6 +80,26 @@ impl fmt::Display for GameStatus {
 ///     game.make_move(Action::MakeMove(*one)).unwrap();
 /// }
 /// assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
+/// ```
+/// 
+/// Making moves by str moves representation:
+/// ```
+/// use libchess::{Game, Action, Color};
+/// use libchess::boards::{ChessBoard, BoardMove};
+/// use libchess::mv_str;
+/// use std::str::FromStr;
+///
+/// let mut game = Game::default();
+/// let moves = vec![
+///     "e2e4", "c7c5",
+///     "Ng1f3", "d7d6",
+///     "d2d4", "c5d4",
+///     "Nf3d4", "Ng8f6",
+/// ];
+/// for m in moves.iter() {
+///     game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
+/// }
+/// println!("{}", game.get_position());
 /// ```
 #[derive(Debug, Clone)]
 pub struct Game {
