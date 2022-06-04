@@ -25,8 +25,14 @@ let game = Game::from_fen(fen).unwrap();
 println!("{}", game.as_fen());  // will return "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
 ```
 
+
 ### Initializing a Game object:
 ```rust
+use libchess::boards::{BoardMove, BoardMoveOption, PieceMove, squares::*};
+use libchess::{Game, Action, GameStatus, Color};
+use libchess::{castle_king_side, castle_queen_side, mv};
+use libchess::PieceType::*;
+
 let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
 let moves = vec![mv!(King, E6, D6)];
 for one in moves.iter() {
@@ -40,7 +46,7 @@ assert_eq!(game.get_game_status(), GameStatus::Stalemate);
 ```rust
 use libchess::{Game, Action, GameStatus, Color};
 use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-use libchess::{castle_king_side, castle_queen_side, mv, mv_str};
+use libchess::{castle_king_side, castle_queen_side, mv};
 use libchess::PieceType::*;
 
 let mut game = Game::default();
