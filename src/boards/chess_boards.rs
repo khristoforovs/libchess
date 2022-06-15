@@ -30,6 +30,7 @@ pub enum BoardStatus {
     Ongoing,
     CheckMated(Color),
     TheoreticalDrawDeclared,
+    FiftyMovesDrawDeclared,
     Stalemate,
 }
 
@@ -747,6 +748,8 @@ impl ChessBoard {
             }
         } else if self.is_theoretical_draw_on_board() {
             BoardStatus::TheoreticalDrawDeclared
+        } else if self.moves_since_capture_or_pawn_move >= 100 {
+            BoardStatus::FiftyMovesDrawDeclared
         } else {
             BoardStatus::Ongoing
         }
@@ -1074,6 +1077,10 @@ impl ChessBoard {
     }
 
     fn update_terminal_status(&mut self) -> &mut Self {
+        // To define whether the position is terminal one, we should understand that current side
+        // does not have legal moves. The simplest way could do this is just by calling
+        // board.get_legal_moves().len(). But it we could avoid iterating over all available
+        // moves for most of the cases and find only the first legal move.
         let color_mask = self.get_color_mask(self.side_to_move);
         let en_passant_mask = match self.get_en_passant() {
             Some(sq) => BitBoard::from_square(sq),

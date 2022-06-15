@@ -234,11 +234,10 @@ impl Game {
                     BoardStatus::CheckMated(c) => GameStatus::CheckMated(c),
                     BoardStatus::TheoreticalDrawDeclared => GameStatus::TheoreticalDrawDeclared,
                     BoardStatus::Stalemate => GameStatus::Stalemate,
+                    BoardStatus::FiftyMovesDrawDeclared => GameStatus::FiftyMovesDrawDeclared,
                     BoardStatus::Ongoing => {
-                        if self.get_position_counter(position) == 3 {
+                        if self.get_position_counter(position) >= 3 {
                             GameStatus::RepetitionDrawDeclared
-                        } else if self.get_moves_since_capture_or_pawn_move() >= 100 {
-                            GameStatus::FiftyMovesDrawDeclared
                         } else {
                             GameStatus::Ongoing
                         }
