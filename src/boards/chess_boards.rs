@@ -70,6 +70,8 @@ pub struct ChessBoard {
     checks: BitBoard,
     flipped_view: bool,
     is_terminal_position: bool,
+    moves_since_capture_or_pawn_move: usize,
+    move_number: usize,
     hash: PositionHashValueType,
 }
 
@@ -91,6 +93,8 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
             .set_en_passant(builder.get_en_passant())
             .set_castling_rights(Color::White, builder.get_castle_rights(Color::White))
             .set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black))
+            .set_move_number(builder.get_move_number())
+            .set_moves_since_capture_or_pawn_move(builder.get_moves_since_capture_or_pawn_move())
             .update_pins_and_checks()
             .update_terminal_status();
 
@@ -208,6 +212,8 @@ impl ChessBoard {
             checks: BLANK,
             flipped_view: false,
             is_terminal_position: false,
+            moves_since_capture_or_pawn_move: 0,
+            move_number: 1,
             hash: 0,
         }
     }
@@ -327,7 +333,7 @@ impl ChessBoard {
     /// Returns a FEN string of current position
     #[inline]
     pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::from_board(self, 0, 1))
+        format!("{}", BoardBuilder::from(*self))
     }
 
     /// Returns a Bitboard mask of same-color pieces
@@ -378,6 +384,19 @@ impl ChessBoard {
     #[inline]
     pub fn get_en_passant(&self) -> Option<Square> {
         self.en_passant
+    }
+
+    /// Returns a move number
+    #[inline]
+    pub fn get_move_number(&self) -> usize {
+        self.move_number
+    }
+
+    /// Returns a number of moves since last capture or pawn move (is used
+    /// to determine the game termination by the 50-move rule)
+    #[inline]
+    pub fn get_moves_since_capture_or_pawn_move(&self) -> usize {
+        self.moves_since_capture_or_pawn_move
     }
 
     /// Returns a Bitboard mask for all pieces which check the king with
@@ -881,7 +900,9 @@ impl ChessBoard {
         }
 
         let new_side_to_move = !self.side_to_move;
-        self.update_castling_rights(next_move)
+        self.update_move_number()
+            .update_moves_since_capture(next_move)
+            .update_castling_rights(next_move)
             .set_side_to_move(new_side_to_move)
             .update_en_passant(next_move)
             .update_pins_and_checks()
@@ -906,6 +927,16 @@ impl ChessBoard {
                 Piece(piece_move.get_piece_type(), color),
                 piece_move.get_destination_square(),
             )
+    }
+
+    fn set_move_number(&mut self, value: usize) -> &mut Self {
+        self.move_number = value;
+        self
+    }
+
+    fn set_moves_since_capture_or_pawn_move(&mut self, value: usize) -> &mut Self {
+        self.moves_since_capture_or_pawn_move = value;
+        self
     }
 
     fn set_side_to_move(&mut self, color: Color) -> &mut Self {
@@ -1016,6 +1047,29 @@ impl ChessBoard {
                     _ => CastlingRights::BothSides,
                 },
         );
+        self
+    }
+
+    fn update_move_number(&mut self) -> &mut Self {
+        if self.side_to_move == Color::Black {
+            self.move_number += 1;
+        }
+        self
+    }
+
+    fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
+        match last_move.get_move_option() {
+            BoardMoveOption::MovePiece(m) => {
+                if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(*self) {
+                    self.moves_since_capture_or_pawn_move = 0;
+                } else {
+                    self.moves_since_capture_or_pawn_move += 1;
+                }
+            }
+            _ => {
+                self.moves_since_capture_or_pawn_move = 0;
+            }
+        }
         self
     }
 
@@ -1198,7 +1252,7 @@ mod tests {
     #[test]
     fn create_from_string() {
         assert_eq!(
-            format!("{}", BoardBuilder::from_board(&ChessBoard::default(), 0, 1)),
+            format!("{}", BoardBuilder::from(ChessBoard::default())),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
     }

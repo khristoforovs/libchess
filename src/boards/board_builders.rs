@@ -39,8 +39,31 @@ pub struct BoardBuilder {
     side_to_move: Color,
     castle_rights: [CastlingRights; COLORS_NUMBER],
     en_passant: Option<Square>,
-    moves_since_capture_counter: usize,
+    moves_since_capture_or_pawn_move: usize,
     move_number: usize,
+}
+
+impl From<ChessBoard> for BoardBuilder {
+    fn from(board: ChessBoard) -> Self {
+        let mut pieces = vec![];
+        for i in 0..SQUARES_NUMBER {
+            let square = Square::new(i as u8).unwrap();
+            if let Some(piece_type) = board.get_piece_type_on(square) {
+                let color = board.get_piece_color_on(square).unwrap();
+                pieces.push((square, Piece(piece_type, color)));
+            }
+        }
+
+        BoardBuilder::setup(
+            &pieces,
+            board.get_side_to_move(),
+            board.get_castle_rights(Color::White),
+            board.get_castle_rights(Color::Black),
+            board.get_en_passant(),
+            board.get_moves_since_capture_or_pawn_move(),
+            board.get_move_number(),
+        )
+    }
 }
 
 impl Index<Square> for BoardBuilder {
@@ -79,7 +102,7 @@ impl FromStr for BoardBuilder {
         let side = tokens[1];
         let castles = tokens[2];
         let en_passant = tokens[3];
-        fen.set_moves_since_capture_counter(match usize::from_str(tokens[4]) {
+        fen.set_moves_since_capture_or_pawn_move(match usize::from_str(tokens[4]) {
             Ok(c) => c,
             Err(_) => {
                 return Err(Error::InvalidFENString {
@@ -244,7 +267,7 @@ impl fmt::Display for BoardBuilder {
                 Some(value) => format!("{}", value),
                 None => "-".to_string(),
             },
-            self.get_moves_since_capture(),
+            self.get_moves_since_capture_or_pawn_move(),
             self.get_move_number(),
         )
     }
@@ -257,34 +280,9 @@ impl BoardBuilder {
             side_to_move: Color::White,
             castle_rights: [CastlingRights::Neither, CastlingRights::Neither],
             en_passant: None,
-            moves_since_capture_counter: 0,
+            moves_since_capture_or_pawn_move: 0,
             move_number: 0,
         }
-    }
-
-    pub fn from_board(
-        board: &ChessBoard,
-        moves_since_capture_counter: usize,
-        move_number: usize,
-    ) -> Self {
-        let mut pieces = vec![];
-        for i in 0..SQUARES_NUMBER {
-            let square = Square::new(i as u8).unwrap();
-            if let Some(piece_type) = board.get_piece_type_on(square) {
-                let color = board.get_piece_color_on(square).unwrap();
-                pieces.push((square, Piece(piece_type, color)));
-            }
-        }
-
-        BoardBuilder::setup(
-            &pieces,
-            board.get_side_to_move(),
-            board.get_castle_rights(Color::White),
-            board.get_castle_rights(Color::Black),
-            board.get_en_passant(),
-            moves_since_capture_counter,
-            move_number,
-        )
     }
 
     pub fn setup<'a>(
@@ -293,7 +291,7 @@ impl BoardBuilder {
         white_castle_rights: CastlingRights,
         black_castle_rights: CastlingRights,
         en_passant: Option<Square>,
-        moves_since_capture_counter: usize,
+        moves_since_capture_or_pawn_move: usize,
         move_number: usize,
     ) -> BoardBuilder {
         let mut builder = BoardBuilder {
@@ -301,7 +299,7 @@ impl BoardBuilder {
             side_to_move,
             castle_rights: [white_castle_rights, black_castle_rights],
             en_passant,
-            moves_since_capture_counter,
+            moves_since_capture_or_pawn_move,
             move_number,
         };
 
@@ -323,8 +321,8 @@ impl BoardBuilder {
     }
 
     #[inline]
-    pub fn get_moves_since_capture(&self) -> usize {
-        self.moves_since_capture_counter
+    pub fn get_moves_since_capture_or_pawn_move(&self) -> usize {
+        self.moves_since_capture_or_pawn_move
     }
 
     #[inline]
@@ -347,8 +345,8 @@ impl BoardBuilder {
         self
     }
 
-    pub fn set_moves_since_capture_counter(&mut self, counter: usize) -> &mut Self {
-        self.moves_since_capture_counter = counter;
+    pub fn set_moves_since_capture_or_pawn_move(&mut self, counter: usize) -> &mut Self {
+        self.moves_since_capture_or_pawn_move = counter;
         self
     }
 
