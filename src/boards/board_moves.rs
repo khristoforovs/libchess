@@ -113,7 +113,7 @@ impl PieceMove {
         self.promotion
     }
 
-    pub fn is_capture_on_board(&self, board: &ChessBoard) -> bool {
+    pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
         (BitBoard::from_square(self.get_destination_square())
             & board.get_color_mask(!board.get_side_to_move()))
         .count_ones()
@@ -297,8 +297,8 @@ impl BoardMove {
 
     pub fn associate(
         &mut self,
-        board_before_move: &ChessBoard,
-        board_after_move: &ChessBoard,
+        board_before_move: ChessBoard,
+        board_after_move: ChessBoard,
     ) -> &mut Self {
         let is_check = board_after_move.get_check_mask().count_ones() > 0;
 
@@ -391,13 +391,13 @@ mod tests {
         let board = ChessBoard::from_str("k7/1q6/8/8/8/8/6Q1/5K2 w - - 0 1").unwrap();
         let mut board_move = mv!(Queen, G2, B7);
         let next_board = board.make_move(board_move).unwrap();
-        board_move.associate(&board, &next_board);
+        board_move.associate(board, next_board);
 
         assert_eq!(board_move.is_capture().unwrap(), true);
 
         let mut board_move = mv!(Queen, G2, C6);
         let next_board = board.make_move(board_move).unwrap();
-        board_move.associate(&board, &next_board);
+        board_move.associate(board, next_board);
         assert_eq!(board_move.is_capture().unwrap(), false);
     }
 

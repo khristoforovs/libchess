@@ -87,8 +87,8 @@ impl GameHistory {
         let positions_seq_len = self.positions.len();
         let mut history_chess_move = chess_move;
         history_chess_move.associate(
-            &self.positions[positions_seq_len - 2],
-            &self.positions[positions_seq_len - 1],
+            self.positions[positions_seq_len - 2],
+            self.positions[positions_seq_len - 1],
         );
         self.moves.push(history_chess_move);
         self

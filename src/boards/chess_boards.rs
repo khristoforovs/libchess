@@ -58,7 +58,7 @@ pub enum BoardStatus {
 /// println!("{}", board.as_fen());
 /// println!("{}", board.make_move(mv!(King, F4, G5)).unwrap());
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
     pieces_mask: [BitBoard; PIECE_TYPES_NUMBER],
     colors_mask: [BitBoard; COLORS_NUMBER],
@@ -833,28 +833,27 @@ impl ChessBoard {
     /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
     /// println!("{}", next_board);
     /// ```
-    pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
-        let mut next_position = self.clone();
+    pub fn make_move_mut(&mut self, next_move: BoardMove) -> Result<&mut Self, Error> {
         if !self.is_legal_move(next_move) {
             return Err(Error::IllegalMoveDetected);
         }
 
         match next_move.get_move_option() {
             BoardMoveOption::MovePiece(m) => {
-                next_position.move_piece(m);
+                self.move_piece(m);
             }
             BoardMoveOption::CastleKingSide => {
                 let king_rank = match self.side_to_move {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
                 };
-                next_position.move_piece(PieceMove::new(
+                self.move_piece(PieceMove::new(
                     PieceType::King,
                     Square::from_rank_file(king_rank, File::E),
                     Square::from_rank_file(king_rank, File::G),
                     None,
                 ));
-                next_position.move_piece(PieceMove::new(
+                self.move_piece(PieceMove::new(
                     PieceType::Rook,
                     Square::from_rank_file(king_rank, File::H),
                     Square::from_rank_file(king_rank, File::F),
@@ -866,13 +865,13 @@ impl ChessBoard {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
                 };
-                next_position.move_piece(PieceMove::new(
+                self.move_piece(PieceMove::new(
                     PieceType::King,
                     Square::from_rank_file(king_rank, File::E),
                     Square::from_rank_file(king_rank, File::C),
                     None,
                 ));
-                next_position.move_piece(PieceMove::new(
+                self.move_piece(PieceMove::new(
                     PieceType::Rook,
                     Square::from_rank_file(king_rank, File::A),
                     Square::from_rank_file(king_rank, File::D),
@@ -880,14 +879,21 @@ impl ChessBoard {
                 ));
             }
         }
-        next_position
-            .update_castling_rights(next_move)
-            .set_side_to_move(!self.side_to_move)
+
+        let new_side_to_move = !self.side_to_move;
+        self.update_castling_rights(next_move)
+            .set_side_to_move(new_side_to_move)
             .update_en_passant(next_move)
             .update_pins_and_checks()
             .update_terminal_status();
 
-        Ok(next_position)
+        Ok(self)
+    }
+
+    pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
+        let mut next_board = self.clone();
+        next_board.make_move_mut(next_move)?;
+        Ok(next_board)
     }
 
     fn move_piece(&mut self, piece_move: PieceMove) -> &mut Self {
@@ -1185,7 +1191,7 @@ impl ChessBoard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::{squares::*, Square};
+    use crate::boards::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
     use crate::PieceType::*;
     use unindent::unindent;
 
@@ -1426,5 +1432,10 @@ mod tests {
             ChessBoard::from_str("r3k1nr/pp1ppppp/8/8/8/2Q5/PPPPPPPP/R3K2R b KQkq - 0 1").unwrap();
         assert!(!board.get_legal_moves().contains(&castle_king_side!()));
         assert!(!board.get_legal_moves().contains(&castle_queen_side!()));
+    }
+
+    #[test]
+    fn kill_the_king() {
+        assert!(ChessBoard::from_str("Q3k3/8/4K3/8/8/8/8/8 w - - 0 1").is_err());
     }
 }

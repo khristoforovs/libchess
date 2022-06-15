@@ -66,7 +66,7 @@ impl fmt::Display for GameStatus {
 /// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
 /// use libchess::{castle_king_side, castle_queen_side, mv};
 /// use libchess::PieceType::*;
-/// 
+///
 /// let mut game = Game::default();
 /// let moves = vec![
 ///    mv!(Pawn, E2, E4),
@@ -81,7 +81,7 @@ impl fmt::Display for GameStatus {
 /// }
 /// assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
 /// ```
-/// 
+///
 /// Making moves by str moves representation:
 /// ```
 /// use libchess::{Game, Action, Color};
@@ -181,10 +181,16 @@ impl Game {
         &self.history
     }
 
+    /// Returns the current game position mut
+    #[inline]
+    pub fn get_position_mut(&mut self) -> &mut ChessBoard {
+        &mut self.position
+    }
+
     /// Returns the current game position
     #[inline]
-    pub fn get_position(&self) -> &ChessBoard {
-        &self.position
+    pub fn get_position(&self) -> ChessBoard {
+        self.position
     }
 
     /// Returns the game status. Only ``GameStatus::Ongoing`` and ``GameStatus::DrawOffered``
@@ -202,7 +208,7 @@ impl Game {
 
     /// Returns number of times current position was arise
     #[inline]
-    pub fn get_position_counter(&self, position: &ChessBoard) -> usize {
+    pub fn get_position_counter(&self, position: ChessBoard) -> usize {
         match self.unique_positions_counter.get(&position.get_hash()) {
             Some(counter) => *counter,
             None => 0,
@@ -233,11 +239,6 @@ impl Game {
     fn set_game_status(&mut self, status: GameStatus) -> &mut Self {
         self.status = status;
         self
-    }
-
-    #[inline]
-    fn set_position(&mut self, position: ChessBoard) {
-        self.position = position;
     }
 
     #[inline]
@@ -314,13 +315,12 @@ impl Game {
                 Action::MakeMove(m) => match self
                     .increment_move_number()
                     .update_moves_since_capture(m)
-                    .get_position()
-                    .make_move(m)
+                    .get_position_mut()
+                    .make_move_mut(m)
                 {
-                    Ok(next_position) => {
-                        self.set_position(next_position);
+                    Ok(_) => {
                         self.position_counter_increment();
-                        self.history.push(m, self.position.clone());
+                        self.history.push(m, self.position);
                     }
                     Err(_) => {
                         return Err(GameError::IllegalActionDetected);
