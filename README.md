@@ -17,7 +17,7 @@ let fen = "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61";
 let board = ChessBoard::from_str(fen).unwrap();
 println!("{}", board);  // this will draw the board representation in terminal
 println!("{}", board.as_fen());  // will return a FEN-string "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
-
+```
 
 ### Initializing a Game object:
 ```rust
