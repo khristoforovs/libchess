@@ -16,22 +16,13 @@ println!("{}", ChessBoard::default());  // draw the starting chess position
 let fen = "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61";
 let board = ChessBoard::from_str(fen).unwrap();
 println!("{}", board);  // this will draw the board representation in terminal
-
-
-println!("{}", board.as_fen());  // will return "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 0 1"
-// because Board does not store the game-related data
-// but Game struct does
-let game = Game::from_fen(fen).unwrap();
-println!("{}", game.as_fen());  // will return "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
-```
+println!("{}", board.as_fen());  // will return a FEN-string "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
 
 
 ### Initializing a Game object:
 ```rust
-use libchess::boards::{BoardMove, BoardMoveOption, PieceMove, squares::*};
-use libchess::{Game, Action, GameStatus, Color};
-use libchess::{castle_king_side, castle_queen_side, mv};
-use libchess::PieceType::*;
+use libchess::*;
+use libchess::{PieceType::*, boards::squares::*};
 
 let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
 let moves = vec![mv!(King, E6, D6)];
@@ -44,10 +35,8 @@ assert_eq!(game.get_game_status(), GameStatus::Stalemate);
 
 ### Making moves:
 ```rust
-use libchess::{Game, Action, GameStatus, Color};
-use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-use libchess::{castle_king_side, castle_queen_side, mv};
-use libchess::PieceType::*;
+use libchess::*;
+use libchess::{PieceType::*, boards::squares::*};
 
 let mut game = Game::default();
 let moves = vec![
@@ -66,9 +55,8 @@ assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
 
 Also you can define moves by str: 
 ```rust
-use libchess::{Game, Action, Color};
-use libchess::boards::{ChessBoard, BoardMove};
-use libchess::mv_str;
+use libchess::*;
+use libchess::{PieceType::*, boards::squares::*};
 use std::str::FromStr;
 
 let mut game = Game::default();

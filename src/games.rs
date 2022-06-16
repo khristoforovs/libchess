@@ -299,11 +299,9 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
-    use crate::boards::ZOBRIST_TABLES as ZOBRIST;
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
-    use crate::PieceType::*;
-    use crate::{castle_king_side, castle_queen_side, mv, mv_str};
+    use crate::*;
+    use crate::{boards::squares::*, PieceType::*};
+    use crate::ZOBRIST_TABLES as ZOBRIST;
 
     #[test]
     fn as_fen() {

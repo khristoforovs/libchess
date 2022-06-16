@@ -97,11 +97,8 @@ impl GameHistory {
 
 #[cfg(test)]
 mod tests {
-    use crate::boards::squares::*;
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove};
-    use crate::games::{Action, Game};
-    use crate::PieceType::*;
-    use crate::{castle_king_side, castle_queen_side, mv};
+    use crate::*;
+    use crate::{boards::squares::*, PieceType::*};
 
     #[test]
     fn de_riviere_paul_morphy_1863() {

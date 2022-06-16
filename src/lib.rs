@@ -15,6 +15,7 @@ mod pieces;
 pub use pieces::{Piece, PieceType, PIECE_TYPES_NUMBER};
 
 pub mod boards;
+pub use  boards::*;
 
 mod game_history;
 pub use game_history::GameHistory;
