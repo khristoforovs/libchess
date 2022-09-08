@@ -927,7 +927,10 @@ impl ChessBoard {
         self.clear_square(piece_move.get_source_square())
             .clear_square(piece_move.get_destination_square())
             .put_piece(
-                Piece(piece_move.get_piece_type(), color),
+                match piece_move.get_promotion() {
+                    Some(new_piece_type) => Piece(new_piece_type, color),
+                    None => Piece(piece_move.get_piece_type(), color),
+                },
                 piece_move.get_destination_square(),
             )
     }
@@ -1458,12 +1461,14 @@ mod tests {
 
     #[test]
     fn promotion() {
-        let board = ChessBoard::from_str("1r5k/P7/7K/8/8/8/8/8 w - - 0 1").unwrap();
+        let mut board = ChessBoard::from_str("1r5k/P7/7K/8/8/8/8/8 w - - 0 1").unwrap();
         for one in board.get_legal_moves() {
             println!("{}", one);
         }
-
         assert_eq!(board.get_legal_moves().len(), 11);
+
+        board = board.make_move(BoardMove::from_str("a7b8=Q").unwrap()).unwrap();
+        assert_eq!(board.as_fen(), "1Q5k/8/7K/8/8/8/8/8 b - - 0 1");
     }
 
     #[test]
