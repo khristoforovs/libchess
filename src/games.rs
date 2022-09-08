@@ -4,11 +4,11 @@
 //! the history of the game also implemented here  
 
 use crate::boards::{
-    BoardBuilder, BoardMove, BoardMoveOption, BoardStatus, ChessBoard, LegalMoves,
+    BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves,
 };
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
-use crate::{Color, PieceType};
+use crate::Color;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
