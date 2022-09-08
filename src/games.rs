@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 
-const UNIQUE_POSITIONS_CAPACITY: usize = 100;
+const UNIQUE_POSITIONS_CAPACITY: usize = 150;
 
 /// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
