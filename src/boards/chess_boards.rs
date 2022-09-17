@@ -69,7 +69,6 @@ pub struct ChessBoard {
     en_passant: Option<Square>,
     pinned: BitBoard,
     checks: BitBoard,
-    flipped_view: bool,
     is_terminal_position: bool,
     moves_since_capture_or_pawn_move: usize,
     move_number: usize,
@@ -134,62 +133,7 @@ impl FromStr for ChessBoard {
 
 impl fmt::Display for ChessBoard {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ranks = if self.flipped_view {
-            Either::Left(RANKS.iter())
-        } else {
-            Either::Right(RANKS.iter().rev())
-        };
-        let files = if self.flipped_view {
-            Either::Right(FILES.iter().rev())
-        } else {
-            Either::Left(FILES.iter())
-        };
-        let footer = if self.flipped_view {
-            "     h  g  f  e  d  c  b  a"
-        } else {
-            "     a  b  c  d  e  f  g  h"
-        };
-
-        let mut field_string = String::new();
-        for rank in ranks {
-            field_string = format!("{}{}  ║", field_string, (*rank).to_index() + 1);
-            for file in files.clone() {
-                let square = Square::from_rank_file(*rank, *file);
-                if self.is_empty_square(square) {
-                    if square.is_light() {
-                        field_string = format!("{}{}", field_string, "   ".on_white());
-                    } else {
-                        field_string = format!("{}{}", field_string, "   ");
-                    };
-                } else {
-                    let mut piece_type_str =
-                        format!(" {} ", self.get_piece_type_on(square).unwrap());
-                    piece_type_str = match self.get_piece_color_on(square).unwrap() {
-                        Color::White => piece_type_str.to_uppercase(),
-                        Color::Black => piece_type_str.to_lowercase(),
-                    };
-                    if square.is_light() {
-                        field_string =
-                            format!("{}{}", field_string, piece_type_str.black().on_white());
-                    } else {
-                        field_string = format!("{}{}", field_string, piece_type_str);
-                    };
-                }
-            }
-            field_string = format!("{}║\n", field_string);
-        }
-
-        let board_string = format!(
-            "   {}  {}{}\n{}\n{}{}\n{}\n",
-            self.get_side_to_move(),
-            format!("{}", self.get_castle_rights(Color::White)).to_uppercase(),
-            self.get_castle_rights(Color::Black),
-            "   ╔════════════════════════╗",
-            field_string,
-            "   ╚════════════════════════╝",
-            footer,
-        );
-        write!(f, "{}", board_string)
+        write!(f, "{}", self.render_straight())
     }
 }
 
@@ -211,7 +155,6 @@ impl ChessBoard {
             en_passant: None,
             pinned: BLANK,
             checks: BLANK,
-            flipped_view: false,
             is_terminal_position: false,
             moves_since_capture_or_pawn_move: 0,
             move_number: 1,
@@ -219,6 +162,7 @@ impl ChessBoard {
         }
     }
 
+    /// Validates the position on the board
     pub fn validate(&self) -> Option<Error> {
         // make sure that is no color overlapping
         if self.get_color_mask(Color::White) & self.get_color_mask(Color::Black) != BLANK {
@@ -331,6 +275,73 @@ impl ChessBoard {
         None
     }
 
+    /// Unified method for rendering to terminal
+    fn render(
+        &self,
+        ranks: impl Iterator<Item=Rank>,
+        files: impl Iterator<Item=File> + Clone,
+        footer: &str,
+    ) -> String {
+        let mut field_string = String::new();
+        for rank in ranks {
+            field_string = format!("{}{}  ║", field_string, (rank).to_index() + 1);
+            for file in files.clone() {
+                let square = Square::from_rank_file(rank, file);
+                if self.is_empty_square(square) {
+                    if square.is_light() {
+                        field_string = format!("{}{}", field_string, "   ".on_white());
+                    } else {
+                        field_string = format!("{}{}", field_string, "   ");
+                    };
+                } else {
+                    let mut piece_type_str =
+                        format!(" {} ", self.get_piece_type_on(square).unwrap());
+                    piece_type_str = match self.get_piece_color_on(square).unwrap() {
+                        Color::White => piece_type_str.to_uppercase(),
+                        Color::Black => piece_type_str.to_lowercase(),
+                    };
+                    if square.is_light() {
+                        field_string =
+                            format!("{}{}", field_string, piece_type_str.black().on_white());
+                    } else {
+                        field_string = format!("{}{}", field_string, piece_type_str);
+                    };
+                }
+            }
+            field_string = format!("{}║\n", field_string);
+        }
+
+        let board_string = format!(
+            "   {}  {}{}\n{}\n{}{}\n{}\n",
+            self.get_side_to_move(),
+            format!("{}", self.get_castle_rights(Color::White)).to_uppercase(),
+            self.get_castle_rights(Color::Black),
+            "   ╔════════════════════════╗",
+            field_string,
+            "   ╚════════════════════════╝",
+            footer,
+        );
+        board_string
+    }
+
+    /// Returns ASCII-representation of the board as a String
+    pub fn render_straight(&self) -> String {
+        let ranks = RANKS.into_iter().rev();
+        let files = FILES.into_iter();
+        let footer = "     a  b  c  d  e  f  g  h";
+
+        self.render(ranks, files, footer)
+    }
+
+    /// Returns ASCII-representation of the flipped board as a String
+    pub fn render_flipped(&self) -> String {
+        let ranks = RANKS.into_iter();
+        let files = FILES.into_iter().rev();
+        let footer = "     h  g  f  e  d  c  b  a";
+
+        self.render(ranks, files, footer)
+    }
+
     /// Returns a FEN string of current position
     #[inline]
     pub fn as_fen(&self) -> String {
@@ -414,18 +425,6 @@ impl ChessBoard {
             return true;
         };
         false
-    }
-
-    /// Returns true if enabled the option of flipped print
-    #[inline]
-    pub fn get_print_flipped(&mut self) -> bool {
-        self.flipped_view
-    }
-
-    /// Sets the flipped view for the visualization via ``fmt::Display``
-    #[inline]
-    pub fn set_print_flipped(&mut self, flipped: bool) {
-        self.flipped_view = flipped
     }
 
     /// Returns a PieceType object if the square is not empty, None otherwise
@@ -1303,8 +1302,6 @@ mod tests {
             unindent(board_str)
         );
 
-        let mut board = ChessBoard::default();
-        board.set_print_flipped(true);
         let board_str =         
         "   white  KQkq
             ╔════════════════════════╗
@@ -1321,7 +1318,7 @@ mod tests {
         ";
         println!("{}", board);
         assert_eq!(
-            format!("{}", board)
+            format!("{}", board.render_flipped())
                 .replace("\u{1b}[47;30m", "")
                 .replace("\u{1b}[47m", "")
                 .replace("\u{1b}[0m", ""),
