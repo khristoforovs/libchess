@@ -9,7 +9,6 @@ license = "MIT"
 
 [dependencies]
 colored = "2.0.0"
-either = "1.6.1"
 failure = "0.1.8"
 lazy_static = "1.4.0"
 rand = "0.8.5"

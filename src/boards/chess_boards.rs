@@ -17,7 +17,6 @@ use crate::move_masks::{
 use crate::{castle_king_side, castle_queen_side, mv};
 use crate::{CastlingRights, Color, Piece, PieceType, COLORS_NUMBER, PIECE_TYPES_NUMBER};
 use colored::Colorize;
-use either::Either;
 use std::collections::hash_set::HashSet;
 use std::fmt;
 use std::str::FromStr;
