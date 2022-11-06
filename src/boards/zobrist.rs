@@ -21,23 +21,21 @@ pub type PositionHashValueType = u64;
 pub struct ZobristHasher {
     piece_square_table:
         [[[PositionHashValueType; SQUARES_NUMBER]; PIECE_TYPES_NUMBER]; COLORS_NUMBER],
-    castling_table: [[PositionHashValueType; CASTLING_RIGHTS_NUMBER]; COLORS_NUMBER],
-    en_passant_table: [PositionHashValueType; FILES_NUMBER],
+    castling_table:      [[PositionHashValueType; CASTLING_RIGHTS_NUMBER]; COLORS_NUMBER],
+    en_passant_table:    [PositionHashValueType; FILES_NUMBER],
     black_to_move_value: PositionHashValueType,
 }
 
 impl Default for ZobristHasher {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl ZobristHasher {
     pub fn new() -> Self {
         let mut result = Self {
-            piece_square_table: [[[0; SQUARES_NUMBER]; PIECE_TYPES_NUMBER]; COLORS_NUMBER],
-            castling_table: [[0; CASTLING_RIGHTS_NUMBER]; COLORS_NUMBER],
-            en_passant_table: [0; FILES_NUMBER],
+            piece_square_table:  [[[0; SQUARES_NUMBER]; PIECE_TYPES_NUMBER]; COLORS_NUMBER],
+            castling_table:      [[0; CASTLING_RIGHTS_NUMBER]; COLORS_NUMBER],
+            en_passant_table:    [0; FILES_NUMBER],
             black_to_move_value: 0,
         };
 
@@ -111,9 +109,7 @@ impl ZobristHasher {
         self.piece_square_table[piece.1.to_index()][piece.0.to_index()][square.to_index()]
     }
 
-    pub fn get_black_to_move_value(&self) -> PositionHashValueType {
-        self.black_to_move_value
-    }
+    pub fn get_black_to_move_value(&self) -> PositionHashValueType { self.black_to_move_value }
 
     pub fn get_castling_rights_value(
         &self,

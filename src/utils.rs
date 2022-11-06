@@ -1,3 +1,1 @@
-pub fn noindent(text: &str) -> String {
-    text.replace("\n", "").replace(" ", "")
-}
+pub fn noindent(text: &str) -> String { text.replace("\n", "").replace(" ", "") }

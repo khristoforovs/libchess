@@ -35,9 +35,7 @@ impl fmt::Display for Color {
 
 impl Color {
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
-    }
+    pub fn to_index(&self) -> usize { *self as usize }
 
     pub fn from_index(n: usize) -> Result<Self, Error> {
         match n {

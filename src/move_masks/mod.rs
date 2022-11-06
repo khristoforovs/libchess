@@ -6,27 +6,19 @@ use lazy_static::lazy_static;
 pub struct PieceMoveTable([BitBoard; SQUARES_NUMBER]);
 
 impl PieceMoveTable {
-    pub fn new() -> Self {
-        Self([BLANK; SQUARES_NUMBER])
-    }
+    pub fn new() -> Self { Self([BLANK; SQUARES_NUMBER]) }
 
     pub fn set_moves(&mut self, square: Square, value: BitBoard) {
         self.0[square.to_index()] = value;
     }
 
-    pub fn reset_moves(&mut self) {
-        self.0 = [BLANK; SQUARES_NUMBER];
-    }
+    pub fn reset_moves(&mut self) { self.0 = [BLANK; SQUARES_NUMBER]; }
 
-    pub fn get_moves(&self, square: Square) -> BitBoard {
-        self.0[square.to_index()]
-    }
+    pub fn get_moves(&self, square: Square) -> BitBoard { self.0[square.to_index()] }
 }
 
 impl Default for PieceMoveTable {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 mod bishops;

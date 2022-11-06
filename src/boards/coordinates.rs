@@ -56,24 +56,16 @@ impl Square {
     }
 
     #[inline]
-    pub fn get_rank(&self) -> Rank {
-        Rank::from_index((self.0 >> 3) as usize).unwrap()
-    }
+    pub fn get_rank(&self) -> Rank { Rank::from_index((self.0 >> 3) as usize).unwrap() }
 
     #[inline]
-    pub fn get_file(&self) -> File {
-        File::from_index((self.0 & 7) as usize).unwrap()
-    }
+    pub fn get_file(&self) -> File { File::from_index((self.0 & 7) as usize).unwrap() }
 
     #[inline]
-    pub fn to_index(&self) -> usize {
-        self.0 as usize
-    }
+    pub fn to_index(&self) -> usize { self.0 as usize }
 
     #[inline]
-    pub fn to_int(&self) -> u8 {
-        self.0
-    }
+    pub fn to_int(&self) -> u8 { self.0 }
 
     #[inline]
     pub fn up(&self) -> Result<Self, Error> {
@@ -114,9 +106,7 @@ impl Square {
     }
 
     #[inline]
-    pub fn is_dark(&self) -> bool {
-        !self.is_light()
-    }
+    pub fn is_dark(&self) -> bool { !self.is_light() }
 }
 
 macro_rules! define_square {

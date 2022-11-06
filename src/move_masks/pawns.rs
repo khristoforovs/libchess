@@ -3,20 +3,18 @@ use crate::boards::{Square, SQUARES_NUMBER};
 use crate::{Color, COLORS_NUMBER};
 
 pub struct PawnMoveTable {
-    moves: [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],
+    moves:    [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],
     captures: [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],
 }
 
 impl Default for PawnMoveTable {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl PawnMoveTable {
     pub fn new() -> Self {
         Self {
-            moves: [BLANK; SQUARES_NUMBER * COLORS_NUMBER],
+            moves:    [BLANK; SQUARES_NUMBER * COLORS_NUMBER],
             captures: [BLANK; SQUARES_NUMBER * COLORS_NUMBER],
         }
     }
@@ -31,13 +29,9 @@ impl PawnMoveTable {
         self.captures[index] = value;
     }
 
-    pub fn reset_moves(&mut self) {
-        self.moves = [BLANK; SQUARES_NUMBER * COLORS_NUMBER];
-    }
+    pub fn reset_moves(&mut self) { self.moves = [BLANK; SQUARES_NUMBER * COLORS_NUMBER]; }
 
-    pub fn reset_captures(&mut self) {
-        self.captures = [BLANK; SQUARES_NUMBER * COLORS_NUMBER]
-    }
+    pub fn reset_captures(&mut self) { self.captures = [BLANK; SQUARES_NUMBER * COLORS_NUMBER] }
 
     pub fn get_moves(&self, square: Square, color: Color) -> BitBoard {
         let index = square.to_index() + SQUARES_NUMBER * color.to_index();

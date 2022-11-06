@@ -22,9 +22,7 @@ impl Add for CastlingRights {
 }
 
 impl AddAssign for CastlingRights {
-    fn add_assign(&mut self, other: Self) {
-        *self = *self + other;
-    }
+    fn add_assign(&mut self, other: Self) { *self = *self + other; }
 }
 
 impl Sub for CastlingRights {
@@ -38,9 +36,7 @@ impl Sub for CastlingRights {
 }
 
 impl SubAssign for CastlingRights {
-    fn sub_assign(&mut self, other: Self) {
-        *self = *self - other;
-    }
+    fn sub_assign(&mut self, other: Self) { *self = *self - other; }
 }
 
 impl fmt::Display for CastlingRights {
@@ -57,9 +53,7 @@ impl fmt::Display for CastlingRights {
 
 impl CastlingRights {
     #[inline]
-    fn to_bits(self) -> [bool; 2] {
-        [self.has_kingside(), self.has_queenside()]
-    }
+    fn to_bits(self) -> [bool; 2] { [self.has_kingside(), self.has_queenside()] }
 
     #[inline]
     fn from_bits(bits: [bool; 2]) -> Self {
@@ -74,9 +68,7 @@ impl CastlingRights {
     }
 
     #[inline]
-    pub fn to_index(self) -> usize {
-        self as usize
-    }
+    pub fn to_index(self) -> usize { self as usize }
 
     #[inline]
     pub fn from_index(i: usize) -> CastlingRights {

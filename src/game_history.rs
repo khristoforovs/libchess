@@ -8,7 +8,7 @@ const HISTORY_CAPACITY: usize = 80;
 #[derive(Debug, Clone)]
 pub struct GameHistory {
     positions: Vec<ChessBoard>,
-    moves: Vec<BoardMove>,
+    moves:     Vec<BoardMove>,
 }
 
 impl Default for GameHistory {
@@ -16,7 +16,7 @@ impl Default for GameHistory {
     fn default() -> Self {
         Self {
             positions: Vec::with_capacity(HISTORY_CAPACITY),
-            moves: Vec::with_capacity(HISTORY_CAPACITY),
+            moves:     Vec::with_capacity(HISTORY_CAPACITY),
         }
     }
 }
@@ -70,13 +70,9 @@ impl GameHistory {
         self
     }
 
-    pub fn get_positions(&self) -> &Vec<ChessBoard> {
-        &self.positions
-    }
+    pub fn get_positions(&self) -> &Vec<ChessBoard> { &self.positions }
 
-    pub fn get_moves(&self) -> &Vec<BoardMove> {
-        &self.moves
-    }
+    pub fn get_moves(&self) -> &Vec<BoardMove> { &self.moves }
 
     fn push_position(&mut self, position: ChessBoard) -> &mut Self {
         self.positions.push(position);

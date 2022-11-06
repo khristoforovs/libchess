@@ -51,10 +51,10 @@ pub enum DisplayAmbiguityType {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct PieceMove {
-    piece_type: PieceType,
+    piece_type:  PieceType,
     square_from: Square,
-    square_to: Square,
-    promotion: Option<PieceType>,
+    square_to:   Square,
+    promotion:   Option<PieceType>,
 }
 
 impl fmt::Display for PieceMove {
@@ -94,24 +94,16 @@ impl PieceMove {
     }
 
     #[inline]
-    pub fn get_piece_type(&self) -> PieceType {
-        self.piece_type
-    }
+    pub fn get_piece_type(&self) -> PieceType { self.piece_type }
 
     #[inline]
-    pub fn get_source_square(&self) -> Square {
-        self.square_from
-    }
+    pub fn get_source_square(&self) -> Square { self.square_from }
 
     #[inline]
-    pub fn get_destination_square(&self) -> Square {
-        self.square_to
-    }
+    pub fn get_destination_square(&self) -> Square { self.square_to }
 
     #[inline]
-    pub fn get_promotion(&self) -> Option<PieceType> {
-        self.promotion
-    }
+    pub fn get_promotion(&self) -> Option<PieceType> { self.promotion }
 
     pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
         (BitBoard::from_square(self.get_destination_square())
@@ -245,15 +237,11 @@ impl fmt::Display for BoardMove {
 }
 
 impl PartialEq for BoardMove {
-    fn eq(&self, other: &Self) -> bool {
-        self.board_move_option == other.board_move_option
-    }
+    fn eq(&self, other: &Self) -> bool { self.board_move_option == other.board_move_option }
 }
 
 impl Hash for BoardMove {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.board_move_option.hash(state);
-    }
+    fn hash<H: Hasher>(&self, state: &mut H) { self.board_move_option.hash(state); }
 }
 
 impl BoardMove {
@@ -276,24 +264,16 @@ impl BoardMove {
     }
 
     #[inline]
-    pub fn get_move_option(&self) -> BoardMoveOption {
-        self.board_move_option
-    }
+    pub fn get_move_option(&self) -> BoardMoveOption { self.board_move_option }
 
     #[inline]
-    pub fn is_capture(&self) -> Option<bool> {
-        self.is_capture
-    }
+    pub fn is_capture(&self) -> Option<bool> { self.is_capture }
 
     #[inline]
-    pub fn is_check(&self) -> Option<bool> {
-        self.is_check
-    }
+    pub fn is_check(&self) -> Option<bool> { self.is_check }
 
     #[inline]
-    pub fn is_checkmate(&self) -> Option<bool> {
-        self.is_checkmate
-    }
+    pub fn is_checkmate(&self) -> Option<bool> { self.is_checkmate }
 
     pub fn associate(
         &mut self,

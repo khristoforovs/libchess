@@ -46,9 +46,9 @@ pub enum BoardStatus {
 ///
 /// ## Examples
 /// ```
-/// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-/// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use libchess::PieceType::*;
+/// use libchess::{castle_king_side, castle_queen_side, mv};
 /// use std::str::FromStr;
 ///
 /// println!("{}", ChessBoard::default());
@@ -109,17 +109,13 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
 impl TryFrom<&mut BoardBuilder> for ChessBoard {
     type Error = Error;
 
-    fn try_from(fen: &mut BoardBuilder) -> Result<Self, Self::Error> {
-        (&*fen).try_into()
-    }
+    fn try_from(fen: &mut BoardBuilder) -> Result<Self, Self::Error> { (&*fen).try_into() }
 }
 
 impl TryFrom<BoardBuilder> for ChessBoard {
     type Error = Error;
 
-    fn try_from(fen: BoardBuilder) -> Result<Self, Self::Error> {
-        (&fen).try_into()
-    }
+    fn try_from(fen: BoardBuilder) -> Result<Self, Self::Error> { (&fen).try_into() }
 }
 
 impl FromStr for ChessBoard {
@@ -131,9 +127,7 @@ impl FromStr for ChessBoard {
 }
 
 impl fmt::Display for ChessBoard {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.render_straight())
-    }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", self.render_straight()) }
 }
 
 impl Default for ChessBoard {
@@ -343,21 +337,15 @@ impl ChessBoard {
 
     /// Returns a FEN string of current position
     #[inline]
-    pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::from(*self))
-    }
+    pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(*self)) }
 
     /// Returns a Bitboard mask of same-color pieces
     #[inline]
-    pub fn get_color_mask(&self, color: Color) -> BitBoard {
-        self.colors_mask[color.to_index()]
-    }
+    pub fn get_color_mask(&self, color: Color) -> BitBoard { self.colors_mask[color.to_index()] }
 
     /// Returns a Bitboard mask for all pieces on the board
     #[inline]
-    pub fn get_combined_mask(&self) -> BitBoard {
-        self.combined_mask
-    }
+    pub fn get_combined_mask(&self) -> BitBoard { self.combined_mask }
 
     /// Returns a square for king-piece of specified color
     #[inline]
@@ -374,9 +362,7 @@ impl ChessBoard {
     /// Returns a Bitboard mask for all pieces which pins the king with
     /// color defined by ``board.get_side_to_move()``
     #[inline]
-    pub fn get_pin_mask(&self) -> BitBoard {
-        self.pinned
-    }
+    pub fn get_pin_mask(&self) -> BitBoard { self.pinned }
 
     /// Returns the castling rights for specified color.
     ///
@@ -388,20 +374,14 @@ impl ChessBoard {
     }
 
     #[inline]
-    pub fn get_side_to_move(&self) -> Color {
-        self.side_to_move
-    }
+    pub fn get_side_to_move(&self) -> Color { self.side_to_move }
 
     #[inline]
-    pub fn get_en_passant(&self) -> Option<Square> {
-        self.en_passant
-    }
+    pub fn get_en_passant(&self) -> Option<Square> { self.en_passant }
 
     /// Returns a move number
     #[inline]
-    pub fn get_move_number(&self) -> usize {
-        self.move_number
-    }
+    pub fn get_move_number(&self) -> usize { self.move_number }
 
     /// Returns a number of moves since last capture or pawn move (is used
     /// to determine the game termination by the 50-move rule)
@@ -413,9 +393,7 @@ impl ChessBoard {
     /// Returns a Bitboard mask for all pieces which check the king with
     /// color defined by ``board.get_side_to_move()``
     #[inline]
-    pub fn get_check_mask(&self) -> BitBoard {
-        self.checks
-    }
+    pub fn get_check_mask(&self) -> BitBoard { self.checks }
 
     #[inline]
     pub fn is_empty_square(&self, square: Square) -> bool {
@@ -606,9 +584,7 @@ impl ChessBoard {
     }
 
     /// Returns true if current side has at least one legal move
-    pub fn is_terminal(&self) -> bool {
-        self.is_terminal_position
-    }
+    pub fn is_terminal(&self) -> bool { self.is_terminal_position }
 
     /// Returns a HashSet of all legal moves for current board
     pub fn get_legal_moves(&self) -> LegalMoves {
@@ -742,9 +718,7 @@ impl ChessBoard {
     }
 
     /// Returns the hash of the position. Is used to detect the repetition draw
-    pub fn get_hash(&self) -> PositionHashValueType {
-        self.hash
-    }
+    pub fn get_hash(&self) -> PositionHashValueType { self.hash }
 
     /// Returns position status on the board
     pub fn get_status(&self) -> BoardStatus {
@@ -855,9 +829,9 @@ impl ChessBoard {
     /// ``castle_king_side!()`` and ``castle_queen_side!()``
     ///
     /// ```
-    /// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-    /// use libchess::{castle_king_side, castle_queen_side, mv};
+    /// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
     /// use libchess::PieceType::*;
+    /// use libchess::{castle_king_side, castle_queen_side, mv};
     ///
     /// let board = ChessBoard::default();
     /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();

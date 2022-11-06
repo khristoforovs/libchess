@@ -60,18 +60,18 @@ impl fmt::Display for GameStatus {
 /// ## Examples
 /// Making moves by creating Action structs:
 /// ```
-/// use libchess::{Game, Action, GameStatus, Color};
-/// use libchess::boards::{ChessBoard, BoardMove, BoardMoveOption, PieceMove, squares::*};
-/// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use libchess::PieceType::*;
+/// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::{Action, Color, Game, GameStatus};
 ///
 /// let mut game = Game::default();
 /// let moves = vec![
-///    mv!(Pawn, E2, E4),
-///    mv!(Pawn, E7, E5),
-///    mv!(Queen, D1, H5),
-///    mv!(King, E8, E7),
-///    mv!(Queen, H5, E5),
+///     mv!(Pawn, E2, E4),
+///     mv!(Pawn, E7, E5),
+///     mv!(Queen, D1, H5),
+///     mv!(King, E8, E7),
+///     mv!(Queen, H5, E5),
 /// ];
 ///
 /// for one in moves.iter() {
@@ -82,17 +82,14 @@ impl fmt::Display for GameStatus {
 ///
 /// Making moves by str moves representation:
 /// ```
-/// use libchess::{Game, Action, Color};
-/// use libchess::boards::{ChessBoard, BoardMove};
+/// use libchess::boards::{BoardMove, ChessBoard};
 /// use libchess::mv_str;
+/// use libchess::{Action, Color, Game};
 /// use std::str::FromStr;
 ///
 /// let mut game = Game::default();
 /// let moves = vec![
-///     "e2e4", "c7c5",
-///     "Ng1f3", "d7d6",
-///     "d2d4", "c5d4",
-///     "Nf3d4", "Ng8f6",
+///     "e2e4", "c7c5", "Ng1f3", "d7d6", "d2d4", "c5d4", "Nf3d4", "Ng8f6",
 /// ];
 /// for m in moves.iter() {
 ///     game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
@@ -144,41 +141,29 @@ impl Game {
 
     /// Returns a FEN string of current game position
     #[inline]
-    pub fn as_fen(&self) -> String {
-        format!("{}", BoardBuilder::from(self.position))
-    }
+    pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(self.position)) }
 
     /// Returns the GameHistory object which represents a sequence of moves
     /// in PGN-like string
     #[inline]
-    pub fn get_action_history(&self) -> &GameHistory {
-        &self.history
-    }
+    pub fn get_action_history(&self) -> &GameHistory { &self.history }
 
     /// Returns the current game position mut
     #[inline]
-    pub fn get_position_mut(&mut self) -> &mut ChessBoard {
-        &mut self.position
-    }
+    pub fn get_position_mut(&mut self) -> &mut ChessBoard { &mut self.position }
 
     /// Returns the current game position
     #[inline]
-    pub fn get_position(&self) -> ChessBoard {
-        self.position
-    }
+    pub fn get_position(&self) -> ChessBoard { self.position }
 
     /// Returns the game status. Only ``GameStatus::Ongoing`` and ``GameStatus::DrawOffered``
     /// are not terminal
     #[inline]
-    pub fn get_game_status(&self) -> GameStatus {
-        self.status
-    }
+    pub fn get_game_status(&self) -> GameStatus { self.status }
 
     /// Returns the side to make move
     #[inline]
-    pub fn get_side_to_move(&self) -> Color {
-        self.get_position().get_side_to_move()
-    }
+    pub fn get_side_to_move(&self) -> Color { self.get_position().get_side_to_move() }
 
     /// Returns number of times current position was arise
     #[inline]
@@ -192,15 +177,11 @@ impl Game {
     /// Returns a set of legal moves in current position. Duplicates the
     /// functionality of the ``ChessBoard::get_legal_moves()``
     #[inline]
-    pub fn get_legal_moves(&self) -> LegalMoves {
-        self.position.get_legal_moves()
-    }
+    pub fn get_legal_moves(&self) -> LegalMoves { self.position.get_legal_moves() }
 
     /// Returns a number of moves done since the first board was created
     #[inline]
-    pub fn get_move_number(&self) -> usize {
-        self.position.get_move_number()
-    }
+    pub fn get_move_number(&self) -> usize { self.position.get_move_number() }
 
     /// Returns a number of moves since last capture or pawn move (is used
     /// to determine the game termination by the 50-move rule)

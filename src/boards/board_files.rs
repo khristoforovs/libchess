@@ -16,8 +16,16 @@ pub enum File {
     H,
 }
 
-pub const FILES: [File; 8] =
-    [File::A, File::B, File::C, File::D, File::E, File::F, File::G, File::H];
+pub const FILES: [File; 8] = [
+    File::A,
+    File::B,
+    File::C,
+    File::D,
+    File::E,
+    File::F,
+    File::G,
+    File::H,
+];
 
 impl fmt::Display for File {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -62,9 +70,7 @@ impl FromStr for File {
 
 impl File {
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
-    }
+    pub fn to_index(&self) -> usize { *self as usize }
 
     #[inline]
     pub fn from_index(n: usize) -> Result<Self, Error> {
@@ -82,9 +88,7 @@ impl File {
     }
 
     #[inline]
-    pub fn right(&self) -> Result<Self, Error> {
-        File::from_index(self.to_index() + 1)
-    }
+    pub fn right(&self) -> Result<Self, Error> { File::from_index(self.to_index() + 1) }
 
     #[inline]
     pub fn left(&self) -> Result<Self, Error> {

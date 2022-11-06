@@ -13,66 +13,50 @@ impl BitAnd for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitand(self, other: BitBoard) -> BitBoard {
-        BitBoard(self.0 & other.0)
-    }
+    fn bitand(self, other: BitBoard) -> BitBoard { BitBoard(self.0 & other.0) }
 }
 
 impl BitOr for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitor(self, other: BitBoard) -> BitBoard {
-        BitBoard(self.0 | other.0)
-    }
+    fn bitor(self, other: BitBoard) -> BitBoard { BitBoard(self.0 | other.0) }
 }
 
 impl BitXor for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn bitxor(self, other: BitBoard) -> BitBoard {
-        BitBoard(self.0 ^ other.0)
-    }
+    fn bitxor(self, other: BitBoard) -> BitBoard { BitBoard(self.0 ^ other.0) }
 }
 
 impl BitAndAssign for BitBoard {
     #[inline]
-    fn bitand_assign(&mut self, other: BitBoard) {
-        self.0 &= other.0;
-    }
+    fn bitand_assign(&mut self, other: BitBoard) { self.0 &= other.0; }
 }
 
 impl BitOrAssign for BitBoard {
     #[inline]
-    fn bitor_assign(&mut self, other: BitBoard) {
-        self.0 |= other.0;
-    }
+    fn bitor_assign(&mut self, other: BitBoard) { self.0 |= other.0; }
 }
 
 impl BitXorAssign for BitBoard {
     #[inline]
-    fn bitxor_assign(&mut self, other: BitBoard) {
-        self.0 ^= other.0;
-    }
+    fn bitxor_assign(&mut self, other: BitBoard) { self.0 ^= other.0; }
 }
 
 impl Mul for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn mul(self, other: BitBoard) -> BitBoard {
-        BitBoard(self.0.wrapping_mul(other.0))
-    }
+    fn mul(self, other: BitBoard) -> BitBoard { BitBoard(self.0.wrapping_mul(other.0)) }
 }
 
 impl Not for BitBoard {
     type Output = BitBoard;
 
     #[inline]
-    fn not(self) -> BitBoard {
-        BitBoard(!self.0)
-    }
+    fn not(self) -> BitBoard { BitBoard(!self.0) }
 }
 
 impl Iterator for BitBoard {
@@ -111,14 +95,10 @@ impl fmt::Display for BitBoard {
 
 impl BitBoard {
     #[inline]
-    pub fn new(b: u64) -> BitBoard {
-        BitBoard(b)
-    }
+    pub fn new(b: u64) -> BitBoard { BitBoard(b) }
 
     #[inline]
-    pub fn from_square(square: Square) -> Self {
-        Self::new(1u64 << square.to_int())
-    }
+    pub fn from_square(square: Square) -> Self { Self::new(1u64 << square.to_int()) }
 
     #[inline]
     pub fn from_rank_file(rank: Rank, file: File) -> Self {
@@ -142,19 +122,13 @@ impl BitBoard {
     }
 
     #[inline]
-    pub fn count_ones(&self) -> u32 {
-        self.0.count_ones()
-    }
+    pub fn count_ones(&self) -> u32 { self.0.count_ones() }
 
     #[inline]
-    pub fn inverse(&self) -> BitBoard {
-        BitBoard(self.0.swap_bytes())
-    }
+    pub fn inverse(&self) -> BitBoard { BitBoard(self.0.swap_bytes()) }
 
     #[inline]
-    pub fn to_square(&self) -> Square {
-        Square::new(self.0.trailing_zeros() as u8).unwrap()
-    }
+    pub fn to_square(&self) -> Square { Square::new(self.0.trailing_zeros() as u8).unwrap() }
 }
 
 #[rustfmt::skip]

@@ -69,9 +69,7 @@ impl From<ChessBoard> for BoardBuilder {
 impl Index<Square> for BoardBuilder {
     type Output = Option<Piece>;
 
-    fn index(&self, index: Square) -> &Self::Output {
-        &self.pieces[index.to_index()]
-    }
+    fn index(&self, index: Square) -> &Self::Output { &self.pieces[index.to_index()] }
 }
 
 impl IndexMut<Square> for BoardBuilder {
@@ -311,14 +309,10 @@ impl BoardBuilder {
     }
 
     #[inline]
-    pub fn get_pieces(&self) -> [Option<Piece>; 64] {
-        self.pieces
-    }
+    pub fn get_pieces(&self) -> [Option<Piece>; 64] { self.pieces }
 
     #[inline]
-    pub fn get_move_number(&self) -> usize {
-        self.move_number
-    }
+    pub fn get_move_number(&self) -> usize { self.move_number }
 
     #[inline]
     pub fn get_moves_since_capture_or_pawn_move(&self) -> usize {
@@ -331,14 +325,10 @@ impl BoardBuilder {
     }
 
     #[inline]
-    pub fn get_side_to_move(&self) -> Color {
-        self.side_to_move
-    }
+    pub fn get_side_to_move(&self) -> Color { self.side_to_move }
 
     #[inline]
-    pub fn get_en_passant(&self) -> Option<Square> {
-        self.en_passant
-    }
+    pub fn get_en_passant(&self) -> Option<Square> { self.en_passant }
 
     pub fn set_move_number(&mut self, counter: usize) -> &mut Self {
         self.move_number = counter;

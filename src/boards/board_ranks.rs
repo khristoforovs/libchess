@@ -70,9 +70,7 @@ impl FromStr for Rank {
 
 impl Rank {
     #[inline]
-    pub fn to_index(&self) -> usize {
-        *self as usize
-    }
+    pub fn to_index(&self) -> usize { *self as usize }
 
     #[inline]
     pub fn from_index(n: usize) -> Result<Self, Error> {
@@ -90,9 +88,7 @@ impl Rank {
     }
 
     #[inline]
-    pub fn up(&self) -> Result<Self, Error> {
-        Rank::from_index(self.to_index() + 1)
-    }
+    pub fn up(&self) -> Result<Self, Error> { Rank::from_index(self.to_index() + 1) }
 
     #[inline]
     pub fn down(&self) -> Result<Self, Error> {

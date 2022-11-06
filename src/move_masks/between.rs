@@ -6,15 +6,11 @@ use std::cmp::max;
 pub struct BetweenTable([[Option<BitBoard>; SQUARES_NUMBER]; SQUARES_NUMBER]);
 
 impl Default for BetweenTable {
-    fn default() -> Self {
-        Self::new()
-    }
+    fn default() -> Self { Self::new() }
 }
 
 impl BetweenTable {
-    pub fn new() -> Self {
-        Self([[None; SQUARES_NUMBER]; SQUARES_NUMBER])
-    }
+    pub fn new() -> Self { Self([[None; SQUARES_NUMBER]; SQUARES_NUMBER]) }
 
     pub fn set(&mut self, square_a: Square, square_b: Square, value: Option<BitBoard>) {
         let (mut ai, mut bi) = (square_a.to_index(), square_b.to_index());
