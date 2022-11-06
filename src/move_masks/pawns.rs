@@ -122,7 +122,7 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unindent::unindent;
+    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -143,7 +143,7 @@ mod tests {
             ";
         println!("{}", move_table.get_moves(square, Color::White));
         assert_eq!(
-            format!("{}", move_table.get_moves(square, Color::White)), unindent(result_str)
+            noindent(format!("{}", move_table.get_moves(square, Color::White)).as_str()), noindent(result_str)
         );
 
         let square = E5;
@@ -159,7 +159,7 @@ mod tests {
             ";
         println!("{}", move_table.get_moves(square, Color::Black));
         assert_eq!(
-            format!("{}", move_table.get_moves(square, Color::Black)), unindent(result_str)
+            noindent(format!("{}", move_table.get_moves(square, Color::Black)).as_str()), noindent(result_str)
         );
     }
 
@@ -181,7 +181,7 @@ mod tests {
             ";
         println!("{}", move_table.get_moves(square, Color::White));
         assert_eq!(
-            format!("{}", move_table.get_moves(square, Color::White)), unindent(result_str)
+            noindent(format!("{}", move_table.get_moves(square, Color::White)).as_str()), noindent(result_str)
         );
 
         let square = E7;
@@ -197,7 +197,7 @@ mod tests {
             ";
         println!("{}", move_table.get_moves(square, Color::Black));
         assert_eq!(
-            format!("{}", move_table.get_moves(square, Color::Black)), unindent(result_str)
+            noindent(format!("{}", move_table.get_moves(square, Color::Black)).as_str()), noindent(result_str)
         );
     }
 
@@ -219,7 +219,7 @@ mod tests {
             ";
         println!("{}", move_table.get_captures(square, Color::White));
         assert_eq!(
-            format!("{}", move_table.get_captures(square, Color::White)), unindent(result_str)
+            noindent(format!("{}", move_table.get_captures(square, Color::White)).as_str()), noindent(result_str)
         );
 
         let square = E6;
@@ -235,7 +235,7 @@ mod tests {
             ";
         println!("{}", move_table.get_captures(square, Color::Black));
         assert_eq!(
-            format!("{}", move_table.get_captures(square, Color::Black)), unindent(result_str)
+            noindent(format!("{}", move_table.get_captures(square, Color::Black)).as_str()), noindent(result_str)
         );
     }
 }

@@ -137,8 +137,8 @@ mod tests {
     use super::*;
     use crate::boards::squares::*;
     use crate::boards::{BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
-    use crate::PieceType::*;
     use crate::mv;
+    use crate::PieceType::*;
 
     #[test]
     fn calculate_hash() {

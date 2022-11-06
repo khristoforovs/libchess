@@ -277,8 +277,8 @@ impl ChessBoard {
     /// Unified method for rendering to terminal
     fn render(
         &self,
-        ranks: impl Iterator<Item=Rank>,
-        files: impl Iterator<Item=File> + Clone,
+        ranks: impl Iterator<Item = Rank>,
+        files: impl Iterator<Item = File> + Clone,
         footer: &str,
     ) -> String {
         let mut field_string = String::new();
@@ -426,7 +426,7 @@ impl ChessBoard {
         false
     }
 
-    /// Returns a PieceType object if the square is not empty, None otherwise
+    /// Returns Some(PieceType) object if the square is not empty, None otherwise
     pub fn get_piece_type_on(&self, square: Square) -> Option<PieceType> {
         let bitboard = BitBoard::from_square(square);
         if self.get_combined_mask() & bitboard == BLANK {
@@ -453,12 +453,22 @@ impl ChessBoard {
         }
     }
 
-    /// Returns a Color object if the square is not empty, None otherwise
+    /// Returns Some(Color) object if the square is not empty, None otherwise
     pub fn get_piece_color_on(&self, square: Square) -> Option<Color> {
         if (self.get_color_mask(Color::White) & BitBoard::from_square(square)) != BLANK {
             Some(Color::White)
         } else if (self.get_color_mask(Color::Black) & BitBoard::from_square(square)) != BLANK {
             Some(Color::Black)
+        } else {
+            None
+        }
+    }
+
+    /// Returns Some(Piece) if the square is not empty, None otherwise
+    pub fn get_piece_on(&self, square: Square) -> Option<Piece> {
+        if let Some(piece_type) = self.get_piece_type_on(square) {
+            let color = self.get_piece_color_on(square).unwrap();
+            Some(Piece(piece_type, color))
         } else {
             None
         }
@@ -1254,8 +1264,8 @@ impl ChessBoard {
 mod tests {
     use super::*;
     use crate::boards::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
+    use crate::utils::noindent;
     use crate::PieceType::*;
-    use unindent::unindent;
 
     #[test]
     fn create_from_string() {
@@ -1294,11 +1304,13 @@ mod tests {
         ";
         println!("{}", board);
         assert_eq!(
-            format!("{}", board)
-                .replace("\u{1b}[47;30m", "")
-                .replace("\u{1b}[47m", "")
-                .replace("\u{1b}[0m", ""),
-            unindent(board_str)
+            noindent(
+                format!("{}", board)
+                    .replace("\u{1b}[47;30m", "")
+                    .replace("\u{1b}[47m", "")
+                    .replace("\u{1b}[0m", "").as_str()
+            ),
+            noindent(board_str)
         );
 
         let board_str =         
@@ -1317,11 +1329,13 @@ mod tests {
         ";
         println!("{}", board);
         assert_eq!(
-            format!("{}", board.render_flipped())
-                .replace("\u{1b}[47;30m", "")
-                .replace("\u{1b}[47m", "")
-                .replace("\u{1b}[0m", ""),
-            unindent(board_str)
+            noindent(
+                format!("{}", board.render_flipped())
+                    .replace("\u{1b}[47;30m", "")
+                    .replace("\u{1b}[47m", "")
+                    .replace("\u{1b}[0m", "").as_str()
+            ),
+            noindent(board_str)
         );
     }
 
@@ -1346,8 +1360,8 @@ mod tests {
              X X X X X X X X 
             ";
         assert_eq!(
-            format!("{}", board.get_combined_mask()),
-            unindent(combined_str)
+            noindent(format!("{}", board.get_combined_mask()).as_str()),
+            noindent(combined_str)
         );
 
         let white = Color::White;
@@ -1362,8 +1376,8 @@ mod tests {
              X X X X X X X X 
             ";
         assert_eq!(
-            format!("{}", board.get_color_mask(white)),
-            unindent(whites_str)
+            noindent(format!("{}", board.get_color_mask(white)).as_str()),
+            noindent(whites_str)
         );
 
         let black = Color::Black;
@@ -1378,8 +1392,8 @@ mod tests {
              . . . . . . . . 
             ";
         assert_eq!(
-            format!("{}", board.get_color_mask(black)),
-            unindent(blacks_str)
+            noindent(format!("{}", board.get_color_mask(black)).as_str()),
+            noindent(blacks_str)
         );
     }
 
@@ -1463,7 +1477,9 @@ mod tests {
         }
         assert_eq!(board.get_legal_moves().len(), 11);
 
-        board = board.make_move(BoardMove::from_str("a7b8=Q").unwrap()).unwrap();
+        board = board
+            .make_move(BoardMove::from_str("a7b8=Q").unwrap())
+            .unwrap();
         assert_eq!(board.as_fen(), "1Q5k/8/7K/8/8/8/8/8 b - - 0 1");
     }
 

@@ -31,7 +31,7 @@ pub fn generate_king_moves(table: &mut PieceMoveTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unindent::unindent;
+    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -51,7 +51,7 @@ mod tests {
             ";
         println!("{}", move_table.get_moves(square));
         assert_eq!(
-            format!("{}", move_table.get_moves(square)), unindent(result_str)
+            noindent(format!("{}", move_table.get_moves(square)).as_str()), noindent(result_str)
         );
     }
 }

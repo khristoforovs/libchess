@@ -161,7 +161,7 @@ impl BitBoard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unindent::unindent;
+    use crate::utils::noindent;
 
     #[test]
     fn create() {
@@ -176,7 +176,7 @@ mod tests {
              . . . . . . . . 
              . X . . . . . . 
             ";
-        assert_eq!(format!("{}", bit_board), unindent(result_str));
+        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_str));
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod tests {
              . . . . X . . . 
              . . . . . . . . 
             ";
-        assert_eq!(format!("{}", bit_board), unindent(result_or));
+        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
 
         let bit_board = bit_board & BitBoard::from_rank_file(Rank::Fourth, File::E);
         let result_or = 
@@ -214,7 +214,7 @@ mod tests {
              . . . . . . . . 
              . . . . . . . . 
             ";
-        assert_eq!(format!("{}", bit_board), unindent(result_or));
+        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
 
         let bit_board = !bit_board;
         let result_or = 
@@ -227,6 +227,6 @@ mod tests {
              X X X X X X X X 
              X X X X X X X X 
             ";
-        assert_eq!(format!("{}", bit_board), unindent(result_or));
+        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
     }
 }

@@ -3,9 +3,7 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::{
-    BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves,
-};
+use crate::boards::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves};
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
 use crate::Color;
@@ -262,10 +260,7 @@ impl Game {
         let game_status = self.get_game_status();
         if game_status == GameStatus::Ongoing {
             match action {
-                Action::MakeMove(m) => match self
-                    .get_position_mut()
-                    .make_move_mut(m)
-                {
+                Action::MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
                     Ok(_) => {
                         self.position_counter_increment();
                         self.history.push(m, self.position);
@@ -299,9 +294,9 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ZOBRIST_TABLES as ZOBRIST;
     use crate::*;
     use crate::{boards::squares::*, PieceType::*};
-    use crate::ZOBRIST_TABLES as ZOBRIST;
 
     #[test]
     fn as_fen() {

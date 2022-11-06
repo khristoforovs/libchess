@@ -81,7 +81,7 @@ pub fn generate_between_masks(table: &mut BetweenTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use unindent::unindent;
+    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -101,8 +101,8 @@ mod tests {
             ";
         println!("{}", between_table.get(square_a, square_b).unwrap());
         assert_eq!(
-            format!("{}", between_table.get(square_a, square_b).unwrap()),
-            unindent(result_str)
+            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
+            noindent(result_str)
         );
     }
 
@@ -123,8 +123,8 @@ mod tests {
             ";
         println!("{}", between_table.get(square_a, square_b).unwrap());
         assert_eq!(
-            format!("{}", between_table.get(square_a, square_b).unwrap()),
-            unindent(result_str)
+            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
+            noindent(result_str)
         );
     }
 
@@ -145,8 +145,8 @@ mod tests {
             ";
         println!("{}", between_table.get(square_a, square_b).unwrap());
         assert_eq!(
-            format!("{}", between_table.get(square_a, square_b).unwrap()),
-            unindent(result_str)
+            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
+            noindent(result_str)
         );
     }
 
