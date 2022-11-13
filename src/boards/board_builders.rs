@@ -242,7 +242,7 @@ impl fmt::Display for BoardBuilder {
         }
 
         let castles_string = match self.castle_rights {
-            [CastlingRights::Neither, CastlingRights::Neither] => String::from("-"),
+            [CastlingRights::Neither, CastlingRights::Neither] => "-".to_string(),
             _ => {
                 format!(
                     "{}{}",

@@ -7,11 +7,9 @@ use crate::boards::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
 use crate::Color;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
-
-const UNIQUE_POSITIONS_CAPACITY: usize = 150;
 
 /// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,16 +38,14 @@ pub enum GameStatus {
 impl fmt::Display for GameStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let status_string = match self {
-            GameStatus::Ongoing | GameStatus::DrawOffered => String::from("the game is ongoing"),
+            GameStatus::Ongoing | GameStatus::DrawOffered => "the game is ongoing".to_string(),
             GameStatus::CheckMated(color) => format!("{} won by checkmate", !*color),
             GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
-            GameStatus::DrawAccepted => String::from("draw declared by agreement"),
-            GameStatus::FiftyMovesDrawDeclared => String::from("draw declared by a 50 moves rule"),
-            GameStatus::TheoreticalDrawDeclared => String::from("draw: no enough pieces"),
-            GameStatus::RepetitionDrawDeclared => {
-                String::from("draw declared by repetition of moves")
-            }
-            GameStatus::Stalemate => String::from("stalemate"),
+            GameStatus::DrawAccepted => "draw declared by agreement".to_string(),
+            GameStatus::FiftyMovesDrawDeclared => "draw declared by a 50 moves rule".to_string(),
+            GameStatus::TheoreticalDrawDeclared => "draw: no enough pieces".to_string(),
+            GameStatus::RepetitionDrawDeclared => "draw declared by moves repetition".to_string(),
+            GameStatus::Stalemate => "stalemate".to_string(),
         };
         write!(f, "{}", status_string)
     }
@@ -100,7 +96,7 @@ impl fmt::Display for GameStatus {
 pub struct Game {
     position: ChessBoard,
     history: GameHistory,
-    unique_positions_counter: HashMap<u64, usize>,
+    unique_positions_counter: BTreeMap<u64, usize>,
     status: GameStatus,
 }
 
@@ -111,7 +107,7 @@ impl Default for Game {
         let mut result = Self {
             position: board.clone(),
             history: GameHistory::from_position(board),
-            unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
+            unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
         };
 
@@ -126,7 +122,7 @@ impl Game {
         let mut result = Self {
             position: board.clone(),
             history: GameHistory::from_position(board),
-            unique_positions_counter: HashMap::with_capacity(UNIQUE_POSITIONS_CAPACITY),
+            unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
         };
 

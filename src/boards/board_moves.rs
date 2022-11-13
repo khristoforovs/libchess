@@ -182,16 +182,12 @@ impl FromStr for BoardMove {
 
 impl fmt::Display for BoardMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let is_associated = self.is_check().is_some();
-
-        let check_string = if !is_associated {
-            String::new()
-        } else if self.is_checkmate().unwrap() {
-            String::from("#")
-        } else if self.is_check().unwrap() {
-            String::from("+")
+        let check_string = if Some(true) == self.is_checkmate() {
+            "#"
+        } else if Some(true) == self.is_check() {
+            "+"
         } else {
-            String::new()
+            ""
         };
 
         match self.board_move_option {
@@ -207,13 +203,7 @@ impl fmt::Display for BoardMove {
                     DisplayAmbiguityType::ExtraSquare => format!("{}", m.get_source_square()),
                     DisplayAmbiguityType::Neither => String::new(),
                 };
-                let capture_string = if !is_associated {
-                    String::new()
-                } else if self.is_capture().unwrap() {
-                    String::from("x")
-                } else {
-                    String::new()
-                };
+                let capture_string = if Some(true) == self.is_capture() { "x" } else { "" };
                 let promotion_string = match m.get_promotion() {
                     Some(piece_type) => format!("={}", piece_type),
                     None => String::new(),
