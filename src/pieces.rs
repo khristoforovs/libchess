@@ -5,12 +5,12 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceType {
+    King,
     Pawn,
     Knight,
     Bishop,
     Rook,
     Queen,
-    King,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
