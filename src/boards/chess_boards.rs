@@ -1238,8 +1238,11 @@ impl ChessBoard {
 mod tests {
     use super::*;
     use crate::boards::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
-    use crate::utils::noindent;
     use crate::PieceType::*;
+
+    pub fn noindent(text: &str) -> String {
+        text.replace("\n", "").replace(" ", "")
+    }
 
     #[test]
     fn create_from_string() {
@@ -1323,52 +1326,14 @@ mod tests {
     #[test]
     fn masks() {
         let board = ChessBoard::default();
-        let combined_str = 
-            "X X X X X X X X 
-             X X X X X X X X 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             X X X X X X X X 
-             X X X X X X X X 
-            ";
-        assert_eq!(
-            noindent(format!("{}", board.get_combined_mask()).as_str()),
-            noindent(combined_str)
-        );
+        let result = 0xffff00000000ffffu64;
+        assert_eq!(board.get_combined_mask().0, result);
 
-        let white = Color::White;
-        let whites_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             X X X X X X X X 
-             X X X X X X X X 
-            ";
-        assert_eq!(
-            noindent(format!("{}", board.get_color_mask(white)).as_str()),
-            noindent(whites_str)
-        );
+        let result = 0x000000000000ffffu64;
+        assert_eq!(board.get_color_mask(Color::White).0, result);
 
-        let black = Color::Black;
-        let blacks_str = 
-            "X X X X X X X X 
-             X X X X X X X X 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        assert_eq!(
-            noindent(format!("{}", board.get_color_mask(black)).as_str()),
-            noindent(blacks_str)
-        );
+        let result = 0xffff000000000000u64;
+        assert_eq!(board.get_color_mask(Color::Black).0, result);
     }
 
     #[test]

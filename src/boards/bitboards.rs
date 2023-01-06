@@ -135,22 +135,12 @@ impl BitBoard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::noindent;
 
     #[test]
     fn create() {
         let bit_board = BitBoard::new(2);
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . X . . . . . . 
-            ";
-        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_str));
+        let result = 0x00000000000002u64;
+        assert_eq!(bit_board.0, result);
     }
 
     #[test]
@@ -165,42 +155,15 @@ mod tests {
     fn bit_ops() {
         let bit_board = BitBoard::from_rank_file(Rank::Second, File::E)
             | BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-            ";
-        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
+        let result = 0x0000000010001000u64;
+        assert_eq!(bit_board.0, result);
 
         let bit_board = bit_board & BitBoard::from_rank_file(Rank::Fourth, File::E);
-        let result_or = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
+        let result = 0x0000000010000000u64;
+        assert_eq!(bit_board.0, result);
 
         let bit_board = !bit_board;
-        let result_or = 
-            "X X X X X X X X 
-             X X X X X X X X 
-             X X X X X X X X 
-             X X X X X X X X 
-             X X X X . X X X 
-             X X X X X X X X 
-             X X X X X X X X 
-             X X X X X X X X 
-            ";
-        assert_eq!(noindent(format!("{}", bit_board).as_str()), noindent(result_or));
-    }
+        let result = 0xffffffffefffffffu64;
+        assert_eq!(bit_board.0, result);
+        }
 }

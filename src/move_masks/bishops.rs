@@ -31,7 +31,6 @@ pub fn generate_bishop_moves(table: &mut PieceMoveTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -39,19 +38,9 @@ mod tests {
         let mut move_table = PieceMoveTable::new();
         generate_bishop_moves(&mut move_table);
         let square = E4;
-        let result_str = 
-            "X . . . . . . . 
-             . X . . . . . X 
-             . . X . . . X . 
-             . . . X . X . . 
-             . . . . . . . . 
-             . . . X . X . . 
-             . . X . . . X . 
-             . X . . . . . X 
-            ";
-        println!("{}", move_table.get_moves(square));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_moves(square)).as_str()), noindent(result_str)
-        );
+        let result = 0x0182442800284482u64;
+        let table = move_table.get_moves(square);
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 }

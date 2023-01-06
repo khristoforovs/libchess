@@ -77,7 +77,6 @@ pub fn generate_between_masks(table: &mut BetweenTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -85,21 +84,10 @@ mod tests {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
         let (square_a, square_b) = (C3, G7);
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . X . . 
-             . . . . X . . . 
-             . . . X . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", between_table.get(square_a, square_b).unwrap());
-        assert_eq!(
-            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
-            noindent(result_str)
-        );
+        let table = between_table.get(square_a, square_b).unwrap();
+        let result = 0x0000201008000000u64;
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 
     #[test]
@@ -107,21 +95,10 @@ mod tests {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
         let (square_a, square_b) = (D5, D1);
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . X . . . . 
-             . . . X . . . . 
-             . . . X . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", between_table.get(square_a, square_b).unwrap());
-        assert_eq!(
-            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
-            noindent(result_str)
-        );
+        let table = between_table.get(square_a, square_b).unwrap();
+        let result = 0x0000000008080800u64;
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 
     #[test]
@@ -129,21 +106,10 @@ mod tests {
         let mut between_table = BetweenTable::new();
         generate_between_masks(&mut between_table);
         let (square_a, square_b) = (D5, D5);
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", between_table.get(square_a, square_b).unwrap());
-        assert_eq!(
-            noindent(format!("{}", between_table.get(square_a, square_b).unwrap()).as_str()),
-            noindent(result_str)
-        );
+        let table = between_table.get(square_a, square_b).unwrap();
+        let result = 0u64;
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 
     #[test]

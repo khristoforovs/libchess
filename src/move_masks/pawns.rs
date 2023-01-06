@@ -116,7 +116,6 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::noindent;
     use crate::boards::squares::*;
 
     #[test]
@@ -124,37 +123,18 @@ mod tests {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_moves(&mut move_table, Color::White);
         generate_pawn_moves(&mut move_table, Color::Black);
+
         let square = E4;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_moves(square, Color::White));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_moves(square, Color::White)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000001000000000u64;
+        let table = move_table.get_moves(square, Color::White);
+        println!("{}", table);
+        assert_eq!(table.0, result);
 
         let square = E5;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_moves(square, Color::Black));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_moves(square, Color::Black)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000000010000000u64;
+        let table = move_table.get_moves(square, Color::Black);
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 
     #[test]
@@ -162,37 +142,18 @@ mod tests {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_moves(&mut move_table, Color::White);
         generate_pawn_moves(&mut move_table, Color::Black);
+
         let square = E2;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_moves(square, Color::White));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_moves(square, Color::White)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000000010100000u64;
+        let table = move_table.get_moves(square, Color::White);
+        println!("{}", table);
+        assert_eq!(table.0, result);
 
         let square = E7;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . X . . . 
-             . . . . X . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_moves(square, Color::Black));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_moves(square, Color::Black)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000101000000000u64;
+        let table = move_table.get_moves(square, Color::Black);
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 
     #[test]
@@ -200,36 +161,17 @@ mod tests {
         let mut move_table = PawnMoveTable::new();
         generate_pawn_captures(&mut move_table, Color::White);
         generate_pawn_captures(&mut move_table, Color::Black);
+
         let square = E3;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . X . X . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_captures(square, Color::White));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_captures(square, Color::White)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000000028000000u64;
+        let table = move_table.get_captures(square, Color::White);
+        println!("{}", table);
+        assert_eq!(table.0, result);
 
         let square = E6;
-        let result_str = 
-            ". . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . X . X . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-             . . . . . . . . 
-            ";
-        println!("{}", move_table.get_captures(square, Color::Black));
-        assert_eq!(
-            noindent(format!("{}", move_table.get_captures(square, Color::Black)).as_str()), noindent(result_str)
-        );
+        let result = 0x0000002800000000u64;
+        let table = move_table.get_captures(square, Color::Black);
+        println!("{}", table);
+        assert_eq!(table.0, result);
     }
 }

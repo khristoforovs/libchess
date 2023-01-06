@@ -1,5 +1,3 @@
-mod utils;
-
 mod castling;
 pub use castling::{CastlingRights, CASTLING_RIGHTS_NUMBER};
 
