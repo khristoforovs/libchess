@@ -1,6 +1,5 @@
-use crate::boards::{BitBoard, ChessBoard, Square};
 use crate::errors::BoardMoveRepresentationError as Error;
-use crate::PieceType;
+use crate::{BitBoard, ChessBoard, PieceType, Square};
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -337,7 +336,7 @@ macro_rules! castle_queen_side {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
+    use crate::squares::*;
     use std::str::FromStr;
     use PieceType::*;
 

@@ -3,10 +3,10 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::boards::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves};
 use crate::errors::{ChessBoardError, GameError};
 use crate::game_history::GameHistory;
 use crate::Color;
+use crate::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves};
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
@@ -56,9 +56,9 @@ impl fmt::Display for GameStatus {
 /// ## Examples
 /// Making moves by creating Action structs:
 /// ```
-/// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use libchess::PieceType::*;
 /// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use libchess::{Action, Color, Game, GameStatus};
 ///
 /// let mut game = Game::default();
@@ -78,9 +78,9 @@ impl fmt::Display for GameStatus {
 ///
 /// Making moves by str moves representation:
 /// ```
-/// use libchess::boards::{BoardMove, ChessBoard};
 /// use libchess::mv_str;
 /// use libchess::{Action, Color, Game};
+/// use libchess::{BoardMove, ChessBoard};
 /// use std::str::FromStr;
 ///
 /// let mut game = Game::default();
@@ -273,7 +273,7 @@ mod tests {
     use super::*;
     use crate::ZOBRIST_TABLES as ZOBRIST;
     use crate::*;
-    use crate::{boards::squares::*, PieceType::*};
+    use crate::{squares::*, PieceType::*};
 
     #[test]
     fn as_fen() {

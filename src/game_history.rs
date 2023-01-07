@@ -1,6 +1,4 @@
-use crate::boards::BoardMove;
-use crate::boards::ChessBoard;
-use crate::Color;
+use crate::{BoardMove, ChessBoard, Color};
 use std::fmt;
 
 const HISTORY_CAPACITY: usize = 80;
@@ -94,7 +92,7 @@ impl GameHistory {
 #[cfg(test)]
 mod tests {
     use crate::*;
-    use crate::{boards::squares::*, PieceType::*};
+    use crate::{squares::*, PieceType::*};
 
     #[test]
     fn de_riviere_paul_morphy_1863() {

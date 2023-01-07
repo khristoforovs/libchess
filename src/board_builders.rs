@@ -1,11 +1,6 @@
-use super::ChessBoard;
-use super::{File, FILES};
-use super::{Rank, RANKS};
-use super::{Square, SQUARES_NUMBER};
+use super::{ChessBoard, File, Rank, Square, FILES, RANKS, SQUARES_NUMBER};
 use crate::errors::ChessBoardError as Error;
-use crate::CastlingRights;
-use crate::{Color, COLORS_NUMBER};
-use crate::{Piece, PieceType};
+use crate::{CastlingRights, Color, Piece, PieceType, COLORS_NUMBER};
 use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str;
@@ -22,7 +17,7 @@ use std::str::FromStr;
 ///
 /// ## Examples
 /// ```
-/// use libchess::boards::BoardBuilder;
+/// use libchess::BoardBuilder;
 /// use std::str::FromStr;
 ///
 /// assert_eq!(

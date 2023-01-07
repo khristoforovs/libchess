@@ -4,18 +4,17 @@
 //! (including Zobrist hash calculation) Implements the logics of
 //! moving pieces and inferring the board status
 
-use crate::boards::{
-    squares, BitBoard, BoardBuilder, BoardMove, BoardMoveOption, DisplayAmbiguityType, File,
-    PieceMove, PositionHashValueType, PromotionPieceType, Rank, Square, BLANK, FILES, RANKS,
-    SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
-};
 use crate::errors::ChessBoardError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
-use crate::{castle_king_side, castle_queen_side, mv};
-use crate::{CastlingRights, Color, Piece, PieceType, COLORS_NUMBER, PIECE_TYPES_NUMBER};
+use crate::{
+    castle_king_side, castle_queen_side, mv, squares, BitBoard, BoardBuilder, BoardMove,
+    BoardMoveOption, CastlingRights, Color, DisplayAmbiguityType, File, Piece, PieceMove,
+    PieceType, PositionHashValueType, PromotionPieceType, Rank, Square, BLANK, COLORS_NUMBER,
+    FILES, PIECE_TYPES_NUMBER, RANKS, SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
+};
 use colored::Colorize;
 use std::collections::hash_set::HashSet;
 use std::fmt;
@@ -46,9 +45,9 @@ pub enum BoardStatus {
 ///
 /// ## Examples
 /// ```
-/// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use libchess::PieceType::*;
 /// use libchess::{castle_king_side, castle_queen_side, mv};
+/// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
 /// use std::str::FromStr;
 ///
 /// println!("{}", ChessBoard::default());
@@ -194,7 +193,7 @@ impl ChessBoard {
         }
 
         // make sure that opponent is not on check
-        let mut cloned_board = self.clone();
+        let mut cloned_board = *self;
         cloned_board.set_side_to_move(!self.side_to_move);
         cloned_board.update_pins_and_checks();
         if cloned_board.get_check_mask().count_ones() > 0 {
@@ -269,17 +268,17 @@ impl ChessBoard {
     }
 
     /// Unified method for rendering to terminal
-    fn render(
+    fn render<'a>(
         &self,
-        ranks: impl Iterator<Item = Rank>,
-        files: impl Iterator<Item = File> + Clone,
+        ranks: impl Iterator<Item = &'a Rank>,
+        files: impl Iterator<Item = &'a File> + Clone,
         footer: &str,
     ) -> String {
         let mut field_string = String::new();
         for rank in ranks {
             field_string = format!("{}{}  ║", field_string, (rank).to_index() + 1);
             for file in files.clone() {
-                let square = Square::from_rank_file(rank, file);
+                let square = Square::from_rank_file(*rank, *file);
                 if self.is_empty_square(square) {
                     if square.is_light() {
                         field_string = format!("{}{}", field_string, "   ".on_white());
@@ -319,20 +318,14 @@ impl ChessBoard {
 
     /// Returns ASCII-representation of the board as a String
     pub fn render_straight(&self) -> String {
-        let ranks = RANKS.into_iter().rev();
-        let files = FILES.into_iter();
         let footer = "     a  b  c  d  e  f  g  h";
-
-        self.render(ranks, files, footer)
+        self.render(RANKS.iter().rev(), FILES.iter(), footer)
     }
 
     /// Returns ASCII-representation of the flipped board as a String
     pub fn render_flipped(&self) -> String {
-        let ranks = RANKS.into_iter();
-        let files = FILES.into_iter().rev();
         let footer = "     h  g  f  e  d  c  b  a";
-
-        self.render(ranks, files, footer)
+        self.render(RANKS.iter(), FILES.iter().rev(), footer)
     }
 
     /// Returns a FEN string of current position
@@ -524,14 +517,7 @@ impl ChessBoard {
                 }
 
                 // Checks
-                if self
-                    .clone()
-                    .move_piece(m)
-                    .update_pins_and_checks()
-                    .get_check_mask()
-                    .count_ones()
-                    != 0
-                {
+                if self.get_check_mask_after_piece_move(m).count_ones() != 0 {
                     return false;
                 }
             }
@@ -829,9 +815,9 @@ impl ChessBoard {
     /// ``castle_king_side!()`` and ``castle_queen_side!()``
     ///
     /// ```
-    /// use libchess::boards::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
     /// use libchess::PieceType::*;
     /// use libchess::{castle_king_side, castle_queen_side, mv};
+    /// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
     ///
     /// let board = ChessBoard::default();
     /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
@@ -900,6 +886,13 @@ impl ChessBoard {
         let mut next_board = self.clone();
         next_board.make_move_mut(next_move)?;
         Ok(next_board)
+    }
+
+    fn get_check_mask_after_piece_move(self, m: PieceMove) -> BitBoard {
+        self.clone()
+            .move_piece(m)
+            .update_pins_and_checks()
+            .get_check_mask()
     }
 
     fn move_piece(&mut self, piece_move: PieceMove) -> &mut Self {
@@ -1237,12 +1230,10 @@ impl ChessBoard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
     use crate::PieceType::*;
+    use crate::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
 
-    pub fn noindent(text: &str) -> String {
-        text.replace("\n", "").replace(" ", "")
-    }
+    pub fn noindent(text: &str) -> String { text.replace("\n", "").replace(" ", "") }
 
     #[test]
     fn create_from_string() {

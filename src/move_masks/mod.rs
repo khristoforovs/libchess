@@ -1,6 +1,4 @@
-use crate::boards::{BitBoard, BLANK};
-use crate::boards::{Square, SQUARES_NUMBER};
-use crate::Color;
+use crate::{BitBoard, Color, Square, BLANK, SQUARES_NUMBER};
 use lazy_static::lazy_static;
 
 pub struct PieceMoveTable([BitBoard; SQUARES_NUMBER]);

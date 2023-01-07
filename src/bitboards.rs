@@ -1,6 +1,4 @@
-use super::Square;
-use super::{File, FILES};
-use super::{Rank, RANKS};
+use super::{File, Rank, Square, FILES, RANKS};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
 

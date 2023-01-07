@@ -1,6 +1,4 @@
-use crate::boards::{BitBoard, BLANK};
-use crate::boards::{File, Rank};
-use crate::boards::{Square, SQUARES_NUMBER};
+use crate::{BitBoard, File, Rank, Square, BLANK, SQUARES_NUMBER};
 use std::cmp::max;
 
 pub struct BetweenTable([[Option<BitBoard>; SQUARES_NUMBER]; SQUARES_NUMBER]);
@@ -77,7 +75,7 @@ pub fn generate_between_masks(table: &mut BetweenTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
+    use crate::squares::*;
 
     #[test]
     fn between_diagonal() {

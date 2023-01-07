@@ -1,6 +1,5 @@
 use super::PieceMoveTable;
-use crate::boards::{BitBoard, BLANK};
-use crate::boards::{Square, SQUARES_NUMBER};
+use crate::{BitBoard, Square, BLANK, SQUARES_NUMBER};
 
 pub fn generate_rook_moves(table: &mut PieceMoveTable) {
     for source_index in 0..SQUARES_NUMBER {
@@ -31,7 +30,7 @@ pub fn generate_rook_moves(table: &mut PieceMoveTable) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
+    use crate::squares::*;
 
     #[test]
     fn create() {

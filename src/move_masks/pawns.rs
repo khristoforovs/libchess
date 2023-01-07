@@ -1,6 +1,4 @@
-use crate::boards::{BitBoard, BLANK};
-use crate::boards::{Square, SQUARES_NUMBER};
-use crate::{Color, COLORS_NUMBER};
+use crate::{BitBoard, Color, Square, BLANK, COLORS_NUMBER, SQUARES_NUMBER};
 
 pub struct PawnMoveTable {
     moves:    [BitBoard; SQUARES_NUMBER * COLORS_NUMBER],
@@ -116,7 +114,7 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
+    use crate::squares::*;
 
     #[test]
     fn create() {

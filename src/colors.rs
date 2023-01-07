@@ -1,5 +1,5 @@
-use crate::boards::Rank;
 use crate::errors::PieceRepresentationError as Error;
+use crate::Rank;
 use std::fmt;
 use std::ops::Not;
 

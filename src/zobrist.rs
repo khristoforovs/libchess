@@ -4,9 +4,9 @@
 //! Number of hash collisions grows like the square root of the number of positions
 //! under consideration
 
-use crate::boards::{ChessBoard, Square, FILES_NUMBER, SQUARES_NUMBER};
 use crate::{
-    CastlingRights, Color, Piece, CASTLING_RIGHTS_NUMBER, COLORS_NUMBER, PIECE_TYPES_NUMBER,
+    CastlingRights, ChessBoard, Color, Piece, Square, CASTLING_RIGHTS_NUMBER, COLORS_NUMBER,
+    FILES_NUMBER, PIECE_TYPES_NUMBER, SQUARES_NUMBER,
 };
 use lazy_static::lazy_static;
 use rand::rngs::StdRng;
@@ -131,10 +131,9 @@ lazy_static! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::boards::squares::*;
-    use crate::boards::{BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
     use crate::mv;
     use crate::PieceType::*;
+    use crate::{squares::*, BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
 
     #[test]
     fn calculate_hash() {
