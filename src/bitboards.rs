@@ -87,7 +87,7 @@ impl fmt::Display for BitBoard {
             }
             s.push('\n');
         }
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::errors::ChessBoardCoordinatesError as Error;
+use crate::errors::LibChessError as Error;
 use std::fmt;
 use std::str::FromStr;
 

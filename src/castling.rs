@@ -47,7 +47,7 @@ impl fmt::Display for CastlingRights {
             CastlingRights::KingSide => "k",
             CastlingRights::BothSides => "kq",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

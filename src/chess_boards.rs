@@ -4,16 +4,16 @@
 //! (including Zobrist hash calculation) Implements the logics of
 //! moving pieces and inferring the board status
 
-use crate::errors::ChessBoardError as Error;
+use crate::errors::LibChessError as Error;
 use crate::move_masks::{
     BETWEEN_TABLE as BETWEEN, BISHOP_TABLE as BISHOP, KING_TABLE as KING, KNIGHT_TABLE as KNIGHT,
     PAWN_TABLE as PAWN, QUEEN_TABLE as QUEEN, ROOK_TABLE as ROOK,
 };
 use crate::{
     castle_king_side, castle_queen_side, mv, squares, BitBoard, BoardBuilder, BoardMove,
-    BoardMoveOption, CastlingRights, Color, DisplayAmbiguityType, File, Piece, PieceMove,
-    PieceType, PositionHashValueType, PromotionPieceType, Rank, Square, BLANK, COLORS_NUMBER,
-    FILES, PIECE_TYPES_NUMBER, RANKS, SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
+    CastlingRights, Color, DisplayAmbiguityType, File, Piece, PieceMove, PieceType,
+    PositionHashValueType, Rank, Square, BLANK, COLORS_NUMBER, FILES, PIECE_TYPES_NUMBER, RANKS,
+    SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
 };
 use colored::Colorize;
 use std::collections::hash_set::HashSet;
@@ -47,7 +47,7 @@ pub enum BoardStatus {
 /// ```
 /// use libchess::PieceType::*;
 /// use libchess::{castle_king_side, castle_queen_side, mv};
-/// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
+/// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
 /// use std::str::FromStr;
 ///
 /// println!("{}", ChessBoard::default());
@@ -296,11 +296,11 @@ impl ChessBoard {
                         field_string =
                             format!("{}{}", field_string, piece_type_str.black().on_white());
                     } else {
-                        field_string = format!("{}{}", field_string, piece_type_str);
+                        field_string = format!("{field_string}{piece_type_str}");
                     };
                 }
             }
-            field_string = format!("{}║\n", field_string);
+            field_string = format!("{field_string}║\n");
         }
 
         let board_string = format!(
@@ -447,8 +447,8 @@ impl ChessBoard {
 
     /// Returns true if specified move is legal for current position
     pub fn is_legal_move(&self, chess_move: BoardMove) -> bool {
-        match chess_move.get_move_option() {
-            BoardMoveOption::MovePiece(m) => {
+        match chess_move {
+            BoardMove::MovePiece(m) => {
                 // Check source square
                 let source_square = m.get_source_square();
                 if (self.get_piece_type_mask(m.get_piece_type())
@@ -521,7 +521,7 @@ impl ChessBoard {
                     return false;
                 }
             }
-            BoardMoveOption::CastleKingSide => {
+            BoardMove::CastleKingSide => {
                 let is_not_check = self.get_check_mask().count_ones() == 0;
                 if !self.get_castle_rights(self.side_to_move).has_kingside() {
                     return false;
@@ -542,7 +542,7 @@ impl ChessBoard {
                     return false;
                 }
             }
-            BoardMoveOption::CastleQueenSide => {
+            BoardMove::CastleQueenSide => {
                 let is_not_check = self.get_check_mask().count_ones() == 0;
                 if !self.get_castle_rights(self.side_to_move).has_queenside() {
                     return false;
@@ -613,14 +613,13 @@ impl ChessBoard {
                                 0 => {
                                     legals |= destination_mask;
                                 }
-                                1 => match self.get_piece_color_on(destination) {
-                                    Some(c) => {
+                                1 => {
+                                    if let Some(c) = self.get_piece_color_on(destination) {
                                         if c == !self.side_to_move {
                                             legals |= destination_mask;
                                         }
                                     }
-                                    None => {}
-                                },
+                                }
                                 _ => {}
                             }
                         }
@@ -651,10 +650,10 @@ impl ChessBoard {
                         // Generate promotion moves
                         let s = m.get_source_square();
                         let d = m.get_destination_square();
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Knight));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Bishop));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Rook));
-                        moves.insert(mv!(PieceType::Pawn, s, d, PromotionPieceType::Queen));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PieceType::Knight));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PieceType::Bishop));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PieceType::Rook));
+                        moves.insert(mv!(PieceType::Pawn, s, d, PieceType::Queen));
                     } else {
                         moves.insert(one);
                     }
@@ -754,7 +753,7 @@ impl ChessBoard {
         &self,
         piece_move: PieceMove,
     ) -> Result<DisplayAmbiguityType, Error> {
-        if !self.is_legal_move(BoardMove::new(BoardMoveOption::MovePiece(piece_move))) {
+        if !self.is_legal_move(BoardMove::MovePiece(piece_move)) {
             return Err(Error::IllegalMoveDetected);
         }
 
@@ -817,7 +816,7 @@ impl ChessBoard {
     /// ```
     /// use libchess::PieceType::*;
     /// use libchess::{castle_king_side, castle_queen_side, mv};
-    /// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
+    /// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
     ///
     /// let board = ChessBoard::default();
     /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
@@ -828,45 +827,57 @@ impl ChessBoard {
             return Err(Error::IllegalMoveDetected);
         }
 
-        match next_move.get_move_option() {
-            BoardMoveOption::MovePiece(m) => {
+        match next_move {
+            BoardMove::MovePiece(m) => {
                 self.move_piece(m);
             }
-            BoardMoveOption::CastleKingSide => {
+            BoardMove::CastleKingSide => {
                 let king_rank = match self.side_to_move {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
                 };
-                self.move_piece(PieceMove::new(
-                    PieceType::King,
-                    Square::from_rank_file(king_rank, File::E),
-                    Square::from_rank_file(king_rank, File::G),
-                    None,
-                ));
-                self.move_piece(PieceMove::new(
-                    PieceType::Rook,
-                    Square::from_rank_file(king_rank, File::H),
-                    Square::from_rank_file(king_rank, File::F),
-                    None,
-                ));
+                self.move_piece(
+                    PieceMove::new(
+                        PieceType::King,
+                        Square::from_rank_file(king_rank, File::E),
+                        Square::from_rank_file(king_rank, File::G),
+                        None,
+                    )
+                    .unwrap(),
+                );
+                self.move_piece(
+                    PieceMove::new(
+                        PieceType::Rook,
+                        Square::from_rank_file(king_rank, File::H),
+                        Square::from_rank_file(king_rank, File::F),
+                        None,
+                    )
+                    .unwrap(),
+                );
             }
-            BoardMoveOption::CastleQueenSide => {
+            BoardMove::CastleQueenSide => {
                 let king_rank = match self.side_to_move {
                     Color::White => Rank::First,
                     Color::Black => Rank::Eighth,
                 };
-                self.move_piece(PieceMove::new(
-                    PieceType::King,
-                    Square::from_rank_file(king_rank, File::E),
-                    Square::from_rank_file(king_rank, File::C),
-                    None,
-                ));
-                self.move_piece(PieceMove::new(
-                    PieceType::Rook,
-                    Square::from_rank_file(king_rank, File::A),
-                    Square::from_rank_file(king_rank, File::D),
-                    None,
-                ));
+                self.move_piece(
+                    PieceMove::new(
+                        PieceType::King,
+                        Square::from_rank_file(king_rank, File::E),
+                        Square::from_rank_file(king_rank, File::C),
+                        None,
+                    )
+                    .unwrap(),
+                );
+                self.move_piece(
+                    PieceMove::new(
+                        PieceType::Rook,
+                        Square::from_rank_file(king_rank, File::A),
+                        Square::from_rank_file(king_rank, File::D),
+                        None,
+                    )
+                    .unwrap(),
+                );
             }
         }
 
@@ -883,7 +894,7 @@ impl ChessBoard {
     }
 
     pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
-        let mut next_board = self.clone();
+        let mut next_board = *self;
         next_board.make_move_mut(next_move)?;
         Ok(next_board)
     }
@@ -965,18 +976,15 @@ impl ChessBoard {
     }
 
     fn clear_square(&mut self, square: Square) -> &mut Self {
-        match self.get_piece_type_on(square) {
-            Some(piece_type) => {
-                let color = self.get_piece_color_on(square).unwrap();
-                let mask = !BitBoard::from_square(square);
+        if let Some(piece_type) = self.get_piece_type_on(square) {
+            let color = self.get_piece_color_on(square).unwrap();
+            let mask = !BitBoard::from_square(square);
 
-                self.combined_mask &= mask;
-                self.pieces_mask[piece_type.to_index()] &= mask;
-                self.colors_mask[color.to_index()] &= mask;
+            self.combined_mask &= mask;
+            self.pieces_mask[piece_type.to_index()] &= mask;
+            self.colors_mask[color.to_index()] &= mask;
 
-                self.hash ^= ZOBRIST.get_piece_square_value(Piece(piece_type, color), square);
-            }
-            None => {}
+            self.hash ^= ZOBRIST.get_piece_square_value(Piece(piece_type, color), square);
         }
         self
     }
@@ -988,8 +996,8 @@ impl ChessBoard {
     }
 
     fn update_en_passant(&mut self, last_move: BoardMove) -> &mut Self {
-        match last_move.get_move_option() {
-            BoardMoveOption::MovePiece(m) => {
+        match last_move {
+            BoardMove::MovePiece(m) => {
                 let source_rank_index = m.get_source_square().get_rank().to_index();
                 let destination_rank_index = m.get_destination_square().get_rank().to_index();
                 if (m.get_piece_type() == PieceType::Pawn)
@@ -1015,8 +1023,8 @@ impl ChessBoard {
         self.set_castling_rights(
             self.side_to_move,
             self.get_castle_rights(self.side_to_move)
-                - match last_move.get_move_option() {
-                    BoardMoveOption::MovePiece(m) => match m.get_piece_type() {
+                - match last_move {
+                    BoardMove::MovePiece(m) => match m.get_piece_type() {
                         PieceType::Rook => match m.get_source_square().get_file() {
                             File::H => CastlingRights::KingSide,
                             File::A => CastlingRights::QueenSide,
@@ -1039,8 +1047,8 @@ impl ChessBoard {
     }
 
     fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
-        match last_move.get_move_option() {
-            BoardMoveOption::MovePiece(m) => {
+        match last_move {
+            BoardMove::MovePiece(m) => {
                 if (m.get_piece_type() == PieceType::Pawn) | m.is_capture_on_board(*self) {
                     self.moves_since_capture_or_pawn_move = 0;
                 } else {
@@ -1057,8 +1065,8 @@ impl ChessBoard {
     fn update_terminal_status(&mut self) -> &mut Self {
         // To define whether the position is terminal one, we should understand that current side
         // does not have legal moves. The simplest way could do this is just by calling
-        // board.get_legal_moves().len(). But it we could avoid iterating over all available
-        // moves for most of the cases and find only the first legal move.
+        // board.get_legal_moves().len(). But we could avoid iterating over all available
+        // moves for most of the cases and find only the first legal move
         let color_mask = self.get_color_mask(self.side_to_move);
         let en_passant_mask = match self.get_en_passant() {
             Some(sq) => BitBoard::from_square(sq),
@@ -1098,14 +1106,13 @@ impl ChessBoard {
                                 0 => {
                                     legals |= destination_mask;
                                 }
-                                1 => match self.get_piece_color_on(destination) {
-                                    Some(c) => {
+                                1 => {
+                                    if let Some(c) = self.get_piece_color_on(destination) {
                                         if c == !self.side_to_move {
                                             legals |= destination_mask;
                                         }
                                     }
-                                    None => {}
-                                },
+                                }
                                 _ => {}
                             }
                         }
@@ -1231,7 +1238,7 @@ impl ChessBoard {
 mod tests {
     use super::*;
     use crate::PieceType::*;
-    use crate::{squares::*, BoardMove, BoardMoveOption, PieceMove, Square};
+    use crate::{squares::*, BoardMove, PieceMove, Square};
 
     pub fn noindent(text: &str) -> String { text.replace("\n", "").replace(" ", "") }
 

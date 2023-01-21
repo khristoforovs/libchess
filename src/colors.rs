@@ -1,4 +1,4 @@
-use crate::errors::PieceRepresentationError as Error;
+use crate::errors::LibChessError as Error;
 use crate::Rank;
 use std::fmt;
 use std::ops::Not;
@@ -29,7 +29,7 @@ impl fmt::Display for Color {
             Color::White => "white",
             Color::Black => "black",
         };
-        write!(f, "{}", display_str)
+        write!(f, "{display_str}")
     }
 }
 

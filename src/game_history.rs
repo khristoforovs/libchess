@@ -1,4 +1,4 @@
-use crate::{BoardMove, ChessBoard, Color};
+use crate::{BoardMove, ChessBoard, Color, MovePropertiesOnBoard};
 use std::fmt;
 
 const HISTORY_CAPACITY: usize = 80;
@@ -7,6 +7,7 @@ const HISTORY_CAPACITY: usize = 80;
 pub struct GameHistory {
     positions: Vec<ChessBoard>,
     moves:     Vec<BoardMove>,
+    metadata:  Vec<MovePropertiesOnBoard>,
 }
 
 impl Default for GameHistory {
@@ -15,6 +16,7 @@ impl Default for GameHistory {
         Self {
             positions: Vec::with_capacity(HISTORY_CAPACITY),
             moves:     Vec::with_capacity(HISTORY_CAPACITY),
+            metadata:  Vec::with_capacity(HISTORY_CAPACITY),
         }
     }
 }
@@ -24,33 +26,31 @@ impl fmt::Display for GameHistory {
         if self.positions.is_empty() {
             write!(f, "")
         } else {
-            let mut game_history_string = String::new();
+            let mut game_history_string;
+            let first_move_string = self.moves[0].to_string(self.metadata[0]);
             match self.positions[0].get_side_to_move() {
                 Color::White => {
-                    for (i, m) in self.get_moves().iter().enumerate() {
-                        let next_move_string = if i % 2 == 0 {
-                            format!("{}.{} ", (i + 2) / 2, m)
-                        } else {
-                            format!("{} ", m)
-                        };
-                        game_history_string =
-                            format!("{}{}", game_history_string, next_move_string);
-                    }
+                    game_history_string = format!("1.{first_move_string} ");
                 }
                 Color::Black => {
-                    game_history_string = format!("1. ... {}", game_history_string);
-                    for (i, m) in self.get_moves().iter().enumerate() {
-                        let next_move_string = if i % 2 == 1 {
-                            format!("{}.{} ", (i + 2) / 2 + 1, m)
-                        } else {
-                            format!("{} ", m)
-                        };
-                        game_history_string =
-                            format!("{}{}", game_history_string, next_move_string);
-                    }
+                    game_history_string = format!("1. ... {first_move_string}");
                 }
             }
-            write!(f, "{}", game_history_string)
+
+            let white_starting = self.positions[0].get_side_to_move() == Color::White;
+            for i in 1..self.moves.len() {
+                let next_move_string = if (i % 2 != 0) ^ white_starting {
+                    format!(
+                        "{}.{} ",
+                        (i + 2) / 2,
+                        self.moves[i].to_string(self.metadata[i])
+                    )
+                } else {
+                    format!("{} ", self.moves[i].to_string(self.metadata[i]))
+                };
+                game_history_string = format!("{game_history_string}{next_move_string}");
+            }
+            write!(f, "{game_history_string}")
         }
     }
 }
@@ -58,13 +58,20 @@ impl fmt::Display for GameHistory {
 impl GameHistory {
     pub fn from_position(position: ChessBoard) -> Self {
         let mut result = Self::default();
-        result.push_position(position);
+        result.positions.push(position);
         result
     }
 
-    pub fn push(&mut self, chess_move: BoardMove, new_position: ChessBoard) -> &mut Self {
-        self.push_position(new_position);
-        self.push_move(chess_move);
+    pub fn push(
+        &mut self,
+        board_move: BoardMove,
+        position: ChessBoard,
+        new_position: ChessBoard,
+    ) -> &mut Self {
+        self.positions.push(new_position);
+        self.moves.push(board_move);
+        self.metadata
+            .push(MovePropertiesOnBoard::new(board_move, position).unwrap());
         self
     }
 
@@ -72,21 +79,7 @@ impl GameHistory {
 
     pub fn get_moves(&self) -> &Vec<BoardMove> { &self.moves }
 
-    fn push_position(&mut self, position: ChessBoard) -> &mut Self {
-        self.positions.push(position);
-        self
-    }
-
-    fn push_move(&mut self, chess_move: BoardMove) -> &mut Self {
-        let positions_seq_len = self.positions.len();
-        let mut history_chess_move = chess_move;
-        history_chess_move.associate(
-            self.positions[positions_seq_len - 2],
-            self.positions[positions_seq_len - 1],
-        );
-        self.moves.push(history_chess_move);
-        self
-    }
+    pub fn get_metadata(&self) -> &Vec<MovePropertiesOnBoard> { &self.metadata }
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use failure::Fail;
 
 #[derive(Debug, Clone, Fail)]
-pub enum ChessBoardCoordinatesError {
+pub enum LibChessError {
     #[fail(display = "Invalid index for board's file: {}", n)]
     InvalidBoardFileIndex { n: usize },
 
@@ -22,10 +22,8 @@ pub enum ChessBoardCoordinatesError {
 
     #[fail(display = "Invalid square representation string")]
     InvalidSquareRepresentation,
-}
 
-#[derive(Debug, Clone, Fail)]
-pub enum PieceRepresentationError {
+    // Piece Errors
     #[fail(display = "Invalid peace representation string")]
     InvalidPeaceRepresentation,
 
@@ -34,16 +32,18 @@ pub enum PieceRepresentationError {
 
     #[fail(display = "Invalid color index : {}", n)]
     InvalidColorIndex { n: usize },
-}
 
-#[derive(Debug, Clone, Fail)]
-pub enum BoardMoveRepresentationError {
+    // Board Moves Errors
     #[fail(display = "Invalid move representation string")]
     InvalidBoardMoveRepresentation,
-}
 
-#[derive(Debug, Clone, Fail)]
-pub enum ChessBoardError {
+    #[fail(display = "Pawn can't be promoted to pawn")]
+    InvalidPromotionPiece,
+
+    #[fail(display = "Invalid move for current board")]
+    InvalidMoveForCurrentBoard,
+
+    // Chess Board Errors
     #[fail(display = "Invalid FEN string: {}", s)]
     InvalidFENString { s: String },
 
@@ -73,10 +73,8 @@ pub enum ChessBoardError {
 
     #[fail(display = "Chess move was not associated with the board")]
     NotAssociatedBoardMove,
-}
 
-#[derive(Debug, Clone, Fail)]
-pub enum GameError {
+    // Game Process Errors
     #[fail(display = "Illegal action detected")]
     IllegalActionDetected,
 

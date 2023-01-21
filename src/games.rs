@@ -3,7 +3,7 @@
 //! Rules of the game, terminating conditions and recording
 //! the history of the game also implemented here  
 
-use crate::errors::{ChessBoardError, GameError};
+use crate::errors::LibChessError as Error;
 use crate::game_history::GameHistory;
 use crate::Color;
 use crate::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves};
@@ -47,7 +47,7 @@ impl fmt::Display for GameStatus {
             GameStatus::RepetitionDrawDeclared => "draw declared by moves repetition".to_string(),
             GameStatus::Stalemate => "stalemate".to_string(),
         };
-        write!(f, "{}", status_string)
+        write!(f, "{status_string}")
     }
 }
 
@@ -58,7 +58,7 @@ impl fmt::Display for GameStatus {
 /// ```
 /// use libchess::PieceType::*;
 /// use libchess::{castle_king_side, castle_queen_side, mv};
-/// use libchess::{squares::*, BoardMove, BoardMoveOption, ChessBoard, PieceMove};
+/// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
 /// use libchess::{Action, Color, Game, GameStatus};
 ///
 /// let mut game = Game::default();
@@ -105,7 +105,7 @@ impl Default for Game {
     fn default() -> Self {
         let board = ChessBoard::default();
         let mut result = Self {
-            position: board.clone(),
+            position: board,
             history: GameHistory::from_position(board),
             unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
@@ -120,7 +120,7 @@ impl Game {
     #[inline]
     pub fn from_board(board: ChessBoard) -> Self {
         let mut result = Self {
-            position: board.clone(),
+            position: board,
             history: GameHistory::from_position(board),
             unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
@@ -131,8 +131,8 @@ impl Game {
     }
 
     #[inline]
-    pub fn from_fen(fen: &str) -> Result<Self, ChessBoardError> {
-        ChessBoard::from_str(fen).and_then(|x| Ok(Self::from_board(x)))
+    pub fn from_fen(fen: &str) -> Result<Self, Error> {
+        ChessBoard::from_str(fen).map(Self::from_board)
     }
 
     /// Returns a FEN string of current game position
@@ -233,34 +233,36 @@ impl Game {
     }
 
     /// The method to make moves during the game
-    pub fn make_move(&mut self, action: Action) -> Result<&mut Self, GameError> {
+    pub fn make_move(&mut self, action: Action) -> Result<&mut Self, Error> {
+        use Action::*;
         let game_status = self.get_game_status();
+        let position = self.position;
         if game_status == GameStatus::Ongoing {
             match action {
-                Action::MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
+                MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
                     Ok(_) => {
                         self.position_counter_increment();
-                        self.history.push(m, self.position);
+                        self.history.push(m, position, self.position);
                     }
                     Err(_) => {
-                        return Err(GameError::IllegalActionDetected);
+                        return Err(Error::IllegalActionDetected);
                     }
                 },
-                Action::AcceptDraw | Action::DeclineDraw => {
-                    return Err(GameError::IllegalActionDetected);
+                AcceptDraw | DeclineDraw => {
+                    return Err(Error::IllegalActionDetected);
                 }
-                Action::OfferDraw | Action::Resign => {}
+                OfferDraw | Resign => {}
             }
         } else if game_status == GameStatus::DrawOffered {
             match action {
-                Action::MakeMove(_) | Action::OfferDraw => {
-                    return Err(GameError::IllegalActionDetected);
+                MakeMove(_) | OfferDraw => {
+                    return Err(Error::IllegalActionDetected);
                 }
-                Action::AcceptDraw | Action::DeclineDraw => {}
-                Action::Resign => {}
+                AcceptDraw | DeclineDraw => {}
+                Resign => {}
             }
         } else {
-            return Err(GameError::GameIsAlreadyFinished);
+            return Err(Error::GameIsAlreadyFinished);
         }
 
         self.update_game_status(Some(action));

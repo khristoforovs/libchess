@@ -95,11 +95,8 @@ impl ZobristHasher {
         }
 
         // en passant
-        match position.get_en_passant() {
-            Some(sq) => {
-                hash ^= self.en_passant_table[sq.get_file().to_index()];
-            }
-            None => {}
+        if let Some(sq) = position.get_en_passant() {
+            hash ^= self.en_passant_table[sq.get_file().to_index()];
         }
 
         hash
@@ -133,7 +130,7 @@ mod tests {
     use super::*;
     use crate::mv;
     use crate::PieceType::*;
-    use crate::{squares::*, BoardMove, BoardMoveOption, PieceMove, ZOBRIST_TABLES as ZOBRIST};
+    use crate::{squares::*, BoardMove, PieceMove, ZOBRIST_TABLES as ZOBRIST};
 
     #[test]
     fn calculate_hash() {

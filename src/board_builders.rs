@@ -1,5 +1,5 @@
 use super::{ChessBoard, File, Rank, Square, FILES, RANKS, SQUARES_NUMBER};
-use crate::errors::ChessBoardError as Error;
+use crate::errors::LibChessError as Error;
 use crate::{CastlingRights, Color, Piece, PieceType, COLORS_NUMBER};
 use std::fmt;
 use std::ops::{Index, IndexMut};
@@ -215,7 +215,7 @@ impl fmt::Display for BoardBuilder {
                 match self[Square::from_rank_file(*rank, *file)] {
                     Some(p) => {
                         if empty_squares != 0 {
-                            pieces_string += format!("{}", empty_squares).as_str();
+                            pieces_string += format!("{empty_squares}").as_str();
                             empty_squares = 0;
                         }
                         let mut s = format!("{}", p.0);
@@ -231,7 +231,7 @@ impl fmt::Display for BoardBuilder {
                 }
             }
             if empty_squares != 0 {
-                pieces_string += format!("{}", empty_squares).as_str();
+                pieces_string += format!("{empty_squares}").as_str();
                 empty_squares = 0;
             }
         }
@@ -257,7 +257,7 @@ impl fmt::Display for BoardBuilder {
             },
             castles_string,
             match self.en_passant {
-                Some(value) => format!("{}", value),
+                Some(value) => format!("{value}"),
                 None => "-".to_string(),
             },
             self.get_moves_since_capture_or_pawn_move(),

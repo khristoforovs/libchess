@@ -1,6 +1,6 @@
 use super::File;
 use super::Rank;
-use crate::errors::ChessBoardCoordinatesError as Error;
+use crate::errors::LibChessError as Error;
 use std::fmt;
 use std::str::FromStr;
 
@@ -14,8 +14,8 @@ impl fmt::Display for Square {
         write!(
             f,
             "{}{}",
-            ((self.0 & 7) as u8 + b'a') as char,
-            ((self.0 >> 3) as u8 + b'1') as char
+            ((self.0 & 7) + b'a') as char,
+            ((self.0 >> 3) + b'1') as char
         )
     }
 }

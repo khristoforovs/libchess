@@ -1,51 +1,50 @@
-use crate::errors::BoardMoveRepresentationError as Error;
+use crate::errors::LibChessError as Error;
 use crate::{BitBoard, ChessBoard, PieceType, Square};
 use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::str::FromStr;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PromotionPieceType {
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-}
-
-impl FromStr for PromotionPieceType {
-    type Err = Error;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        if value.len() != 1 {
-            return Err(Error::InvalidBoardMoveRepresentation);
-        }
-
-        match value.to_uppercase().as_str().chars().next().unwrap() {
-            'N' => Ok(PromotionPieceType::Knight),
-            'B' => Ok(PromotionPieceType::Bishop),
-            'R' => Ok(PromotionPieceType::Rook),
-            'Q' => Ok(PromotionPieceType::Queen),
-            _ => Err(Error::InvalidBoardMoveRepresentation),
-        }
-    }
-}
-
-impl From<PromotionPieceType> for PieceType {
-    fn from(piece_type: PromotionPieceType) -> Self {
-        match piece_type {
-            PromotionPieceType::Knight => PieceType::Knight,
-            PromotionPieceType::Bishop => PieceType::Bishop,
-            PromotionPieceType::Rook => PieceType::Rook,
-            PromotionPieceType::Queen => PieceType::Queen,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DisplayAmbiguityType {
     ExtraFile,
     ExtraSquare,
     Neither,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MovePropertiesOnBoard {
+    pub is_check:       bool,
+    pub is_checkmate:   bool,
+    pub is_capture:     bool,
+    pub ambiguity_type: DisplayAmbiguityType,
+}
+
+impl MovePropertiesOnBoard {
+    pub fn new(board_move: BoardMove, board: ChessBoard) -> Result<Self, Error> {
+        let board_after_move = board.make_move(board_move)?;
+        let is_check = board_after_move.get_check_mask().count_ones() > 0;
+        let is_checkmate = board_after_move.is_terminal() & is_check;
+        let is_capture = match board_move {
+            BoardMove::MovePiece(m) => m.is_capture_on_board(board),
+            BoardMove::CastleKingSide => false,
+            BoardMove::CastleQueenSide => false,
+        };
+        let ambiguity_type = match board_move {
+            BoardMove::MovePiece(m) => match m.get_piece_type() {
+                PieceType::King => DisplayAmbiguityType::Neither,
+                _ => board.get_move_ambiguity_type(m)?,
+            },
+            BoardMove::CastleKingSide => DisplayAmbiguityType::Neither,
+            BoardMove::CastleQueenSide => DisplayAmbiguityType::Neither,
+        };
+
+        Ok(Self {
+            is_check,
+            is_checkmate,
+            is_capture,
+            ambiguity_type,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -59,12 +58,12 @@ pub struct PieceMove {
 impl fmt::Display for PieceMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let promotion_string = match self.get_promotion() {
-            Some(piece_type) => format!("={}", piece_type),
+            Some(piece_type) => format!("={piece_type}"),
             None => String::new(),
         };
         let piece_type_string = match self.get_piece_type() {
             PieceType::Pawn => String::new(),
-            p => format!("{}", p),
+            p => format!("{p}"),
         };
         write!(
             f,
@@ -77,19 +76,67 @@ impl fmt::Display for PieceMove {
     }
 }
 
+impl FromStr for PieceMove {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let tokens: Vec<&str> = value.split('=').collect();
+        let piece_str = tokens[0];
+        let len = piece_str.len();
+
+        let piece_type = if len == 4 {
+            PieceType::Pawn
+        } else {
+            match PieceType::from_str(&piece_str[..1]) {
+                Ok(p) => p,
+                Err(_) => {
+                    return Err(Error::InvalidBoardMoveRepresentation);
+                }
+            }
+        };
+
+        let source_square = match Square::from_str(&piece_str[(len - 4)..(len - 2)]) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(Error::InvalidBoardMoveRepresentation);
+            }
+        };
+        let destination_square = match Square::from_str(&piece_str[(len - 2)..]) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(Error::InvalidBoardMoveRepresentation);
+            }
+        };
+
+        PieceMove::new(
+            piece_type,
+            source_square,
+            destination_square,
+            if tokens.len() > 1 {
+                Some(PieceType::from_str(tokens[1]).unwrap())
+            } else {
+                None
+            },
+        )
+    }
+}
+
 impl PieceMove {
     pub fn new(
         piece_type: PieceType,
         square_from: Square,
         square_to: Square,
-        promotion: Option<PromotionPieceType>,
-    ) -> Self {
-        PieceMove {
+        promotion: Option<PieceType>,
+    ) -> Result<Self, Error> {
+        if promotion == Some(PieceType::Pawn) {
+            return Err(Error::InvalidPromotionPiece);
+        }
+        Ok(PieceMove {
             piece_type,
             square_from,
             square_to,
-            promotion: promotion.map(PieceType::from),
-        }
+            promotion,
+        })
     }
 
     #[inline]
@@ -113,103 +160,72 @@ impl PieceMove {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum BoardMoveOption {
+pub enum BoardMove {
     MovePiece(PieceMove),
     CastleKingSide,
     CastleQueenSide,
-}
-
-#[derive(Debug, Clone, Copy, Eq)]
-pub struct BoardMove {
-    board_move_option: BoardMoveOption,
-    is_capture: Option<bool>,
-    is_check: Option<bool>,
-    is_checkmate: Option<bool>,
-    display_ambiguity_type: DisplayAmbiguityType,
 }
 
 impl FromStr for BoardMove {
     type Err = Error;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let tokens: Vec<&str> = value.split('=').collect();
         match value {
-            "O-O-O" => Ok(Self::new(BoardMoveOption::CastleQueenSide)),
-            "O-O" => Ok(Self::new(BoardMoveOption::CastleKingSide)),
-            _ => {
-                let piece_str = tokens[0];
-                let len = piece_str.len();
-
-                let piece_type = if len == 4 {
-                    PieceType::Pawn
-                } else {
-                    match PieceType::from_str(&piece_str[..1]) {
-                        Ok(p) => p,
-                        Err(_) => {
-                            return Err(Error::InvalidBoardMoveRepresentation);
-                        }
-                    }
-                };
-
-                let source_square = match Square::from_str(&piece_str[(len - 4)..(len - 2)]) {
-                    Ok(s) => s,
-                    Err(_) => {
-                        return Err(Error::InvalidBoardMoveRepresentation);
-                    }
-                };
-                let destination_square = match Square::from_str(&piece_str[(len - 2)..]) {
-                    Ok(s) => s,
-                    Err(_) => {
-                        return Err(Error::InvalidBoardMoveRepresentation);
-                    }
-                };
-
-                Ok(BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                    piece_type,
-                    source_square,
-                    destination_square,
-                    if tokens.len() > 1 {
-                        Some(PromotionPieceType::from_str(tokens[1]).unwrap())
-                    } else {
-                        None
-                    },
-                ))))
-            }
+            "O-O-O" => Ok(Self::CastleQueenSide),
+            "O-O" => Ok(Self::CastleKingSide),
+            s => Ok(Self::MovePiece(PieceMove::from_str(s)?)),
         }
     }
 }
 
 impl fmt::Display for BoardMove {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let check_string = if Some(true) == self.is_checkmate() {
+        match *self {
+            BoardMove::MovePiece(m) => write!(f, "{m}"),
+            BoardMove::CastleKingSide => write!(f, "O-O"),
+            BoardMove::CastleQueenSide => write!(f, "O-O-O"),
+        }
+    }
+}
+
+impl BoardMove {
+    pub fn piece_move(&self) -> Result<PieceMove, Error> {
+        if let BoardMove::MovePiece(m) = self {
+            Ok(*m)
+        } else {
+            Err(Error::InvalidBoardMoveRepresentation)
+        }
+    }
+
+    pub fn to_string(&self, properties: MovePropertiesOnBoard) -> String {
+        let check_string = if properties.is_checkmate {
             "#"
-        } else if Some(true) == self.is_check() {
+        } else if properties.is_check {
             "+"
         } else {
             ""
         };
 
-        match self.board_move_option {
-            BoardMoveOption::MovePiece(m) => {
+        match self {
+            BoardMove::MovePiece(m) => {
                 let piece_type_string = match m.get_piece_type() {
                     PieceType::Pawn => String::new(),
-                    p => format!("{}", p),
+                    p => format!("{p}"),
                 };
-                let ambiguity_resolve_string = match self.display_ambiguity_type {
+                let ambiguity_resolve_string = match properties.ambiguity_type {
                     DisplayAmbiguityType::ExtraFile => {
                         format!("{}", m.get_source_square().get_file())
                     }
                     DisplayAmbiguityType::ExtraSquare => format!("{}", m.get_source_square()),
                     DisplayAmbiguityType::Neither => String::new(),
                 };
-                let capture_string = if Some(true) == self.is_capture() { "x" } else { "" };
+                let capture_string = if properties.is_capture { "x" } else { "" };
                 let promotion_string = match m.get_promotion() {
-                    Some(piece_type) => format!("={}", piece_type),
+                    Some(piece_type) => format!("={piece_type}"),
                     None => String::new(),
                 };
 
-                write!(
-                    f,
+                format!(
                     "{}{}{}{}{}{}",
                     piece_type_string,
                     ambiguity_resolve_string,
@@ -219,96 +235,22 @@ impl fmt::Display for BoardMove {
                     check_string,
                 )
             }
-            BoardMoveOption::CastleKingSide => write!(f, "O-O{}", check_string),
-            BoardMoveOption::CastleQueenSide => write!(f, "O-O-O{}", check_string),
+            BoardMove::CastleKingSide => format!("O-O{check_string}"),
+            BoardMove::CastleQueenSide => format!("O-O-O{check_string}"),
         }
-    }
-}
-
-impl PartialEq for BoardMove {
-    fn eq(&self, other: &Self) -> bool { self.board_move_option == other.board_move_option }
-}
-
-impl Hash for BoardMove {
-    fn hash<H: Hasher>(&self, state: &mut H) { self.board_move_option.hash(state); }
-}
-
-impl BoardMove {
-    pub fn new(board_move_option: BoardMoveOption) -> Self {
-        Self {
-            board_move_option,
-            is_capture: None,
-            is_check: None,
-            is_checkmate: None,
-            display_ambiguity_type: DisplayAmbiguityType::ExtraSquare,
-        }
-    }
-
-    pub fn piece_move(&self) -> Option<PieceMove> {
-        match self.board_move_option {
-            BoardMoveOption::MovePiece(m) => Some(m),
-            BoardMoveOption::CastleKingSide => None,
-            BoardMoveOption::CastleQueenSide => None,
-        }
-    }
-
-    #[inline]
-    pub fn get_move_option(&self) -> BoardMoveOption { self.board_move_option }
-
-    #[inline]
-    pub fn is_capture(&self) -> Option<bool> { self.is_capture }
-
-    #[inline]
-    pub fn is_check(&self) -> Option<bool> { self.is_check }
-
-    #[inline]
-    pub fn is_checkmate(&self) -> Option<bool> { self.is_checkmate }
-
-    pub fn associate(
-        &mut self,
-        board_before_move: ChessBoard,
-        board_after_move: ChessBoard,
-    ) -> &mut Self {
-        let is_check = board_after_move.get_check_mask().count_ones() > 0;
-
-        self.is_check = Some(is_check);
-        self.is_capture = match self.board_move_option {
-            BoardMoveOption::MovePiece(m) => Some(m.is_capture_on_board(board_before_move)),
-            BoardMoveOption::CastleKingSide => Some(false),
-            BoardMoveOption::CastleQueenSide => Some(false),
-        };
-        self.is_checkmate = Some(board_after_move.is_terminal() & is_check);
-        self.display_ambiguity_type = match self.board_move_option {
-            BoardMoveOption::MovePiece(m) => match m.get_piece_type() {
-                PieceType::King => DisplayAmbiguityType::Neither,
-                _ => board_before_move.get_move_ambiguity_type(m).unwrap(),
-            },
-            BoardMoveOption::CastleKingSide => DisplayAmbiguityType::Neither,
-            BoardMoveOption::CastleQueenSide => DisplayAmbiguityType::Neither,
-        };
-
-        self
     }
 }
 
 #[macro_export]
 macro_rules! mv {
     ($piece_type:expr, $square_from:expr, $square_to:expr) => {
-        BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-            $piece_type,
-            $square_from,
-            $square_to,
-            None,
-        )))
+        BoardMove::MovePiece(PieceMove::new($piece_type, $square_from, $square_to, None).unwrap())
     };
 
     ($piece_type:expr, $square_from:expr, $square_to:expr, $promotion:expr) => {
-        BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-            $piece_type,
-            $square_from,
-            $square_to,
-            Some($promotion),
-        )))
+        BoardMove::MovePiece(
+            PieceMove::new($piece_type, $square_from, $square_to, Some($promotion)).unwrap(),
+        )
     };
 }
 
@@ -322,14 +264,14 @@ macro_rules! mv_str {
 #[macro_export]
 macro_rules! castle_king_side {
     () => {
-        BoardMove::new(BoardMoveOption::CastleKingSide)
+        BoardMove::CastleKingSide
     };
 }
 
 #[macro_export]
 macro_rules! castle_queen_side {
     () => {
-        BoardMove::new(BoardMoveOption::CastleQueenSide)
+        BoardMove::CastleQueenSide
     };
 }
 
@@ -345,7 +287,7 @@ mod tests {
         let board_move = mv!(Pawn, E2, E4);
         assert_eq!(format!("{}", board_move), "e2e4");
 
-        let board_move = mv!(Pawn, E7, E8, PromotionPieceType::Queen);
+        let board_move = mv!(Pawn, E7, E8, Queen);
         assert_eq!(format!("{}", board_move), "e7e8=Q");
 
         let board_move = mv!(Queen, A1, A8);
@@ -358,69 +300,47 @@ mod tests {
     #[test]
     fn capture() {
         let board = ChessBoard::from_str("k7/1q6/8/8/8/8/6Q1/5K2 w - - 0 1").unwrap();
-        let mut board_move = mv!(Queen, G2, B7);
-        let next_board = board.make_move(board_move).unwrap();
-        board_move.associate(board, next_board);
+        let board_move = mv!(Queen, G2, B7);
+        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        assert_eq!(metadata.is_capture, true);
 
-        assert_eq!(board_move.is_capture().unwrap(), true);
-
-        let mut board_move = mv!(Queen, G2, C6);
-        let next_board = board.make_move(board_move).unwrap();
-        board_move.associate(board, next_board);
-        assert_eq!(board_move.is_capture().unwrap(), false);
+        let board_move = mv!(Queen, G2, C6);
+        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        assert_eq!(metadata.is_capture, false);
     }
 
     #[test]
     fn str_representation() {
-        assert_eq!(
-            BoardMove::from_str("e2e4").unwrap(),
-            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                Pawn, E2, E4, None
-            )))
-        );
+        assert_eq!(BoardMove::from_str("e2e4").unwrap(), mv!(Pawn, E2, E4));
 
         assert_eq!(
             BoardMove::from_str("e7e8=Q").unwrap(),
-            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                Pawn,
-                E7,
-                E8,
-                Some(PromotionPieceType::Queen)
-            )))
+            BoardMove::MovePiece(PieceMove::new(Pawn, E7, E8, Some(PieceType::Queen)).unwrap())
         );
 
         assert_eq!(
             BoardMove::from_str("Pe7e8=Q").unwrap(),
-            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                Pawn,
-                E7,
-                E8,
-                Some(PromotionPieceType::Queen)
-            )))
+            BoardMove::MovePiece(PieceMove::new(Pawn, E7, E8, Some(PieceType::Queen)).unwrap())
         );
 
         assert_eq!(
             BoardMove::from_str("Ra1a8").unwrap(),
-            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                Rook, A1, A8, None
-            )))
+            BoardMove::MovePiece(PieceMove::new(Rook, A1, A8, None).unwrap())
         );
 
         assert_eq!(
             BoardMove::from_str("O-O-O").unwrap(),
-            BoardMove::new(BoardMoveOption::CastleQueenSide)
+            BoardMove::CastleQueenSide
         );
 
         assert_eq!(
             BoardMove::from_str("O-O").unwrap(),
-            BoardMove::new(BoardMoveOption::CastleKingSide)
+            BoardMove::CastleKingSide
         );
 
         assert_eq!(
             BoardMove::from_str("bc1h6").unwrap(),
-            BoardMove::new(BoardMoveOption::MovePiece(PieceMove::new(
-                Bishop, C1, H6, None
-            )))
+            BoardMove::MovePiece(PieceMove::new(Bishop, C1, H6, None).unwrap())
         );
 
         assert!(BoardMove::from_str("gc1h6").is_err());

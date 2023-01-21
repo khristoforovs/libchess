@@ -37,9 +37,7 @@ pub use zobrist::{PositionHashValueType, ZOBRIST_TABLES};
 
 #[macro_use]
 mod board_moves;
-pub use board_moves::{
-    BoardMove, BoardMoveOption, DisplayAmbiguityType, PieceMove, PromotionPieceType,
-};
+pub use board_moves::{BoardMove, DisplayAmbiguityType, MovePropertiesOnBoard, PieceMove};
 
 mod game_history;
 pub use game_history::GameHistory;

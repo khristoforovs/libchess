@@ -1,4 +1,4 @@
-use crate::errors::PieceRepresentationError as Error;
+use crate::errors::LibChessError as Error;
 use crate::Color;
 use std::fmt;
 use std::str::FromStr;
