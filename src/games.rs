@@ -235,34 +235,24 @@ impl Game {
     /// The method to make moves during the game
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, Error> {
         use Action::*;
-        let game_status = self.get_game_status();
         let position = self.position;
-        if game_status == GameStatus::Ongoing {
-            match action {
+        match self.get_game_status() {
+            GameStatus::Ongoing => match action {
                 MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
                     Ok(_) => {
                         self.position_counter_increment();
                         self.history.push(m, position, self.position);
                     }
-                    Err(_) => {
-                        return Err(Error::IllegalActionDetected);
-                    }
+                    Err(_) => return Err(Error::IllegalActionDetected),
                 },
-                AcceptDraw | DeclineDraw => {
-                    return Err(Error::IllegalActionDetected);
-                }
-                OfferDraw | Resign => {}
-            }
-        } else if game_status == GameStatus::DrawOffered {
-            match action {
-                MakeMove(_) | OfferDraw => {
-                    return Err(Error::IllegalActionDetected);
-                }
-                AcceptDraw | DeclineDraw => {}
-                Resign => {}
-            }
-        } else {
-            return Err(Error::GameIsAlreadyFinished);
+                AcceptDraw | DeclineDraw => return Err(Error::IllegalActionDetected),
+                _ => {}
+            },
+            GameStatus::DrawOffered => match action {
+                MakeMove(_) | OfferDraw => return Err(Error::IllegalActionDetected),
+                _ => {}
+            },
+            _ => return Err(Error::GameIsAlreadyFinished),
         }
 
         self.update_game_status(Some(action));

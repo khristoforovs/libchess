@@ -100,7 +100,7 @@ impl FromStr for BoardBuilder {
             Err(_) => {
                 return Err(Error::InvalidFENString {
                     s: value.to_string(),
-                });
+                })
             }
         });
         fen.set_move_number(match usize::from_str(tokens[5]) {
@@ -159,7 +159,7 @@ impl FromStr for BoardBuilder {
                 _ => {
                     return Err(Error::InvalidFENString {
                         s: value.to_string(),
-                    });
+                    })
                 }
             }
         }
@@ -225,9 +225,7 @@ impl fmt::Display for BoardBuilder {
                         }
                         pieces_string.push_str(&s);
                     }
-                    None => {
-                        empty_squares += 1;
-                    }
+                    None => empty_squares += 1,
                 }
             }
             if empty_squares != 0 {

@@ -806,22 +806,7 @@ impl ChessBoard {
         Ok(DisplayAmbiguityType::Neither)
     }
 
-    /// The method which allows to make moves on the board. Returns a new board instance
-    /// if the move is legal
-    ///
-    /// The simplest way to generate moves is by picking one from a set of available moves:
-    /// ``board.get_legal_moves()`` or by simply creating a new move via macros: ``mv!()``,
-    /// ``castle_king_side!()`` and ``castle_queen_side!()``
-    ///
-    /// ```
-    /// use libchess::PieceType::*;
-    /// use libchess::{castle_king_side, castle_queen_side, mv};
-    /// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
-    ///
-    /// let board = ChessBoard::default();
-    /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
-    /// println!("{}", next_board);
-    /// ```
+    /// Same as .make_move() but modifies existing board instead of creating new one
     pub fn make_move_mut(&mut self, next_move: BoardMove) -> Result<&mut Self, Error> {
         if !self.is_legal_move(next_move) {
             return Err(Error::IllegalMoveDetected);
@@ -893,6 +878,22 @@ impl ChessBoard {
         Ok(self)
     }
 
+    /// The method which allows to make moves on the board. Returns a new board instance
+    /// if the move is legal
+    ///
+    /// The simplest way to generate moves is by picking one from a set of available moves:
+    /// ``board.get_legal_moves()`` or by simply creating a new move via macros: ``mv!()``,
+    /// ``castle_king_side!()`` and ``castle_queen_side!()``
+    ///
+    /// ```
+    /// use libchess::PieceType::*;
+    /// use libchess::{castle_king_side, castle_queen_side, mv};
+    /// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
+    ///
+    /// let board = ChessBoard::default();
+    /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
+    /// println!("{}", next_board);
+    /// ```
     pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
         let mut next_board = *self;
         next_board.make_move_mut(next_move)?;

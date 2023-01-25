@@ -29,24 +29,17 @@ impl fmt::Display for GameHistory {
             let mut game_history_string;
             let first_move_string = self.moves[0].to_string(self.metadata[0]);
             match self.positions[0].get_side_to_move() {
-                Color::White => {
-                    game_history_string = format!("1.{first_move_string} ");
-                }
-                Color::Black => {
-                    game_history_string = format!("1. ... {first_move_string}");
-                }
+                Color::White => game_history_string = format!("1.{first_move_string} "),
+                Color::Black => game_history_string = format!("1. ... {first_move_string}"),
             }
 
             let white_starting = self.positions[0].get_side_to_move() == Color::White;
             for i in 1..self.moves.len() {
-                let next_move_string = if (i % 2 != 0) ^ white_starting {
-                    format!(
-                        "{}.{} ",
-                        (i + 2) / 2,
-                        self.moves[i].to_string(self.metadata[i])
-                    )
+                let mut next_move_string = self.moves[i].to_string(self.metadata[i]);
+                next_move_string = if (i % 2 != 0) ^ white_starting {
+                    format!("{}.{next_move_string} ", (i + 2) / 2)
                 } else {
-                    format!("{} ", self.moves[i].to_string(self.metadata[i]))
+                    format!("{next_move_string} ")
                 };
                 game_history_string = format!("{game_history_string}{next_move_string}");
             }

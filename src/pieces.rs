@@ -82,7 +82,11 @@ mod tests {
     #[test]
     fn create_from_string() {
         assert_eq!(PieceType::from_str("").unwrap(), PieceType::Pawn);
+        assert_eq!(PieceType::from_str("P").unwrap(), PieceType::Pawn);
         assert_eq!(PieceType::from_str("N").unwrap(), PieceType::Knight);
+        assert_eq!(PieceType::from_str("B").unwrap(), PieceType::Bishop);
+        assert_eq!(PieceType::from_str("R").unwrap(), PieceType::Rook);
         assert_eq!(PieceType::from_str("Q").unwrap(), PieceType::Queen);
+        assert_eq!(PieceType::from_str("K").unwrap(), PieceType::King);
     }
 }
