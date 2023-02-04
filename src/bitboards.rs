@@ -2,7 +2,7 @@ use super::{File, Rank, Square, FILES, RANKS};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
 
-#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Debug, Default, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Default, Hash)]
 pub struct BitBoard(pub u64);
 
 pub const BLANK: BitBoard = BitBoard(0);
@@ -70,6 +70,10 @@ impl Iterator for BitBoard {
             Some(result)
         }
     }
+}
+
+impl fmt::Debug for BitBoard {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "BitBoard({:#018x})", self.0) }
 }
 
 impl fmt::Display for BitBoard {
