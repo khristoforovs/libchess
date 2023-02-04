@@ -19,28 +19,32 @@ impl Default for PieceMoveTable {
     fn default() -> Self { Self::new() }
 }
 
+mod rays;
+pub use rays::RaysTable;
+
 mod bishops;
-pub use bishops::generate_bishop_moves;
+use bishops::generate_bishop_moves;
 
 mod knights;
-pub use knights::generate_knight_moves;
+use knights::generate_knight_moves;
 
 mod rooks;
-pub use rooks::generate_rook_moves;
+use rooks::generate_rook_moves;
 
 mod kings;
-pub use kings::generate_king_moves;
+use kings::generate_king_moves;
 
 mod queens;
-pub use queens::generate_queen_moves;
+use queens::generate_queen_moves;
 
 mod pawns;
-pub use pawns::{generate_pawn_captures, generate_pawn_moves, PawnMoveTable};
+use pawns::{generate_pawn_captures, generate_pawn_moves, PawnMoveTable};
 
 mod between;
-pub use between::{generate_between_masks, BetweenTable};
+use between::{generate_between_masks, BetweenTable};
 
 lazy_static! {
+    pub static ref RAYS_TABLE: RaysTable = RaysTable::default();
     pub static ref BISHOP_TABLE: PieceMoveTable = {
         let mut table = PieceMoveTable::new();
         generate_bishop_moves(&mut table);
