@@ -1,89 +1,93 @@
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Clone, Fail)]
+#[derive(Error, Debug)]
 pub enum LibChessError {
-    #[fail(display = "Invalid index for board's file: {}", n)]
+    #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::MAX)]
+    InvalidLookahead(u32),
+
+    #[error("Invalid index for board's file: {}", n)]
     InvalidBoardFileIndex { n: usize },
 
-    #[fail(display = "Negative file index found")]
+    #[error("Negative file index found")]
     NegativeBoardFileIndex,
 
-    #[fail(display = "Invalid board's file string representation")]
+    #[error("Invalid board's file string representation")]
     InvalidBoardFileName,
 
-    #[fail(display = "Invalid index for board's rank: {}", n)]
+    #[error("Invalid index for board's rank: {}", n)]
     InvalidBoardRankIndex { n: usize },
 
-    #[fail(display = "Negative rank index found")]
+    #[error("Negative rank index found")]
     NegativeBoardRankIndex,
 
-    #[fail(display = "Invalid board's rank string representation")]
+    #[error("Invalid board's rank string representation")]
     InvalidBoardRankName,
 
-    #[fail(display = "Invalid square representation string")]
+    #[error("Invalid square representation string")]
     InvalidSquareRepresentation,
 
     // Piece Errors
-    #[fail(display = "Invalid peace representation string")]
+    #[error("Invalid peace representation string")]
     InvalidPeaceRepresentation,
 
-    #[fail(display = "Invalid peace index : {}", n)]
+    #[error("Invalid peace index : {}", n)]
     InvalidPeaceIndex { n: usize },
 
-    #[fail(display = "Invalid color index : {}", n)]
+    #[error("Invalid color index : {}", n)]
     InvalidColorIndex { n: usize },
 
     // Board Moves Errors
-    #[fail(display = "Invalid move representation string")]
+    #[error("Invalid move representation string")]
     InvalidBoardMoveRepresentation,
 
-    #[fail(display = "Pawn can't be promoted to pawn")]
+    #[error("Pawn can't be promoted to pawn")]
     InvalidPromotionPiece,
 
-    #[fail(display = "Invalid move for current board")]
+    #[error("Invalid move for current board")]
     InvalidMoveForCurrentBoard,
 
     // Chess Board Errors
-    #[fail(display = "Invalid FEN string: {}", s)]
+    #[error("Invalid FEN string: {}", s)]
     InvalidFENString { s: String },
 
-    #[fail(display = "Invalid position: colors overlapping detected")]
+    #[error("Invalid position: colors overlapping detected")]
     InvalidPositionColorsOverlap,
 
-    #[fail(display = "Invalid position: 2 or more piece type overlap detected")]
+    #[error("Invalid position: 2 or more piece type overlap detected")]
     InvalidPositionPieceTypeOverlap,
 
-    #[fail(display = "Invalid board: combined mask is not self-consistent")]
+    #[error("Invalid board: combined mask is not self-consistent")]
     InvalidBoardSelfNonConsistency,
 
-    #[fail(display = "Invalid board: more than 1 king of the same color")]
+    #[error("Invalid board: more than 1 king of the same color")]
     InvalidBoardMultipleOneColorKings,
 
-    #[fail(display = "Invalid board: opponent is on check")]
+    #[error("Invalid board: opponent is on check")]
     InvalidBoardOpponentIsOnCheck,
 
-    #[fail(display = "Invalid board: en passant square does not have a pawn on it")]
+    #[error("Invalid board: en passant square does not have a pawn on it")]
     InvalidBoardInconsistentEnPassant,
 
-    #[fail(display = "Invalid board: inconsistent castling rights")]
+    #[error("Invalid board: inconsistent castling rights")]
     InvalidBoardInconsistentCastlingRights,
 
-    #[fail(display = "Illegal move detected")]
+    #[error("Illegal move detected")]
     IllegalMoveDetected,
 
-    #[fail(display = "Chess move was not associated with the board")]
+    #[error("Chess move was not associated with the board")]
     NotAssociatedBoardMove,
 
     // Game Process Errors
-    #[fail(display = "Illegal action detected")]
+    #[error("Illegal action detected")]
     IllegalActionDetected,
 
-    #[fail(display = "Need to answer the draw offer")]
+    #[error("Need to answer the draw offer")]
     DrawOfferNeedsAnswer,
 
-    #[fail(display = "No draw offer detected")]
+    #[error("No draw offer detected")]
     DrawOfferNotDetected,
 
-    #[fail(display = "Game is already finished")]
+    #[error("Game is already finished")]
     GameIsAlreadyFinished,
 }
+

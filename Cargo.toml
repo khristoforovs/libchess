@@ -1,6 +1,6 @@
 [package]
 name = "libchess"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
 description = "Simple Rust library to simulate the game of chess"
@@ -9,6 +9,6 @@ license = "MIT"
 
 [dependencies]
 colored = "2.0.0"
-failure = "0.1.8"
 lazy_static = "1.4.0"
 rand = "0.8.5"
+thiserror = "1.0.38"
