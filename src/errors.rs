@@ -87,4 +87,3 @@ pub enum LibChessError {
     #[error("Game is already finished")]
     GameIsAlreadyFinished,
 }
-

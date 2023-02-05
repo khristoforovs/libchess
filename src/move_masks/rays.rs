@@ -1,5 +1,14 @@
 use crate::{BitBoard, Square, BLANK, SQUARES_NUMBER};
 
+/// This masks structure contains all available rays for each square on the board.
+/// For the most generic case, we need to store 8 different directions: both side
+/// vertical + both side horizontal and 4 diagonal rays. This masks are useful for
+/// faster generation of generic move tables for long-range pieces and also allows
+/// us to calculate faster possible moves when paths are blocked by other pieces.
+/// 
+/// Indexing of rays:
+/// 0: Up, 1: Down, 2: Right, 3: Left, 
+/// 4: Up-Right, 5: Up-Left, 6: Down-Right, 7: Down-Left
 pub struct RaysTable {
     rays: [[BitBoard; 8]; SQUARES_NUMBER],
 }
@@ -55,11 +64,13 @@ fn generate_rays(table: &mut RaysTable) {
                 (s_.get_file().to_index() as i32 - file),
             );
 
-            for (i, condition) in conditions.iter().enumerate() {
-                if condition(diffs.0, diffs.1) {
-                    destination_mask[i] |= BitBoard::from_square(s_);
-                }
-            }
+            conditions
+                .iter()
+                .enumerate()
+                .filter(|val| val.1(diffs.0, diffs.1))
+                .for_each(|val| {
+                    destination_mask[val.0] |= BitBoard::from_square(s_);
+                });
         }
         table.set(source_square, destination_mask);
     }
