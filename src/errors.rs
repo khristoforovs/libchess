@@ -2,9 +2,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum LibChessError {
-    #[error("invalid rdo_lookahead_frames {0} (expected < {})", i32::MAX)]
-    InvalidLookahead(u32),
-
     #[error("Invalid index for board's file: {}", n)]
     InvalidBoardFileIndex { n: usize },
 
