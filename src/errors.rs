@@ -86,4 +86,7 @@ pub enum LibChessError {
 
     #[error("Game is already finished")]
     GameIsAlreadyFinished,
+
+    #[error("Wrong move number")]
+    WrongMoveNumber,
 }

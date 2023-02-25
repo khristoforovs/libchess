@@ -235,13 +235,12 @@ impl Game {
     /// The method to make moves during the game
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, Error> {
         use Action::*;
-        let position = self.position;
         match self.get_game_status() {
             GameStatus::Ongoing => match action {
                 MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
                     Ok(_) => {
                         self.position_counter_increment();
-                        self.history.push(m, position, self.position);
+                        self.history.push(m, self.position);
                     }
                     Err(_) => return Err(Error::IllegalActionDetected),
                 },

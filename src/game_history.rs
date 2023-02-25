@@ -1,3 +1,4 @@
+use crate::errors::LibChessError as Error;
 use crate::{BoardMove, ChessBoard, Color, MovePropertiesOnBoard};
 use std::fmt;
 
@@ -55,16 +56,25 @@ impl GameHistory {
         result
     }
 
+    pub fn get_position_on_move(&self, move_number: usize) -> Result<ChessBoard, Error> {
+        if move_number < self.positions.len() {
+            Ok(self.positions[move_number])
+        } else {
+            Err(Error::WrongMoveNumber)
+        }
+    }
+
+    pub fn get_last_position(&self) -> ChessBoard { self.positions.last().unwrap().clone() }
+
     pub fn push(
         &mut self,
         board_move: BoardMove,
-        position: ChessBoard,
         new_position: ChessBoard,
     ) -> &mut Self {
+        self.metadata
+            .push(MovePropertiesOnBoard::new(board_move, self.get_last_position()).unwrap());
         self.positions.push(new_position);
         self.moves.push(board_move);
-        self.metadata
-            .push(MovePropertiesOnBoard::new(board_move, position).unwrap());
         self
     }
 
