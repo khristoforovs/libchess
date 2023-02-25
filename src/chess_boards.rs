@@ -458,10 +458,14 @@ impl ChessBoard {
                 };
                 let destination_mask = match m.get_piece_type() {
                     Pawn => {
+                        let en_passant_mask = match self.get_en_passant() {
+                            Some(sq) => BitBoard::from_square(sq),
+                            None => BLANK,
+                        };
                         PAWN.get_moves(source, self.side_to_move)
                             & !self.get_color_mask(self.side_to_move)
                             | PAWN.get_captures(source, self.side_to_move)
-                                & self.get_color_mask(!self.side_to_move)
+                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask)
                     }
                     Knight => KNIGHT.get_moves(source) & !self.get_color_mask(self.side_to_move),
                     Bishop => {
@@ -1333,13 +1337,16 @@ mod tests {
 
     #[test]
     fn en_passant() {
-        let board =
-            ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1")
-                .unwrap();
+        let position =
+            ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1").unwrap();
 
-        let next_board = board.make_move(mv![Pawn, D7, D5]).unwrap();
+        let next_position = position.make_move(mv![Pawn, D7, D5]).unwrap();
+        assert!(next_position.get_legal_moves().contains(&mv![Pawn, E5, D6]));
 
-        assert!(next_board.get_legal_moves().contains(&mv![Pawn, E5, D6]));
+        let position = 
+            ChessBoard::from_str("4rk2/1p4pp/1pp2q2/r2pb3/3NpP1P/P3P1PR/1PPRQ3/2K5 b - f3 0 27").unwrap();
+        assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
+        position.make_move(mv![Pawn, E4, F3]).unwrap();
     }
 
     #[test]
