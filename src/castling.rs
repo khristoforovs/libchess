@@ -91,6 +91,11 @@ impl CastlingRights {
     pub fn has_queenside(&self) -> bool {
         matches!(self, CastlingRights::BothSides | CastlingRights::QueenSide)
     }
+
+    #[inline]
+    pub fn has_any(&self) -> bool {
+        self.has_kingside() | self.has_queenside()
+    }
 }
 
 #[cfg(test)]

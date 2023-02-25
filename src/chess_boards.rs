@@ -565,12 +565,16 @@ impl ChessBoard {
             Some(sq) => BitBoard::from_square(sq),
             None => BLANK,
         };
+        let promotion_rank = match self.side_to_move {
+            White => Rank::Eighth,
+            Black => Rank::First,
+        };
 
         let truncate_to_first_block = |mut full_moves_mask: BitBoard, square: Square| {
             let mut legals = BLANK;
             RAYS.get(square).into_iter().for_each(|ray| {
                 let mut ray_mask = ray & full_moves_mask;
-                (ray_mask & self.combined_mask).into_iter().for_each(|s| {
+                (ray_mask & self.combined_mask).for_each(|s| {
                     let between = BETWEEN.get(square, s).unwrap();
                     ray_mask &= between | BitBoard::from_square(s);
                 });
@@ -597,25 +601,19 @@ impl ChessBoard {
                     Queen => truncate_to_first_block(QUEEN.get_moves(square), square),
                 };
 
-                for one in full
-                    .into_iter()
-                    .map(|s| mv!(piece_type, square, s))
-                    .filter(|m| {
+                for m in full
+                    .map(|s| PieceMove::new(piece_type, square, s, None).unwrap())
+                    .filter(|pm| {
                         self.clone()
-                            .move_piece(m.piece_move().unwrap())
+                            .move_piece(*pm)
                             .update_pins_and_checks()
                             .get_check_mask()
                             .count_ones()
                             == 0
                     })
                 {
-                    let m = one.piece_move().unwrap();
                     if (m.get_piece_type() == Pawn)
-                        & (m.get_destination_square().get_rank()
-                            == match self.side_to_move {
-                                White => Rank::Eighth,
-                                Black => Rank::First,
-                            })
+                        & (m.get_destination_square().get_rank() == promotion_rank)
                     {
                         // Generate promotion moves
                         let (s, d) = (m.get_source_square(), m.get_destination_square());
@@ -624,7 +622,7 @@ impl ChessBoard {
                         moves.insert(mv!(Pawn, s, d, Rook));
                         moves.insert(mv!(Pawn, s, d, Queen));
                     } else {
-                        moves.insert(one);
+                        moves.insert(BoardMove::MovePiece(m));
                     }
                 }
             }
@@ -990,6 +988,11 @@ impl ChessBoard {
     }
 
     fn update_castling_rights(&mut self, last_move: BoardMove) -> &mut Self {
+        if !self.get_castle_rights(self.side_to_move).has_any() {
+            // check to avoid following code of updating the rights after king loses them
+            return self;
+        }
+
         self.set_castling_rights(
             self.side_to_move,
             self.get_castle_rights(self.side_to_move)
@@ -1037,8 +1040,8 @@ impl ChessBoard {
         // does not have legal moves. The simplest way could do this is just by calling
         // board.get_legal_moves().len(). But we could avoid iterating over all available
         // moves for most of the cases and find only the first legal move.
-        // Moreover, we do not need to process castling because for mate and stalemate it is
-        // unnecessary
+        // Moreover, we do not need to process castling and promotions because for mate and
+        // stalemate it is unnecessary
         let color_mask = self.get_color_mask(self.side_to_move);
         let en_passant_mask = match self.get_en_passant() {
             Some(sq) => BitBoard::from_square(sq),
@@ -1080,17 +1083,14 @@ impl ChessBoard {
 
                 if full
                     .into_iter()
-                    .map(|s| mv!(piece_type, square, s))
-                    .filter(|m| {
+                    .map(|s| {
                         self.clone()
-                            .move_piece(m.piece_move().unwrap())
+                            .move_piece(PieceMove::new(piece_type, square, s, None).unwrap())
                             .update_pins_and_checks()
                             .get_check_mask()
                             .count_ones()
-                            == 0
                     })
-                    .count()
-                    > 0
+                    .any(|x| x == 0)
                 {
                     self.is_terminal_position = false;
                     return self;
@@ -1129,11 +1129,8 @@ impl ChessBoard {
 
         checks |= {
             let mut all_pawn_attacks = BLANK;
-            for attacked_square in
-                self.get_color_mask(opposite_color) & self.get_piece_type_mask(Pawn)
-            {
-                all_pawn_attacks |= PAWN.get_captures(attacked_square, opposite_color);
-            }
+            (self.get_color_mask(opposite_color) & self.get_piece_type_mask(Pawn))
+                .for_each(|sq| all_pawn_attacks |= PAWN.get_captures(sq, opposite_color));
             all_pawn_attacks & BitBoard::from_square(square)
         };
 
@@ -1338,13 +1335,15 @@ mod tests {
     #[test]
     fn en_passant() {
         let position =
-            ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1").unwrap();
+            ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1")
+                .unwrap();
 
         let next_position = position.make_move(mv![Pawn, D7, D5]).unwrap();
         assert!(next_position.get_legal_moves().contains(&mv![Pawn, E5, D6]));
 
-        let position = 
-            ChessBoard::from_str("4rk2/1p4pp/1pp2q2/r2pb3/3NpP1P/P3P1PR/1PPRQ3/2K5 b - f3 0 27").unwrap();
+        let position =
+            ChessBoard::from_str("4rk2/1p4pp/1pp2q2/r2pb3/3NpP1P/P3P1PR/1PPRQ3/2K5 b - f3 0 27")
+                .unwrap();
         assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
         position.make_move(mv![Pawn, E4, F3]).unwrap();
     }
