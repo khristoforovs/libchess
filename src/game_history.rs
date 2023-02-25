@@ -66,11 +66,7 @@ impl GameHistory {
 
     pub fn get_last_position(&self) -> ChessBoard { self.positions.last().unwrap().clone() }
 
-    pub fn push(
-        &mut self,
-        board_move: BoardMove,
-        new_position: ChessBoard,
-    ) -> &mut Self {
+    pub fn push(&mut self, board_move: BoardMove, new_position: ChessBoard) -> &mut Self {
         self.metadata
             .push(MovePropertiesOnBoard::new(board_move, self.get_last_position()).unwrap());
         self.positions.push(new_position);

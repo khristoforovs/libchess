@@ -5,9 +5,9 @@ use crate::{BitBoard, Square, BLANK, SQUARES_NUMBER};
 /// vertical + both side horizontal and 4 diagonal rays. This masks are useful for
 /// faster generation of generic move tables for long-range pieces and also allows
 /// us to calculate faster possible moves when paths are blocked by other pieces.
-/// 
+///
 /// Indexing of rays:
-/// 0: Up, 1: Down, 2: Right, 3: Left, 
+/// 0: Up, 1: Down, 2: Right, 3: Left,
 /// 4: Up-Right, 5: Up-Left, 6: Down-Right, 7: Down-Left
 pub struct RaysTable {
     rays: [[BitBoard; 8]; SQUARES_NUMBER],
