@@ -22,7 +22,7 @@ println!("{}", board);  // this will draw the board representation in terminal:
 
 ![Board Rendering](./img/screenshot_render_straight.png)
 
-*Here uppercase letters represent whites' pieces and lowercase - blacks'.*
+*Here uppercase letters represent white's pieces and lowercase - black's.*
 
 
 ```rust
