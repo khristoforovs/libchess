@@ -3,7 +3,7 @@ use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Mul, Not};
 
 #[derive(PartialEq, Eq, PartialOrd, Clone, Copy, Default, Hash)]
-pub struct BitBoard(pub u64);
+pub struct BitBoard(u64);
 
 pub const BLANK: BitBoard = BitBoard(0);
 
@@ -99,6 +99,8 @@ impl BitBoard {
     #[inline]
     pub fn new(b: u64) -> BitBoard { BitBoard(b) }
 
+    pub fn bits(&self) -> u64 { self.0 }
+
     #[inline]
     pub fn from_square(square: Square) -> Self { Self::new(1u64 << square.to_int()) }
 
@@ -125,9 +127,6 @@ impl BitBoard {
 
     #[inline]
     pub fn count_ones(&self) -> u32 { self.0.count_ones() }
-
-    #[inline]
-    pub fn inverse(&self) -> BitBoard { BitBoard(self.0.swap_bytes()) }
 
     #[inline]
     pub fn to_square(&self) -> Square { Square::new(self.0.trailing_zeros() as u8).unwrap() }

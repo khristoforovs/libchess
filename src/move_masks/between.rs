@@ -85,7 +85,7 @@ mod tests {
         let table = between_table.get(square_a, square_b).unwrap();
         let result = 0x0000201008000000u64;
         println!("{}", table);
-        assert_eq!(table.0, result);
+        assert_eq!(table.bits(), result);
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
         let table = between_table.get(square_a, square_b).unwrap();
         let result = 0x0000000008080800u64;
         println!("{}", table);
-        assert_eq!(table.0, result);
+        assert_eq!(table.bits(), result);
     }
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
         let table = between_table.get(square_a, square_b).unwrap();
         let result = 0u64;
         println!("{}", table);
-        assert_eq!(table.0, result);
+        assert_eq!(table.bits(), result);
     }
 
     #[test]

@@ -6,9 +6,7 @@ pub fn generate_rook_moves(table: &mut PieceMoveTable) {
         let source_square = Square::new(source_index as u8).unwrap();
         let mut destination_mask = BLANK;
         let rays = RAYS_TABLE.get(source_square);
-        for i in 0..4 {
-            destination_mask |= rays[i];
-        }
+        (0..4).for_each(|i| destination_mask |= rays[i]);
         table.set_moves(source_square, destination_mask);
     }
 }
@@ -27,6 +25,6 @@ mod tests {
         let result = 0x10101010ef101010u64;
         let table = move_table.get_moves(square);
         println!("{}", table);
-        assert_eq!(table.0, result);
+        assert_eq!(table.bits(), result);
     }
 }

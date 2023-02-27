@@ -38,6 +38,6 @@ mod tests {
         let result = 0x0000284400442800u64;
         let table = move_table.get_moves(square);
         println!("{}", table);
-        assert_eq!(table.0, result);
+        assert_eq!(table.bits(), result);
     }
 }
