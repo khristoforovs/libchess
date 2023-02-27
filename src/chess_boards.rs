@@ -1103,9 +1103,6 @@ impl ChessBoard {
     }
 
     fn get_pins_and_checks(&self, square: Square) -> (BitBoard, BitBoard) {
-        let mut pinned = BLANK;
-        let mut checks = BLANK;
-
         let opposite_color = !self.side_to_move;
         let bishops_and_queens = self.get_piece_type_mask(Bishop) | self.get_piece_type_mask(Queen);
         let rooks_and_queens = self.get_piece_type_mask(Rook) | self.get_piece_type_mask(Queen);
@@ -1114,8 +1111,10 @@ impl ChessBoard {
         let pinners = self.get_color_mask(opposite_color)
             & (bishop_mask & bishops_and_queens | rook_mask & rooks_and_queens);
 
+        let (mut pinned, mut checks) = (BLANK, BLANK);
+        let mut between;
         for pinner_square in pinners {
-            let between = self.get_combined_mask() & BETWEEN.get(square, pinner_square).unwrap();
+            between = self.get_combined_mask() & BETWEEN.get(square, pinner_square).unwrap();
             if between == BLANK {
                 checks |= BitBoard::from_square(pinner_square);
             } else if between.count_ones() == 1 {
@@ -1237,13 +1236,13 @@ mod tests {
     fn masks() {
         let board = ChessBoard::default();
         let result = 0xffff00000000ffffu64;
-        assert_eq!(board.get_combined_mask().0, result);
+        assert_eq!(board.get_combined_mask().bits(), result);
 
         let result = 0x000000000000ffffu64;
-        assert_eq!(board.get_color_mask(Color::White).0, result);
+        assert_eq!(board.get_color_mask(Color::White).bits(), result);
 
         let result = 0xffff000000000000u64;
-        assert_eq!(board.get_color_mask(Color::Black).0, result);
+        assert_eq!(board.get_color_mask(Color::Black).bits(), result);
     }
 
     #[test]

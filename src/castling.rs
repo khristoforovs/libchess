@@ -93,9 +93,7 @@ impl CastlingRights {
     }
 
     #[inline]
-    pub fn has_any(&self) -> bool {
-        self.has_kingside() | self.has_queenside()
-    }
+    pub fn has_any(&self) -> bool { self.has_kingside() | self.has_queenside() }
 }
 
 #[cfg(test)]
