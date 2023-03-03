@@ -1,0 +1,38 @@
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2023.02.21"]
+[Round "-"]
+[White "player1"]
+[Black "player2"]
+[Result "1-0"]
+[CurrentPosition "2K1R1k1/8/8/5PP1/4R2p/7r/8/8 b - -"]
+[Timezone "UTC"]
+[ECO "B22"]
+[ECOUrl "https://www.chess.com/openings/Alapin-Sicilian-Defense-2...Nc6-3.d4"]
+[UTCDate "2023.02.21"]
+[UTCTime "19:57:24"]
+[WhiteElo "1499"]
+[BlackElo "1442"]
+[TimeControl "1800"]
+[Termination "player1 won by resignation"]
+[StartTime "19:57:24"]
+[EndDate "2023.02.21"]
+[EndTime "20:48:03"]
+[Link "https://www.chess.com/game/some_test_link"]
+[WhiteUrl "https://www.chess.com/bundles/web/images/avatar1.jpeg"]
+[WhiteCountry "116"]
+[WhiteTitle ""]
+[BlackUrl "https://www.chess.com/bundles/web/images/avatar2.jpeg"]
+[BlackCountry "225"]
+[BlackTitle ""]
+
+1. e4 c5 2. c3 Nc6 3. d4 cxd4 4. cxd4 e6 5. Nf3 Nf6 6. Nc3 Bb4 7. Bd3 O-O 8. a3
+Bxc3+ 9. bxc3 d5 10. e5 Ne4 11. Bxe4 dxe4 12. Nd2 f5 13. exf6 Rxf6 14. Nxe4 Rg6
+15. Qf3 Qd5 16. Bg5 Rxg5 17. Nxg5 Qxg5 18. O-O Qf5 19. Qe3 Bd7 20. Rab1 b6 21.
+a4 Ne7 22. a5 Nd5 23. Qd2 bxa5 24. c4 Nb4 25. c5 Bb5 26. Rfc1 Bd3 27. Ra1 Rd8
+28. Rxa5 Nc6 29. Ra3 Rxd4 30. Qb2 Qd5 31. Qb7 Rg4 32. Qc8+ Kf7 33. Qc7+ Kg6 34.
+f3 Rg5 35. Qd6 Qxd6 36. cxd6 Rd5 37. Rxc6 Bb5 38. Rc7 Rd1+ 39. Kf2 Rxd6 40.
+Raxa7 Rd2+ 41. Kg3 Kh6 42. Rxg7 Bd3 43. Rgd7 Kg5 44. Ra3 h5 45. f4+ Kf5 46.
+Raxd3 h4+ 47. Kf3 Ra2 48. g4+ Kf6 49. h3 Ra1 50. g5+ Kg6 51. Ke4 Re1+ 52. Re3
+Rf1 53. Rd6 Kf7 54. Ke5 Ra1 55. Rxe6 Ra5+ 56. Kd6 Ra6+ 57. Kd7 Ra7+ 58. Kc8 Ra4
+59. R3e4 Ra3 60. f5 Rxh3 61. Re7+ Kg8 62. Re8+ 1-0
