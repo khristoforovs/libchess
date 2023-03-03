@@ -134,7 +134,7 @@ mod tests {
         for m in moves.iter() {
             game.make_move(Action::MakeMove(*m)).unwrap();
         }
-        game.make_move(Action::Resign).unwrap();
+        game.make_move(Action::Resign(Color::White)).unwrap();
 
         println!("{}", game.get_position());
         println!("{}", game.get_action_history());

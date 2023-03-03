@@ -89,4 +89,7 @@ pub enum LibChessError {
 
     #[error("Wrong move number")]
     WrongMoveNumber,
+
+    #[error("Invalid initialization PGN-string")]
+    InvalidPGNString,
 }

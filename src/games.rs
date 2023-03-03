@@ -6,7 +6,8 @@
 use crate::errors::LibChessError as Error;
 use crate::game_history::GameHistory;
 use crate::Color;
-use crate::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves};
+use crate::{BoardBuilder, BoardMove, BoardStatus, ChessBoard, LegalMoves, MovePropertiesOnBoard};
+use regex::Regex;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
@@ -15,17 +16,17 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
     MakeMove(BoardMove),
-    OfferDraw,
+    OfferDraw(Color),
     AcceptDraw,
     DeclineDraw,
-    Resign,
+    Resign(Color),
 }
 
 /// Represents the status of the game
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GameStatus {
     Ongoing,
-    DrawOffered,
+    DrawOffered(Color),
     CheckMated(Color),
     Resigned(Color),
     FiftyMovesDrawDeclared,
@@ -38,7 +39,8 @@ pub enum GameStatus {
 impl fmt::Display for GameStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let status_string = match self {
-            GameStatus::Ongoing | GameStatus::DrawOffered => "the game is ongoing".to_string(),
+            GameStatus::Ongoing => "the game is ongoing".to_string(),
+            GameStatus::DrawOffered(color) => format!("draw offered by {}", *color),
             GameStatus::CheckMated(color) => format!("{} won by checkmate", !*color),
             GameStatus::Resigned(color) => format!("{} won by resignation", !*color),
             GameStatus::DrawAccepted => "draw declared by agreement".to_string(),
@@ -49,6 +51,38 @@ impl fmt::Display for GameStatus {
         };
         write!(f, "{status_string}")
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct GameMetadata {
+    metadata: BTreeMap<String, String>,
+}
+
+const METADATA_PRIMARY_KEYS: [&str; 7] =
+    ["Event", "Site", "Date", "Round", "White", "Black", "Result"];
+
+impl Default for GameMetadata {
+    #[inline]
+    fn default() -> Self {
+        let mut metadata = BTreeMap::new();
+        metadata.insert("Event".to_string(), "?".to_string());
+        metadata.insert("Site".to_string(), "?".to_string());
+        metadata.insert("Date".to_string(), "?".to_string());
+        metadata.insert("Round".to_string(), "?".to_string());
+        metadata.insert("White".to_string(), "Player 1".to_string());
+        metadata.insert("Black".to_string(), "Player 2".to_string());
+        metadata.insert("Result".to_string(), "".to_string());
+        Self::new(metadata)
+    }
+}
+
+impl GameMetadata {
+    #[inline]
+    fn new(metadata: BTreeMap<String, String>) -> Self { Self { metadata } }
+
+    pub fn get_value(&self, tag: String) -> Option<&String> { self.metadata.get(&tag) }
+
+    pub fn set_value(&mut self, tag: String, value: String) { self.metadata.insert(tag, value); }
 }
 
 /// The Game of Chess object
@@ -98,6 +132,7 @@ pub struct Game {
     history: GameHistory,
     unique_positions_counter: BTreeMap<u64, usize>,
     status: GameStatus,
+    metadata: GameMetadata,
 }
 
 impl Default for Game {
@@ -109,6 +144,7 @@ impl Default for Game {
             history: GameHistory::from_position(board),
             unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
+            metadata: GameMetadata::default(),
         };
 
         result.update_game_status(None).position_counter_increment();
@@ -124,6 +160,7 @@ impl Game {
             history: GameHistory::from_position(board),
             unique_positions_counter: BTreeMap::new(),
             status: GameStatus::Ongoing,
+            metadata: GameMetadata::default(),
         };
 
         result.update_game_status(None).position_counter_increment();
@@ -135,9 +172,87 @@ impl Game {
         ChessBoard::from_str(fen).map(Self::from_board)
     }
 
+    pub fn from_pgn(pgn: &str) -> Result<Self, Error> {
+        use Color::*;
+        let mut game = Game::default();
+        let metadata_pattern = r#"(?x)\[
+        (\s*[\w\d_]+) # key pattern
+        \s+
+        "([\s\w\d:/\.\?,-]*)" # value pattern in quotes
+        \s*
+        \]"#;
+
+        Regex::new(metadata_pattern)
+            .expect("Invalid regex")
+            .captures_iter(pgn)
+            .for_each(|cap| {
+                game.metadata
+                    .set_value(cap[1].to_string(), cap[2].to_string())
+            });
+
+        let pgn_moves_part = Regex::new(r"(\r?\n){2,}")
+            .expect("Invalid regex")
+            .split(pgn)
+            .nth(1)
+            .ok_or_else(|| Error::InvalidPGNString)?;
+
+        let moves_pattern = r"(?x)
+        (
+            (
+                ([nNbBrRqQkK]*[a-h]*[1-8]*x*[a-h][1-8])
+                |(O-O(-O)?)
+            )
+            (=[nNbBrRqQ])?
+            \+?\#?
+        )";
+
+        for cap in Regex::new(moves_pattern)
+            .expect("Invalid regex")
+            .captures_iter(pgn_moves_part)
+        {
+            let capture = cap[0].to_string();
+            let pos = game.get_position();
+            let legal_moves = BTreeMap::from_iter(
+                game.get_legal_moves()
+                    .into_iter()
+                    .map(|m| (m, MovePropertiesOnBoard::new(m, pos).unwrap()))
+                    .map(|(m, metadata)| (m.to_string(metadata), m)),
+            );
+
+            let current_move = *legal_moves.get(&capture).ok_or(Error::InvalidPGNString)?;
+            game.make_move(Action::MakeMove(current_move))?;
+        }
+
+        if game.get_game_status() == GameStatus::Ongoing {
+            let result_cap = Regex::new(r"(1-0)|(0-1)|(1/2-1/2)")
+                .expect("Invalid regex")
+                .captures_iter(pgn_moves_part)
+                .nth(0)
+                .map(|x| x.get(0).unwrap())
+                .ok_or_else(|| Error::InvalidPGNString)?;
+
+            match result_cap.as_str() {
+                "1-0" => game.make_move(Action::Resign(Black)).unwrap(),
+                "0-1" => game.make_move(Action::Resign(White)).unwrap(),
+                "1/2-1/2" => game
+                    .make_move(Action::OfferDraw(White))
+                    .unwrap()
+                    .make_move(Action::AcceptDraw)
+                    .unwrap(),
+                _ => return Err(Error::InvalidPGNString),
+            };
+        }
+
+        Ok(game)
+    }
+
     /// Returns a FEN string of current game position
     #[inline]
     pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(self.position)) }
+
+    /// Returns game's additional info
+    #[inline]
+    pub fn get_metadata(&self) -> &GameMetadata { &self.metadata }
 
     /// Returns the GameHistory object which represents a sequence of moves
     /// in PGN-like string
@@ -219,10 +334,10 @@ impl Game {
                     }
                 }
             }
-            Some(Action::OfferDraw) => GameStatus::DrawOffered,
+            Some(Action::OfferDraw(color)) => GameStatus::DrawOffered(color),
             Some(Action::DeclineDraw) => GameStatus::Ongoing,
             Some(Action::AcceptDraw) => GameStatus::DrawAccepted,
-            Some(Action::Resign) => GameStatus::Resigned(self.get_side_to_move()),
+            Some(Action::Resign(color)) => GameStatus::Resigned(color),
         });
 
         if self.get_game_status() != GameStatus::Ongoing {
@@ -247,8 +362,8 @@ impl Game {
                 AcceptDraw | DeclineDraw => return Err(Error::IllegalActionDetected),
                 _ => {}
             },
-            GameStatus::DrawOffered => match action {
-                MakeMove(_) | OfferDraw => return Err(Error::IllegalActionDetected),
+            GameStatus::DrawOffered(_) => match action {
+                MakeMove(_) | OfferDraw(_) => return Err(Error::IllegalActionDetected),
                 _ => {}
             },
             _ => return Err(Error::GameIsAlreadyFinished),
@@ -264,7 +379,8 @@ mod tests {
     use super::*;
     use crate::ZOBRIST_TABLES as ZOBRIST;
     use crate::*;
-    use crate::{squares::*, PieceType::*};
+    use crate::{squares::*, Color::*, PieceType::*};
+    use std::fs;
 
     #[test]
     fn as_fen() {
@@ -336,8 +452,8 @@ mod tests {
     #[test]
     fn resignation() {
         let mut game = Game::default();
-        game.make_move(Action::Resign).unwrap();
-        assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
+        game.make_move(Action::Resign(White)).unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(White));
     }
 
     #[test]
@@ -398,9 +514,9 @@ mod tests {
         for m in moves.iter() {
             game.make_move(Action::MakeMove(*m)).unwrap();
         }
-        game.make_move(Action::Resign).unwrap();
+        game.make_move(Action::Resign(White)).unwrap();
 
-        assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::White));
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(White));
     }
 
     #[test]
@@ -438,9 +554,9 @@ mod tests {
         for m in moves.iter() {
             game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
         }
-        game.make_move(Action::Resign).unwrap();
+        game.make_move(Action::Resign(Black)).unwrap();
 
-        assert_eq!(game.get_game_status(), GameStatus::Resigned(Color::Black));
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
     }
 
     #[test]
@@ -499,5 +615,18 @@ mod tests {
         let direct_calculated_hash = ZOBRIST.calculate_position_hash(&game.get_position());
         let live_updating_hash = game.get_position().get_hash();
         assert_eq!(direct_calculated_hash, live_updating_hash);
+    }
+
+    #[test]
+    fn pgn_read() {
+        let pgn = fs::read_to_string("examples/pgn_data/game1.pgn").expect("Can't read the file");
+        let game = Game::from_pgn(&pgn).unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::CheckMated(Black));
+        println!("{}", game.get_position());
+
+        let pgn = fs::read_to_string("examples/pgn_data/game2.pgn").expect("Can't read the file");
+        let game = Game::from_pgn(&pgn).unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
+        println!("{}", game.get_position());
     }
 }
