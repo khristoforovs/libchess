@@ -759,13 +759,14 @@ impl ChessBoard {
                 }
             };
 
-            let candidates = (piece_moves & pieces_mask)
+            if (piece_moves & pieces_mask)
                 .into_iter()
-                .filter(between_filter);
-
-            if candidates.count() > 1 {
+                .filter(between_filter)
+                .count()
+                > 1
+            {
                 if (BitBoard::from_file(source_square.get_file()) & pieces_mask).count_ones() > 1 {
-                    return Ok(ExtraSquare);
+                    return Ok(ExtraRank);
                 } else {
                     return Ok(ExtraFile);
                 }
@@ -783,7 +784,7 @@ impl ChessBoard {
 
         match next_move {
             BoardMove::MovePiece(m) => {
-                self.move_piece(m);
+                self.move_piece(m).clear_square_if_en_passant_capture(m);
             }
             BoardMove::CastleKingSide => {
                 let king_rank = match self.side_to_move {
@@ -889,6 +890,18 @@ impl ChessBoard {
                 },
                 piece_move.get_destination_square(),
             )
+    }
+
+    fn clear_square_if_en_passant_capture(&mut self, piece_move: PieceMove) -> &mut Self {
+        if let Some(sq) = self.en_passant {
+            if (piece_move.get_piece_type() == Pawn) & (piece_move.get_destination_square() == sq) {
+                self.clear_square( match self.side_to_move {
+                    White => piece_move.get_destination_square().down().unwrap(),
+                    Black => piece_move.get_destination_square().up().unwrap(),
+                });
+            }
+        }
+        self
     }
 
     fn set_move_number(&mut self, value: usize) -> &mut Self {
