@@ -1357,7 +1357,8 @@ mod tests {
             ChessBoard::from_str("4rk2/1p4pp/1pp2q2/r2pb3/3NpP1P/P3P1PR/1PPRQ3/2K5 b - f3 0 27")
                 .unwrap();
         assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
-        position.make_move(mv![Pawn, E4, F3]).unwrap();
+        let next_position = position.make_move(mv![Pawn, E4, F3]).unwrap();
+        assert_eq!(next_position.as_fen(), "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28");
     }
 
     #[test]
