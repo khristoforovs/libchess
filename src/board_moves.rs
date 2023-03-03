@@ -7,7 +7,7 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DisplayAmbiguityType {
     ExtraFile,
-    ExtraSquare,
+    ExtraRank,
     Neither,
 }
 
@@ -151,11 +151,16 @@ impl PieceMove {
     #[inline]
     pub fn get_promotion(&self) -> Option<PieceType> { self.promotion }
 
+    #[inline]
+    fn is_en_passant_move(&self) -> bool {
+        (self.piece_type == PieceType::Pawn)
+            & (self.square_from.get_file() != self.square_to.get_file())
+    }
+
     pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
-        (BitBoard::from_square(self.get_destination_square())
-            & board.get_color_mask(!board.get_side_to_move()))
-        .count_ones()
-            > 0
+        let destination_mask = BitBoard::from_square(self.get_destination_square());
+        ((destination_mask & board.get_color_mask(!board.get_side_to_move())).count_ones() > 0)
+            | self.is_en_passant_move()
     }
 }
 
@@ -216,7 +221,9 @@ impl BoardMove {
                     DisplayAmbiguityType::ExtraFile => {
                         format!("{}", m.get_source_square().get_file())
                     }
-                    DisplayAmbiguityType::ExtraSquare => format!("{}", m.get_source_square()),
+                    DisplayAmbiguityType::ExtraRank => {
+                        format!("{}", m.get_source_square().get_rank())
+                    }
                     DisplayAmbiguityType::Neither => String::new(),
                 };
                 let capture_string = if properties.is_capture { "x" } else { "" };
@@ -307,6 +314,14 @@ mod tests {
         let board_move = mv!(Queen, G2, C6);
         let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
         assert_eq!(metadata.is_capture, false);
+
+        let board = ChessBoard::from_str(
+            "r2q1rk1/1b3pbn/pp1p2pp/2pP4/PP1NPp2/2PB3P/3N2P1/R2Q1RK1 w - c6 0 18",
+        )
+        .unwrap();
+        let board_move = mv!(Pawn, D5, C6);
+        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        assert_eq!(metadata.is_capture, true);
     }
 
     #[test]
