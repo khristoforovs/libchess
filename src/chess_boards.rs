@@ -895,7 +895,7 @@ impl ChessBoard {
     fn clear_square_if_en_passant_capture(&mut self, piece_move: PieceMove) -> &mut Self {
         if let Some(sq) = self.en_passant {
             if (piece_move.get_piece_type() == Pawn) & (piece_move.get_destination_square() == sq) {
-                self.clear_square( match self.side_to_move {
+                self.clear_square(match self.side_to_move {
                     White => piece_move.get_destination_square().down().unwrap(),
                     Black => piece_move.get_destination_square().up().unwrap(),
                 });
@@ -1358,7 +1358,10 @@ mod tests {
                 .unwrap();
         assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
         let next_position = position.make_move(mv![Pawn, E4, F3]).unwrap();
-        assert_eq!(next_position.as_fen(), "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28");
+        assert_eq!(
+            next_position.as_fen(),
+            "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28"
+        );
     }
 
     #[test]
