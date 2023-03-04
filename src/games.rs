@@ -11,6 +11,7 @@ use regex::Regex;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
+use textwrap::wrap;
 
 /// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +61,7 @@ pub struct GameMetadata {
 
 const METADATA_PRIMARY_KEYS: [&str; 7] =
     ["Event", "Site", "Date", "Round", "White", "Black", "Result"];
+const TEXT_WRAP_WIDTH: usize = 85;
 
 impl Default for GameMetadata {
     #[inline]
@@ -246,9 +248,47 @@ impl Game {
         Ok(game)
     }
 
-    /// Returns a FEN string of current game position
+    /// Returns a FEN string representing current game position
     #[inline]
     pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(self.position)) }
+
+    /// Returns PGN string representing current game
+    pub fn as_pgn(&self) -> String {
+        use GameStatus::*;
+
+        let mut result = String::new();
+        let mut metadata = self.metadata.metadata.clone();
+        METADATA_PRIMARY_KEYS.into_iter().for_each(|key| {
+            result = format!("{result}[{} \"{}\"]\n", key, metadata.get(key).unwrap());
+            metadata.remove(key);
+        });
+        metadata.keys().for_each(|key| {
+            result = format!("{result}[{} \"{}\"]\n", key, metadata.get(key).unwrap());
+        });
+
+        result = format!(
+            "{result}\n{} ",
+            wrap(
+                format!("{}", self.get_action_history()).as_str(),
+                TEXT_WRAP_WIDTH
+            )
+            .join("\n")
+        );
+        result += match self.get_game_status() {
+            Ongoing | DrawOffered(_) => "",
+            CheckMated(color) | Resigned(color) => match color {
+                Color::White => "0-1",
+                Color::Black => "1-0",
+            },
+            Stalemate
+            | DrawAccepted
+            | RepetitionDrawDeclared
+            | TheoreticalDrawDeclared
+            | FiftyMovesDrawDeclared => "1/2-1/2",
+        };
+
+        result
+    }
 
     /// Returns game's additional info
     #[inline]
@@ -628,5 +668,14 @@ mod tests {
         let game = Game::from_pgn(&pgn).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
         println!("{}", game.get_position());
+    }
+
+    #[test]
+    fn to_pgn_string() {
+        let pgn = fs::read_to_string("examples/pgn_data/game2.pgn").expect("Can't read the file");
+        let game = Game::from_pgn(&pgn).unwrap();
+        let read_game = Game::from_pgn(&game.as_pgn()).unwrap();
+        println!("{}", game.as_pgn());
+        assert_eq!(read_game.get_position(), game.get_position());
     }
 }
