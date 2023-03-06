@@ -73,7 +73,7 @@ impl Default for GameMetadata {
         metadata.insert("Round".to_string(), "?".to_string());
         metadata.insert("White".to_string(), "Player 1".to_string());
         metadata.insert("Black".to_string(), "Player 2".to_string());
-        metadata.insert("Result".to_string(), "".to_string());
+        metadata.insert("Result".to_string(), "?".to_string());
         Self::new(metadata)
     }
 }
@@ -254,9 +254,8 @@ impl Game {
 
     /// Returns PGN string representing current game
     pub fn as_pgn(&self) -> String {
-        use GameStatus::*;
-
         let mut result = String::new();
+        let game_result_str = self.metadata.metadata.get("Result").unwrap();
         let mut metadata = self.metadata.metadata.clone();
         METADATA_PRIMARY_KEYS.into_iter().for_each(|key| {
             result = format!("{result}[{} \"{}\"]\n", key, metadata.get(key).unwrap());
@@ -274,18 +273,7 @@ impl Game {
             )
             .join("\n")
         );
-        result += match self.get_game_status() {
-            Ongoing | DrawOffered(_) => "",
-            CheckMated(color) | Resigned(color) => match color {
-                Color::White => "0-1",
-                Color::Black => "1-0",
-            },
-            Stalemate
-            | DrawAccepted
-            | RepetitionDrawDeclared
-            | TheoreticalDrawDeclared
-            | FiftyMovesDrawDeclared => "1/2-1/2",
-        };
+        result += game_result_str;
 
         result
     }
@@ -293,6 +281,10 @@ impl Game {
     /// Returns game's additional info
     #[inline]
     pub fn get_metadata(&self) -> &GameMetadata { &self.metadata }
+
+    /// Returns game's additional info mut
+    #[inline]
+    pub fn get_metadata_mut(&mut self) -> &mut GameMetadata { &mut self.metadata }
 
     /// Returns the GameHistory object which represents a sequence of moves
     /// in PGN-like string
@@ -343,7 +335,27 @@ impl Game {
 
     #[inline]
     fn set_game_status(&mut self, status: GameStatus) -> &mut Self {
-        self.status = status;
+        use {GameStatus::*, Color::*};
+
+        if status != self.status {
+            self.get_metadata_mut().set_value(
+                "Result".to_string(),
+                match status {
+                    Ongoing | DrawOffered(_) => "?".to_string(),
+                    CheckMated(color) | Resigned(color) => match color {
+                        White => "0-1".to_string(),
+                        Black => "1-0".to_string(),
+                    },
+                    Stalemate
+                    | DrawAccepted
+                    | RepetitionDrawDeclared
+                    | TheoreticalDrawDeclared
+                    | FiftyMovesDrawDeclared => "1/2-1/2".to_string(),
+                },
+            );
+            self.status = status;
+        }
+
         self
     }
 
