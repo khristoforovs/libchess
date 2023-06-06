@@ -15,7 +15,7 @@ use crate::{
     PositionHashValueType, Rank, Square, BLANK, COLORS_NUMBER, FILES, PIECE_TYPES_NUMBER, RANKS,
     SQUARES_NUMBER, ZOBRIST_TABLES as ZOBRIST,
 };
-use crate::{CastlingRights::*, Color::*, PieceType::*};
+use crate::{Color::*, PieceType::*};
 use colored::Colorize;
 use std::collections::hash_set::HashSet;
 use std::fmt;
@@ -40,7 +40,7 @@ pub enum BoardStatus {
 /// the sanity of the position, so if the struct is created the position is valid.
 /// If the initial position is not the terminal (stalemate or checkmate),
 /// you can generate another valid board after calling .make_move(&self, next_move: ChessMove)
-/// (of course the move should be legal).
+/// (of course, the move must be legal).
 ///
 /// Also it implements the board visualization (in terminal)
 ///
@@ -157,6 +157,8 @@ impl ChessBoard {
 
     /// Validates the position on the board
     pub fn validate(&self) -> Option<Error> {
+        use {squares::*, CastlingRights::*};
+
         // make sure that is no color overlapping
         if self.get_color_mask(White) & self.get_color_mask(Black) != BLANK {
             return Some(Error::InvalidPositionColorsOverlap);
@@ -217,14 +219,12 @@ impl ChessBoard {
 
         // validate castling rights
         let white_rook_mask = self.get_piece_type_mask(Rook) & self.get_color_mask(White);
-        if self.get_king_square(White) == squares::E1 {
+        if self.get_king_square(White) == E1 {
             let validation_mask = match self.get_castle_rights(White) {
                 Neither => BLANK,
-                QueenSide => BitBoard::from_square(squares::A1),
-                KingSide => BitBoard::from_square(squares::H1),
-                BothSides => {
-                    BitBoard::from_square(squares::A1) | BitBoard::from_square(squares::H1)
-                }
+                QueenSide => BitBoard::from_square(A1),
+                KingSide => BitBoard::from_square(H1),
+                BothSides => BitBoard::from_square(A1) | BitBoard::from_square(H1),
             };
             if (white_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
                 return Some(Error::InvalidBoardInconsistentCastlingRights);
@@ -234,14 +234,12 @@ impl ChessBoard {
         }
 
         let black_rook_mask = self.get_piece_type_mask(Rook) & self.get_color_mask(Black);
-        if self.get_king_square(Black) == squares::E8 {
+        if self.get_king_square(Black) == E8 {
             let validation_mask = match self.get_castle_rights(Black) {
                 Neither => BLANK,
-                QueenSide => BitBoard::from_square(squares::A8),
-                KingSide => BitBoard::from_square(squares::H8),
-                BothSides => {
-                    BitBoard::from_square(squares::A8) | BitBoard::from_square(squares::H8)
-                }
+                QueenSide => BitBoard::from_square(A8),
+                KingSide => BitBoard::from_square(H8),
+                BothSides => BitBoard::from_square(A8) | BitBoard::from_square(H8),
             };
             if (black_rook_mask & validation_mask).count_ones() != validation_mask.count_ones() {
                 return Some(Error::InvalidBoardInconsistentCastlingRights);
@@ -262,15 +260,15 @@ impl ChessBoard {
     ) -> String {
         let mut field_string = String::new();
         for rank in ranks {
-            field_string = format!("{}{}  ║", field_string, (rank).to_index() + 1);
+            field_string = format!("{field_string}{}  ║", (rank).to_index() + 1);
             for file in files.clone() {
                 let square = Square::from_rank_file(*rank, *file);
-                if self.is_empty_square(square) {
+                field_string = if self.is_empty_square(square) {
                     if square.is_light() {
-                        field_string = format!("{}{}", field_string, "   ".on_white());
+                        format!("{field_string}{}", "   ".on_white())
                     } else {
-                        field_string = format!("{}{}", field_string, "   ");
-                    };
+                        format!("{field_string}{}", "   ")
+                    }
                 } else {
                     let mut piece_type_str =
                         format!(" {} ", self.get_piece_type_on(square).unwrap());
@@ -278,12 +276,12 @@ impl ChessBoard {
                         White => piece_type_str.to_uppercase(),
                         Black => piece_type_str.to_lowercase(),
                     };
+
                     if square.is_light() {
-                        field_string =
-                            format!("{}{}", field_string, piece_type_str.black().on_white());
+                        format!("{field_string}{}", piece_type_str.black().on_white())
                     } else {
-                        field_string = format!("{field_string}{piece_type_str}");
-                    };
+                        format!("{field_string}{piece_type_str}")
+                    }
                 }
             }
             field_string = format!("{field_string}║\n");
@@ -376,8 +374,7 @@ impl ChessBoard {
 
     #[inline]
     pub fn is_empty_square(&self, square: Square) -> bool {
-        let mask = self.combined_mask & BitBoard::from_square(square);
-        mask.count_ones() == 0
+        (self.combined_mask & BitBoard::from_square(square)).count_ones() == 0
     }
 
     /// Returns Some(PieceType) object if the square is not empty, None otherwise
@@ -394,20 +391,20 @@ impl ChessBoard {
             != BLANK
         {
             if self.get_piece_type_mask(Pawn) & bitboard != BLANK {
-                return Some(Pawn);
+                Some(Pawn)
+            } else if self.get_piece_type_mask(Knight) & bitboard != BLANK {
+                Some(Knight)
+            } else {
+                Some(Bishop)
             }
-            if self.get_piece_type_mask(Knight) & bitboard != BLANK {
-                return Some(Knight);
-            }
-            Some(Bishop)
         } else {
             if self.get_piece_type_mask(Rook) & bitboard != BLANK {
-                return Some(Rook);
+                Some(Rook)
+            } else if self.get_piece_type_mask(Queen) & bitboard != BLANK {
+                Some(Queen)
+            } else {
+                Some(King)
             }
-            if self.get_piece_type_mask(Queen) & bitboard != BLANK {
-                return Some(Queen);
-            }
-            Some(King)
         }
     }
 
@@ -427,10 +424,8 @@ impl ChessBoard {
 
     /// Returns Some(Piece) if the square is not empty, None otherwise
     pub fn get_piece_on(&self, square: Square) -> Option<Piece> {
-        self.get_piece_type_on(square).map(|piece_type| {
-            let color = self.get_piece_color_on(square).unwrap();
-            Piece(piece_type, color)
-        })
+        self.get_piece_type_on(square)
+            .map(|piece_type| Piece(piece_type, self.get_piece_color_on(square).unwrap()))
     }
 
     /// Returns true if specified move is legal for current position
@@ -453,8 +448,7 @@ impl ChessBoard {
                 // Check destination square availability
                 let is_blocked_path = || {
                     let between = BETWEEN.get(source, destination);
-                    between.is_none()
-                        | ((between.unwrap() & self.get_combined_mask()).count_ones() > 0)
+                    (between.unwrap() & self.get_combined_mask()).count_ones() > 0
                 };
                 let destination_mask = match m.get_piece_type() {
                     Pawn => {
@@ -517,12 +511,11 @@ impl ChessBoard {
                 };
                 let is_king_side_under_attack = self.is_under_attack(square_king_side_1)
                     | self.is_under_attack(square_king_side_2);
-                let king_side_between_mask = match self.side_to_move {
-                    White => BETWEEN.get(squares::E1, squares::H1).unwrap(),
-                    Black => BETWEEN.get(squares::E8, squares::H8).unwrap(),
-                };
-                let is_empty_king_side =
-                    (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+                let is_empty_king_side = ((BitBoard::from_square(square_king_side_1)
+                    | BitBoard::from_square(square_king_side_2))
+                    & self.get_combined_mask())
+                .count_ones()
+                    == 0;
                 if is_king_side_under_attack | !is_empty_king_side {
                     return false;
                 }
@@ -539,12 +532,11 @@ impl ChessBoard {
                 };
                 let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
                     | self.is_under_attack(square_queen_side_2);
-                let queen_side_between_mask = match self.side_to_move {
-                    White => BETWEEN.get(squares::E1, squares::A1).unwrap(),
-                    Black => BETWEEN.get(squares::E8, squares::A8).unwrap(),
-                };
-                let is_empty_queen_side =
-                    (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+                let is_empty_queen_side = ((BitBoard::from_square(square_queen_side_1)
+                    | BitBoard::from_square(square_queen_side_2))
+                    & self.get_combined_mask())
+                .count_ones()
+                    == 0;
                 if is_queen_side_under_attack | !is_empty_queen_side {
                     return false;
                 }
@@ -570,7 +562,7 @@ impl ChessBoard {
             Black => Rank::First,
         };
 
-        let truncate_to_first_block = |mut full_moves_mask: BitBoard, square: Square| {
+        let truncate_rays = |mut full_moves_mask: BitBoard, square: Square| {
             let mut legals = BLANK;
             RAYS.get(square).into_iter().for_each(|ray| {
                 let mut ray_mask = ray & full_moves_mask;
@@ -596,9 +588,9 @@ impl ChessBoard {
                     }
                     Knight => KNIGHT.get_moves(square) & !color_mask,
                     King => KING.get_moves(square) & !color_mask,
-                    Bishop => truncate_to_first_block(BISHOP.get_moves(square), square),
-                    Rook => truncate_to_first_block(ROOK.get_moves(square), square),
-                    Queen => truncate_to_first_block(QUEEN.get_moves(square), square),
+                    Bishop => truncate_rays(BISHOP.get_moves(square), square),
+                    Rook => truncate_rays(ROOK.get_moves(square), square),
+                    Queen => truncate_rays(QUEEN.get_moves(square), square),
                 };
 
                 for m in full
@@ -637,12 +629,11 @@ impl ChessBoard {
             };
             let is_king_side_under_attack =
                 self.is_under_attack(square_king_side_1) | self.is_under_attack(square_king_side_2);
-            let king_side_between_mask = match self.side_to_move {
-                White => BETWEEN.get(squares::E1, squares::H1).unwrap(),
-                Black => BETWEEN.get(squares::E8, squares::H8).unwrap(),
-            };
-            let is_empty_king_side =
-                (king_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+            let is_empty_king_side = ((BitBoard::from_square(square_king_side_1)
+                | BitBoard::from_square(square_king_side_2))
+                & self.get_combined_mask())
+            .count_ones()
+                == 0;
             if !is_king_side_under_attack & is_empty_king_side {
                 moves.insert(castle_king_side!());
             }
@@ -655,12 +646,11 @@ impl ChessBoard {
             };
             let is_queen_side_under_attack = self.is_under_attack(square_queen_side_1)
                 | self.is_under_attack(square_queen_side_2);
-            let queen_side_between_mask = match self.side_to_move {
-                White => BETWEEN.get(squares::E1, squares::A1).unwrap(),
-                Black => BETWEEN.get(squares::E8, squares::A8).unwrap(),
-            };
-            let is_empty_queen_side =
-                (queen_side_between_mask & self.get_combined_mask()).count_ones() == 0;
+            let is_empty_queen_side = ((BitBoard::from_square(square_queen_side_1)
+                | BitBoard::from_square(square_queen_side_2))
+                & self.get_combined_mask())
+            .count_ones()
+                == 0;
             if !is_queen_side_under_attack & is_empty_queen_side {
                 moves.insert(castle_queen_side!());
             }
@@ -895,7 +885,7 @@ impl ChessBoard {
     fn clear_square_if_en_passant_capture(&mut self, piece_move: PieceMove) -> &mut Self {
         if let Some(sq) = self.en_passant {
             if (piece_move.get_piece_type() == Pawn) & (piece_move.get_destination_square() == sq) {
-                self.clear_square( match self.side_to_move {
+                self.clear_square(match self.side_to_move {
                     White => piece_move.get_destination_square().down().unwrap(),
                     Black => piece_move.get_destination_square().up().unwrap(),
                 });
@@ -1358,7 +1348,10 @@ mod tests {
                 .unwrap();
         assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
         let next_position = position.make_move(mv![Pawn, E4, F3]).unwrap();
-        assert_eq!(next_position.as_fen(), "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28");
+        assert_eq!(
+            next_position.as_fen(),
+            "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28"
+        );
     }
 
     #[test]

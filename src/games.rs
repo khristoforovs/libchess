@@ -11,6 +11,7 @@ use regex::Regex;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
+use textwrap::wrap;
 
 /// Represents available actions for the player
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +61,7 @@ pub struct GameMetadata {
 
 const METADATA_PRIMARY_KEYS: [&str; 7] =
     ["Event", "Site", "Date", "Round", "White", "Black", "Result"];
+const TEXT_WRAP_WIDTH: usize = 85;
 
 impl Default for GameMetadata {
     #[inline]
@@ -71,7 +73,7 @@ impl Default for GameMetadata {
         metadata.insert("Round".to_string(), "?".to_string());
         metadata.insert("White".to_string(), "Player 1".to_string());
         metadata.insert("Black".to_string(), "Player 2".to_string());
-        metadata.insert("Result".to_string(), "".to_string());
+        metadata.insert("Result".to_string(), "?".to_string());
         Self::new(metadata)
     }
 }
@@ -246,13 +248,43 @@ impl Game {
         Ok(game)
     }
 
-    /// Returns a FEN string of current game position
+    /// Returns a FEN string representing current game position
     #[inline]
     pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(self.position)) }
+
+    /// Returns PGN string representing current game
+    pub fn as_pgn(&self) -> String {
+        let mut result = String::new();
+        let game_result_str = self.metadata.metadata.get("Result").unwrap();
+        let mut metadata = self.metadata.metadata.clone();
+        METADATA_PRIMARY_KEYS.into_iter().for_each(|key| {
+            result = format!("{result}[{} \"{}\"]\n", key, metadata.get(key).unwrap());
+            metadata.remove(key);
+        });
+        metadata.keys().for_each(|key| {
+            result = format!("{result}[{} \"{}\"]\n", key, metadata.get(key).unwrap());
+        });
+
+        result = format!(
+            "{result}\n{} ",
+            wrap(
+                format!("{}", self.get_action_history()).as_str(),
+                TEXT_WRAP_WIDTH
+            )
+            .join("\n")
+        );
+        result += game_result_str;
+
+        result
+    }
 
     /// Returns game's additional info
     #[inline]
     pub fn get_metadata(&self) -> &GameMetadata { &self.metadata }
+
+    /// Returns game's additional info mut
+    #[inline]
+    pub fn get_metadata_mut(&mut self) -> &mut GameMetadata { &mut self.metadata }
 
     /// Returns the GameHistory object which represents a sequence of moves
     /// in PGN-like string
@@ -303,7 +335,27 @@ impl Game {
 
     #[inline]
     fn set_game_status(&mut self, status: GameStatus) -> &mut Self {
-        self.status = status;
+        use {Color::*, GameStatus::*};
+
+        if status != self.status {
+            self.get_metadata_mut().set_value(
+                "Result".to_string(),
+                match status {
+                    Ongoing | DrawOffered(_) => "?".to_string(),
+                    CheckMated(color) | Resigned(color) => match color {
+                        White => "0-1".to_string(),
+                        Black => "1-0".to_string(),
+                    },
+                    Stalemate
+                    | DrawAccepted
+                    | RepetitionDrawDeclared
+                    | TheoreticalDrawDeclared
+                    | FiftyMovesDrawDeclared => "1/2-1/2".to_string(),
+                },
+            );
+            self.status = status;
+        }
+
         self
     }
 
@@ -628,5 +680,14 @@ mod tests {
         let game = Game::from_pgn(&pgn).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
         println!("{}", game.get_position());
+    }
+
+    #[test]
+    fn to_pgn_string() {
+        let pgn = fs::read_to_string("examples/pgn_data/game2.pgn").expect("Can't read the file");
+        let game = Game::from_pgn(&pgn).unwrap();
+        let read_game = Game::from_pgn(&game.as_pgn()).unwrap();
+        println!("{}", game.as_pgn());
+        assert_eq!(read_game.get_position(), game.get_position());
     }
 }
