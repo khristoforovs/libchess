@@ -335,7 +335,7 @@ impl Game {
 
     #[inline]
     fn set_game_status(&mut self, status: GameStatus) -> &mut Self {
-        use {GameStatus::*, Color::*};
+        use {Color::*, GameStatus::*};
 
         if status != self.status {
             self.get_metadata_mut().set_value(
