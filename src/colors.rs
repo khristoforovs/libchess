@@ -52,3 +52,15 @@ impl Color {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_index_from_index() {
+        for i in 0..COLORS_NUMBER {
+            assert_eq!(Color::from_index(i).unwrap().to_index(), i);
+        }
+    }
+}
