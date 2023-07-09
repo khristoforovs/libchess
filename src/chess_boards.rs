@@ -635,7 +635,7 @@ impl ChessBoard {
             }
         }
 
-        LegalMoves::from_iter(moves.into_iter())
+        LegalMoves::from_iter(moves)
     }
 
     /// Returns the hash of the position. Is used to detect the repetition draw

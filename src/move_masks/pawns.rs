@@ -52,7 +52,7 @@ fn get_rank_file_idx(square_idx: u8) -> (i32, i32) {
 
 pub fn generate_pawn_moves(table: &mut PawnMoveTable, color: Color) {
     for source_index in 0..SQUARES_NUMBER as u8 {
-        let source_square = Square::new(source_index as u8).unwrap();
+        let source_square = Square::new(source_index).unwrap();
         let (rank, file) = get_rank_file_idx(source_index);
 
         let mut dest_mask = BLANK;
@@ -78,7 +78,7 @@ pub fn generate_pawn_moves(table: &mut PawnMoveTable, color: Color) {
 
 pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
     for source_index in 0..SQUARES_NUMBER as u8 {
-        let source_square = Square::new(source_index as u8).unwrap();
+        let source_square = Square::new(source_index).unwrap();
         let (rank, file) = get_rank_file_idx(source_index);
 
         let mut dest_mask = BLANK;

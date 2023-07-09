@@ -196,7 +196,7 @@ impl Game {
             .expect("Invalid regex")
             .split(pgn)
             .nth(1)
-            .ok_or_else(|| Error::InvalidPGNString)?;
+            .ok_or(Error::InvalidPGNString)?;
 
         let moves_pattern = r"(?x)
         (
@@ -231,7 +231,7 @@ impl Game {
                 .captures_iter(pgn_moves_part)
                 .nth(0)
                 .map(|x| x.get(0).unwrap())
-                .ok_or_else(|| Error::InvalidPGNString)?;
+                .ok_or(Error::InvalidPGNString)?;
 
             match result_cap.as_str() {
                 "1-0" => game.make_move(Action::Resign(Black)).unwrap(),
