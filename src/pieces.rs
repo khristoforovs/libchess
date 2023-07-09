@@ -5,12 +5,12 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceType {
-    King,
     Pawn,
     Knight,
     Bishop,
     Rook,
     Queen,
+    King,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -78,6 +78,13 @@ impl PieceType {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn to_index_from_index() {
+        for i in 0..PIECE_TYPES_NUMBER {
+            assert_eq!(PieceType::from_index(i).unwrap().to_index(), i);
+        }
+    }
 
     #[test]
     fn create_from_string() {

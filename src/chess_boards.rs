@@ -17,11 +17,11 @@ use crate::{
 };
 use crate::{Color::*, PieceType::*};
 use colored::Colorize;
-use std::collections::hash_set::HashSet;
+use rustc_hash::FxHashSet;
 use std::fmt;
 use std::str::FromStr;
 
-pub type LegalMoves = HashSet<BoardMove>;
+pub type LegalMoves = FxHashSet<BoardMove>;
 
 /// Represents the board status
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -384,42 +384,21 @@ impl ChessBoard {
             return None;
         }
 
-        if (self.get_piece_type_mask(Pawn)
-            | self.get_piece_type_mask(Knight)
-            | self.get_piece_type_mask(Bishop))
-            & bitboard
-            != BLANK
-        {
-            if self.get_piece_type_mask(Pawn) & bitboard != BLANK {
-                Some(Pawn)
-            } else if self.get_piece_type_mask(Knight) & bitboard != BLANK {
-                Some(Knight)
-            } else {
-                Some(Bishop)
-            }
-        } else {
-            if self.get_piece_type_mask(Rook) & bitboard != BLANK {
-                Some(Rook)
-            } else if self.get_piece_type_mask(Queen) & bitboard != BLANK {
-                Some(Queen)
-            } else {
-                Some(King)
-            }
-        }
+        let sum = (1..PIECE_TYPES_NUMBER).fold(0, |acc, i| {
+            acc + i * (self.pieces_mask[i] & bitboard != BLANK) as usize
+        });
+        Some(PieceType::from_index(sum).unwrap())
     }
 
     /// Returns Some(Color) object if the square is not empty, None otherwise
     pub fn get_piece_color_on(&self, square: Square) -> Option<Color> {
         let bitboard = BitBoard::from_square(square);
-        if self.get_combined_mask() & bitboard == BLANK {
-            return None;
+        if (self.get_color_mask(White) & bitboard) != BLANK {
+            return Some(White);
+        } else if (self.get_color_mask(Black) & bitboard) != BLANK {
+            return Some(Black);
         }
-
-        if (self.get_color_mask(White) & BitBoard::from_square(square)) != BLANK {
-            Some(White)
-        } else {
-            Some(Black)
-        }
+        None
     }
 
     /// Returns Some(Piece) if the square is not empty, None otherwise
@@ -549,9 +528,9 @@ impl ChessBoard {
     /// Returns true if current side has at least one legal move
     pub fn is_terminal(&self) -> bool { self.is_terminal_position }
 
-    /// Returns a HashSet of all legal moves for current board
+    /// Returns a FxHashSet of all legal moves for current board
     pub fn get_legal_moves(&self) -> LegalMoves {
-        let mut moves = LegalMoves::new();
+        let mut moves = Vec::with_capacity(121);
         let color_mask = self.get_color_mask(self.side_to_move);
         let en_passant_mask = match self.get_en_passant() {
             Some(sq) => BitBoard::from_square(sq),
@@ -609,12 +588,12 @@ impl ChessBoard {
                     {
                         // Generate promotion moves
                         let (s, d) = (m.get_source_square(), m.get_destination_square());
-                        moves.insert(mv!(Pawn, s, d, Knight));
-                        moves.insert(mv!(Pawn, s, d, Bishop));
-                        moves.insert(mv!(Pawn, s, d, Rook));
-                        moves.insert(mv!(Pawn, s, d, Queen));
+                        moves.push(mv!(Pawn, s, d, Knight));
+                        moves.push(mv!(Pawn, s, d, Bishop));
+                        moves.push(mv!(Pawn, s, d, Rook));
+                        moves.push(mv!(Pawn, s, d, Queen));
                     } else {
-                        moves.insert(BoardMove::MovePiece(m));
+                        moves.push(BoardMove::MovePiece(m));
                     }
                 }
             }
@@ -635,7 +614,7 @@ impl ChessBoard {
             .count_ones()
                 == 0;
             if !is_king_side_under_attack & is_empty_king_side {
-                moves.insert(castle_king_side!());
+                moves.push(castle_king_side!());
             }
         }
 
@@ -652,11 +631,11 @@ impl ChessBoard {
             .count_ones()
                 == 0;
             if !is_queen_side_under_attack & is_empty_queen_side {
-                moves.insert(castle_queen_side!());
+                moves.push(castle_queen_side!());
             }
         }
 
-        moves
+        LegalMoves::from_iter(moves.into_iter())
     }
 
     /// Returns the hash of the position. Is used to detect the repetition draw
@@ -963,8 +942,8 @@ impl ChessBoard {
     }
 
     fn update_pins_and_checks(&mut self) -> &mut Self {
-        let king_square = self.get_king_square(self.side_to_move);
-        (self.pinned, self.checks) = self.get_pins_and_checks(king_square);
+        (self.pinned, self.checks) =
+            self.get_pins_and_checks(self.get_king_square(self.side_to_move));
         self
     }
 
@@ -1110,20 +1089,21 @@ impl ChessBoard {
         let bishops_and_queens = self.get_piece_type_mask(Bishop) | self.get_piece_type_mask(Queen);
         let rooks_and_queens = self.get_piece_type_mask(Rook) | self.get_piece_type_mask(Queen);
 
-        let (bishop_mask, rook_mask) = (BISHOP.get_moves(square), ROOK.get_moves(square));
-        let pinners = self.get_color_mask(opposite_color)
-            & (bishop_mask & bishops_and_queens | rook_mask & rooks_and_queens);
+        let (bishop_moves, rook_moves) = (BISHOP.get_moves(square), ROOK.get_moves(square));
+        let attackers = self.get_color_mask(opposite_color)
+            & (bishop_moves & bishops_and_queens | rook_moves & rooks_and_queens);
 
         let (mut pinned, mut checks) = (BLANK, BLANK);
         let mut between;
-        for pinner_square in pinners {
+        for pinner_square in attackers {
             between = self.get_combined_mask() & BETWEEN.get(square, pinner_square).unwrap();
-            if between == BLANK {
-                checks |= BitBoard::from_square(pinner_square);
-            } else if between.count_ones() == 1 {
-                pinned |= between;
+            match between.count_ones() {
+                0 => checks |= BitBoard::from_square(pinner_square),
+                1 => pinned |= between,
+                _ => {}
             }
         }
+        pinned &= self.get_color_mask(self.side_to_move);
 
         checks |= self.get_color_mask(opposite_color)
             & KNIGHT.get_moves(square)
@@ -1162,6 +1142,20 @@ mod tests {
             format!("{}", BoardBuilder::from(ChessBoard::default())),
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         );
+    }
+
+    #[test]
+    fn piece_types_and_colors() {
+        let board = ChessBoard::default();
+        assert_eq!(board.get_piece_type_on(A2).unwrap(), Pawn);
+        assert_eq!(board.get_piece_type_on(A1).unwrap(), Rook);
+        assert_eq!(board.get_piece_type_on(B1).unwrap(), Knight);
+        assert_eq!(board.get_piece_type_on(C1).unwrap(), Bishop);
+        assert_eq!(board.get_piece_type_on(E1).unwrap(), King);
+        assert_eq!(board.get_piece_type_on(D1).unwrap(), Queen);
+
+        assert_eq!(board.get_piece_color_on(A1).unwrap(), White);
+        assert_eq!(board.get_piece_color_on(A8).unwrap(), Black);
     }
 
     #[test]
