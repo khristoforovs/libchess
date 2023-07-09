@@ -1,6 +1,6 @@
 [package]
 name = "libchess"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
 description = "Simple Rust library to simulate the game of chess"
@@ -12,5 +12,6 @@ colored = "2.0.0"
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.7.1"
+rustc-hash = "1.1.0"
 textwrap = "0.16.0"
-thiserror = "1.0.38"
+thiserror = "1.0.39"
