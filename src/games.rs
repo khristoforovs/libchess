@@ -1,7 +1,7 @@
 //! This module implements the game of chess
 //!
-//! Rules of the game, terminating conditions and recording
-//! the history of the game also implemented here  
+//! Rules of the game, terminating conditions and recording the history of the game also
+//! implemented here  
 
 use crate::errors::LibChessError as Error;
 use crate::game_history::GameHistory;
@@ -180,6 +180,24 @@ impl Game {
     }
 
     /// Creates a ``Game`` object and sets custom starting position by using FEN-string
+    ///
+    /// # Errors
+    /// ``LibChessError::InvalidPositionColorsOverlap`` if there is any square taken by white and
+    /// black color simultaneously
+    ///
+    /// ``LibChessError::InvalidPositionPieceTypeOverlap`` if there is any square taken by 2 or more
+    /// different piece types simultaneously
+    ///
+    /// ``LibChessError::InvalidBoardMultipleOneColorKings`` if there is more than 1 king of each
+    /// color
+    ///
+    /// ``LibChessError::InvalidBoardOpponentIsOnCheck`` if opponent is on check and it is our move
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentEnPassant`` if there is not any pawn in front of en
+    /// passant square
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentCastlingRights`` if there is any incompatible
+    /// conditions of king an rooks positions and castling rights for any of color
     ///
     /// # Examples
     /// ```
