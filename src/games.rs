@@ -1,7 +1,7 @@
 //! This module implements the game of chess
 //!
-//! Rules of the game, terminating conditions and recording
-//! the history of the game also implemented here  
+//! Rules of the game, terminating conditions and recording the history of the game also
+//! implemented here  
 
 use crate::errors::LibChessError as Error;
 use crate::game_history::GameHistory;
@@ -155,6 +155,16 @@ impl Default for Game {
 }
 
 impl Game {
+    /// Creates a ``Game`` object and sets custom starting position by using ``ChessBoard`` instance
+    ///
+    /// # Examples
+    /// ```
+    /// use libchess::{ChessBoard, Game};
+    /// let game_fen = "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3";
+    /// let board = ChessBoard::from_fen(game_fen).unwrap();
+    /// let game = Game::from_board(board);
+    /// println!("{}", game.get_position());
+    /// ```
     #[inline]
     pub fn from_board(board: ChessBoard) -> Self {
         let mut result = Self {
@@ -169,11 +179,57 @@ impl Game {
         result
     }
 
+    /// Creates a ``Game`` object and sets custom starting position by using FEN-string
+    ///
+    /// # Errors
+    /// ``LibChessError::InvalidPositionColorsOverlap`` if there is any square taken by white and
+    /// black color simultaneously
+    ///
+    /// ``LibChessError::InvalidPositionPieceTypeOverlap`` if there is any square taken by 2 or more
+    /// different piece types simultaneously
+    ///
+    /// ``LibChessError::InvalidBoardMultipleOneColorKings`` if there is more than 1 king of each
+    /// color
+    ///
+    /// ``LibChessError::InvalidBoardOpponentIsOnCheck`` if opponent is on check and it is our move
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentEnPassant`` if there is not any pawn in front of en
+    /// passant square
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentCastlingRights`` if there is any incompatible
+    /// conditions of king an rooks positions and castling rights for any of color
+    ///
+    /// # Examples
+    /// ```
+    /// use libchess::Game;
+    /// let game_fen = "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3";
+    /// let game = Game::from_fen(game_fen).unwrap();
+    /// println!("{}", game.get_position());
+    /// ```
     #[inline]
     pub fn from_fen(fen: &str) -> Result<Self, Error> {
         ChessBoard::from_str(fen).map(Self::from_board)
     }
 
+    /// Uses PGN string to initialize ``Game`` object
+    ///
+    /// In case of full correct PGN-string which represents finished game, this method can be used
+    /// for analysis of game history, rendering positions or viewing the result of the game only.
+    /// You will not able to make any moves or change the history of the game because it is finished.
+    /// But in case when PGN was generated for the continuing game it, obviously, will be possible
+    ///
+    /// # Errors
+    /// ``errors::LibChessError::InvalidPGNString`` in case when parser will fail to process the
+    /// PGN-string passed into arguments
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use libchess::{Color::*, Game, GameStatus};
+    /// use std::fs;
+    /// let pgn = fs::read_to_string("my_game_pgn.pgn").expect("Can't read the file");
+    /// let game = Game::from_pgn(&pgn).unwrap();
+    /// println!("{}", game.get_position());
+    /// ```
     pub fn from_pgn(pgn: &str) -> Result<Self, Error> {
         use Color::*;
         let mut game = Game::default();
@@ -196,7 +252,7 @@ impl Game {
             .expect("Invalid regex")
             .split(pgn)
             .nth(1)
-            .ok_or_else(|| Error::InvalidPGNString)?;
+            .ok_or(Error::InvalidPGNString)?;
 
         let moves_pattern = r"(?x)
         (
@@ -231,7 +287,7 @@ impl Game {
                 .captures_iter(pgn_moves_part)
                 .nth(0)
                 .map(|x| x.get(0).unwrap())
-                .ok_or_else(|| Error::InvalidPGNString)?;
+                .ok_or(Error::InvalidPGNString)?;
 
             match result_cap.as_str() {
                 "1-0" => game.make_move(Action::Resign(Black)).unwrap(),
@@ -249,10 +305,40 @@ impl Game {
     }
 
     /// Returns a FEN string representing current game position
+    ///
+    /// [FEN-string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
+    /// (Forsyth–Edwards Notation) - standard notation for describing a particular board position
+    /// of a chess game. This method returns FEN-string for the current position in the game. To
+    /// render any other position from the game history you can use
+    /// ``game.get_action_history().get_position_on_move(move_number: usize).as_fen()``
+    ///
+    /// # Examples
+    /// ```
+    /// use libchess::Game;
+    /// let game_fen = "rnbq1bnr/pppkpppp/8/3p4/4P3/5N2/PPPP1PPP/RNBQKB1R w KQ - 2 3";
+    /// let game = Game::from_fen(game_fen).unwrap();
+    /// assert_eq!(game.as_fen(), game_fen);
+    /// ```
     #[inline]
     pub fn as_fen(&self) -> String { format!("{}", BoardBuilder::from(self.position)) }
 
     /// Returns PGN string representing current game
+    ///
+    /// [PGN-string](https://en.wikipedia.org/wiki/Portable_Game_Notation) file extension is a
+    /// plain text representation of current game and allows you to export the game to any available
+    /// GUI for chess rendering/analysis
+    ///
+    /// # Examples
+    /// ```
+    /// use libchess::{mv, Action, BoardMove, Game, PieceMove};
+    /// use libchess::{squares::*, Color::*, PieceType::*};
+    /// let mut game = Game::default();
+    /// game.make_move(Action::MakeMove(mv!(Pawn, E2, E4))).unwrap();
+    /// game.make_move(Action::MakeMove(mv!(Pawn, E7, E5))).unwrap();
+    /// game.make_move(Action::OfferDraw(White)).unwrap();
+    /// game.make_move(Action::AcceptDraw).unwrap();
+    /// println!("{}", game.as_pgn());
+    /// ```
     pub fn as_pgn(&self) -> String {
         let mut result = String::new();
         let game_result_str = self.metadata.metadata.get("Result").unwrap();
@@ -399,7 +485,25 @@ impl Game {
         self
     }
 
-    /// The method to make moves during the game
+    /// This method is used to make moves during the game
+    ///
+    /// # Errors
+    ///
+    /// ``errors::LibChessError::IllegalActionDetected`` returns in any of 3 cases:
+    /// 1. If selected ``BoardMove`` is illegal for current position
+    /// 2. If player tries to accept/decline draw if it was not offered
+    /// 3. If player tries to accept draw or make a move while the draw was offered
+    ///
+    /// ``errors::LibChessError::GameIsAlreadyFinished`` in case if player tries to make any action
+    /// after the fame was ended
+    ///
+    /// # Examples
+    /// ```
+    /// use libchess::{mv, Action, BoardMove, Game, PieceMove};
+    /// use libchess::{squares::*, PieceType::*};
+    /// let mut game = Game::default();
+    /// game.make_move(Action::MakeMove(mv!(Pawn, E2, E4))).unwrap();
+    /// ```
     pub fn make_move(&mut self, action: Action) -> Result<&mut Self, Error> {
         use Action::*;
         match self.get_game_status() {
@@ -506,6 +610,10 @@ mod tests {
         let mut game = Game::default();
         game.make_move(Action::Resign(White)).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(White));
+
+        let mut game = Game::default();
+        game.make_move(Action::Resign(Black)).unwrap();
+        assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
     }
 
     #[test]

@@ -1,10 +1,9 @@
 use crate::errors::LibChessError as Error;
-use crate::{BitBoard, ChessBoard, PieceType, Square};
+use crate::{BitBoard, ChessBoard, PieceType, Square, BLANK};
 use std::fmt;
-use std::hash::Hash;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DisplayAmbiguityType {
     ExtraFile,
     ExtraRank,
@@ -47,7 +46,7 @@ impl MovePropertiesOnBoard {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PieceMove {
     piece_type:  PieceType,
     square_from: Square,
@@ -159,12 +158,12 @@ impl PieceMove {
 
     pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
         let destination_mask = BitBoard::from_square(self.get_destination_square());
-        ((destination_mask & board.get_color_mask(!board.get_side_to_move())).count_ones() > 0)
+        (destination_mask & board.get_color_mask(!board.get_side_to_move()) != BLANK)
             | self.is_en_passant_move()
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoardMove {
     MovePiece(PieceMove),
     CastleKingSide,
