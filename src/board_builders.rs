@@ -9,13 +9,10 @@ use std::str::FromStr;
 /// The board builder is used for initializing the ChessBoard without position checks
 ///
 /// It does not check the sanity of position, moves ordering etc.
-/// Actually it just implements the parser of FEN strings and easy representation
-/// of ChessBoard's inner parameters. There is no need to create this object
-/// manually because ChessBoard implements initialization via BoardBuilder
-/// under the hood.
-/// Also this struct implements the default starting position of chess board
+/// Actually it just implements the parser of FEN strings and simple representation of ChessBoard's
+/// inner parameters. Also this struct implements the default starting position of chess board
 ///
-/// ## Examples
+/// # Examples
 /// ```
 /// use libchess::BoardBuilder;
 /// use std::str::FromStr;
@@ -265,6 +262,7 @@ impl fmt::Display for BoardBuilder {
 }
 
 impl BoardBuilder {
+    /// Creates empty object of BoardBuilder
     pub fn new() -> BoardBuilder {
         BoardBuilder {
             pieces: [None; 64],
@@ -276,6 +274,7 @@ impl BoardBuilder {
         }
     }
 
+    /// Creates new BoardBuilder and allows to setup any properties of the position
     pub fn setup<'a>(
         pieces: impl IntoIterator<Item = &'a (Square, Piece)>,
         side_to_move: Color,
@@ -285,70 +284,86 @@ impl BoardBuilder {
         moves_since_capture_or_pawn_move: usize,
         move_number: usize,
     ) -> BoardBuilder {
-        let mut builder = BoardBuilder {
-            pieces: [None; SQUARES_NUMBER],
+        BoardBuilder {
+            pieces: {
+                let mut squares_pieces = [None; SQUARES_NUMBER];
+                pieces.into_iter().for_each(|(s, p)| {
+                    squares_pieces[s.to_index()] = Some(*p);
+                });
+                squares_pieces
+            },
             side_to_move,
             castle_rights: [white_castle_rights, black_castle_rights],
             en_passant,
             moves_since_capture_or_pawn_move,
             move_number,
-        };
-
-        for (s, p) in pieces.into_iter() {
-            builder.pieces[s.to_index()] = Some(*p);
         }
-
-        builder
     }
 
+    /// Returns presence or absence of pieces on each square of the chess board
     #[inline]
     pub fn get_pieces(&self) -> [Option<Piece>; 64] { self.pieces }
 
+    /// Returns the move number
     #[inline]
     pub fn get_move_number(&self) -> usize { self.move_number }
 
+    /// Returns number of semi-moves since last capture or pawn move had been performed
     #[inline]
     pub fn get_moves_since_capture_or_pawn_move(&self) -> usize {
         self.moves_since_capture_or_pawn_move
     }
 
+    /// Returns castling rights for specified color
     #[inline]
     pub fn get_castle_rights(&self, color: Color) -> CastlingRights {
         self.castle_rights[color.to_index()]
     }
 
+    /// Returns color of side to move
     #[inline]
     pub fn get_side_to_move(&self) -> Color { self.side_to_move }
 
+    /// Returns en-passant square
     #[inline]
     pub fn get_en_passant(&self) -> Option<Square> { self.en_passant }
 
+    /// Allows to set move number manually
+    #[inline]
     pub fn set_move_number(&mut self, counter: usize) -> &mut Self {
         self.move_number = counter;
         self
     }
 
+    /// Allows to set number of semi-moves since last capture or pawn move had been performed
+    #[inline]
     pub fn set_moves_since_capture_or_pawn_move(&mut self, counter: usize) -> &mut Self {
         self.moves_since_capture_or_pawn_move = counter;
         self
     }
 
+    /// Allows to set side to move at this position manually
+    #[inline]
     pub fn set_side_to_move(&mut self, color: Color) -> &mut Self {
         self.side_to_move = color;
         self
     }
 
+    /// Allows to set castling rights manually
+    #[inline]
     pub fn set_castling_rights(&mut self, color: Color, rights: CastlingRights) -> &mut Self {
         self.castle_rights[color.to_index()] = rights;
         self
     }
 
+    /// Allows to set en-passant square manually
     pub fn set_en_passant(&mut self, square: Option<Square>) -> &mut Self {
         self.en_passant = square;
         self
     }
 
-    pub fn set_square(&mut self, square: Square, piece: Option<Piece>) -> &mut Self {
+    /// Allows to put specific piece on some specific square
+    pub fn put_piece_on_square(&mut self, square: Square, piece: Option<Piece>) -> &mut Self {
         self[square] = piece;
         self
     }

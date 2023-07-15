@@ -458,20 +458,20 @@ impl ChessBoard {
     }
 
     /// Shows which side has move now
-    /// 
+    ///
     /// # Examples
     /// ```
-    /// use libchess::{ChessBoard, Action, BoardMove, PieceMove};
+    /// use libchess::{Action, BoardMove, ChessBoard, PieceMove};
     /// assert_eq!(ChessBoard::default().get_side_to_move(), White);
     /// ```
     #[inline]
     pub fn get_side_to_move(&self) -> Color { self.side_to_move }
 
     /// Returns en-passant square if it exists at hte current move
-    /// 
+    ///
     /// # Examples
     /// ```
-    /// use libchess::{ChessBoard, BoardMove, PieceMove, squares::*, mv, PieceType::*};
+    /// use libchess::{mv, squares::*, BoardMove, ChessBoard, PieceMove, PieceType::*};
     /// let board = ChessBoard::default().make_move(mv!(Pawn, E2, E4)).unwrap();
     /// assert_eq!(board.get_en_passant(), Some(E3));
     /// ```
@@ -766,10 +766,10 @@ impl ChessBoard {
     pub fn get_hash(&self) -> PositionHashValueType { self.hash }
 
     /// Returns position status on the board
-    /// 
+    ///
     /// # Examples
     /// ```
-    /// use libchess::{ChessBoard, BoardStatus::*, Color::*};
+    /// use libchess::{BoardStatus::*, ChessBoard, Color::*};
     /// let board = ChessBoard::from_fen("Q4k2/8/5K2/8/8/8/8/8 b - - 0 1").unwrap();
     /// assert_eq!(board.get_status(), CheckMated(Black));
     /// ```
@@ -804,14 +804,14 @@ impl ChessBoard {
 
         let white_can_not_checkmate = match white_pieces_number {
             1 => true, // Only white king on the board
-            2 => self.get_color_mask(White) & bishops_and_knights != BLANK, /* only white
-            king and white bishop or knight are on the board */
+            2 => self.get_color_mask(White) & bishops_and_knights != BLANK, /* only white */
+            //king and white bishop or knight are on the board
             _ => unreachable!(),
         };
         let black_can_not_checkmate = match black_pieces_number {
             1 => true, // Only black king on the board
-            2 => self.get_color_mask(Black) & bishops_and_knights != BLANK, /* only black
-            king and white black or knight are on the board */
+            2 => self.get_color_mask(Black) & bishops_and_knights != BLANK, /* only black */
+            //king and white black or knight are on the board
             _ => unreachable!(),
         };
 
@@ -888,7 +888,7 @@ impl ChessBoard {
     ///
     /// # Errors
     /// ``LibChessError::IllegalMoveDetected`` if specified move is not legal
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use libchess::PieceType::*;
@@ -973,7 +973,7 @@ impl ChessBoard {
     ///
     /// # Errors
     /// ``LibChessError::IllegalMoveDetected`` if specified move is not legal
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use libchess::PieceType::*;
