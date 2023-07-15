@@ -461,7 +461,7 @@ impl ChessBoard {
     ///
     /// # Examples
     /// ```
-    /// use libchess::{Action, BoardMove, ChessBoard, PieceMove};
+    /// use libchess::{ChessBoard, Color::*};
     /// assert_eq!(ChessBoard::default().get_side_to_move(), White);
     /// ```
     #[inline]
