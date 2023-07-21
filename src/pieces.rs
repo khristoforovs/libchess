@@ -3,6 +3,8 @@ use crate::Color;
 use std::fmt;
 use std::str::FromStr;
 
+pub const PIECE_TYPES_NUMBER: usize = 6;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PieceType {
     Pawn,
@@ -12,11 +14,6 @@ pub enum PieceType {
     Queen,
     King,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Piece(pub PieceType, pub Color);
-
-pub const PIECE_TYPES_NUMBER: usize = 6;
 
 impl fmt::Display for PieceType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -74,6 +71,9 @@ impl PieceType {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Piece(pub PieceType, pub Color);
 
 #[cfg(test)]
 mod tests {
