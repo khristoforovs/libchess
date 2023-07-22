@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 pub const SQUARES_NUMBER: usize = 64;
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Square(u8);
 
 impl fmt::Display for Square {
@@ -60,6 +60,14 @@ impl Square {
 
     #[inline]
     pub fn get_file(&self) -> File { File::from_index((self.0 & 7) as usize).unwrap() }
+
+    #[inline]
+    pub fn offsets_from(&self, other: Square) -> (i32, i32) {
+        (
+            other.get_rank().to_index() as i32 - self.get_rank().to_index() as i32,
+            other.get_file().to_index() as i32 - self.get_file().to_index() as i32,
+        )
+    }
 
     #[inline]
     pub fn to_index(&self) -> usize { self.0 as usize }
@@ -217,5 +225,14 @@ mod tests {
         assert_eq!(E4.is_light(), true);
         assert_eq!(A3.is_dark(), true);
         assert_eq!(E6.is_dark(), false);
+    }
+
+    #[test]
+    fn test_offsets() {
+        use squares::*;
+
+        assert_eq!(A1.offsets_from(A8), (7, 0));
+        assert_eq!(B8.offsets_from(B1), (-7, 0));
+        assert_eq!(E3.offsets_from(D4), (1, -1));
     }
 }
