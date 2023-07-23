@@ -37,6 +37,7 @@ impl Color {
     #[inline]
     pub fn to_index(&self) -> usize { *self as usize }
 
+    #[inline]
     pub fn from_index(n: usize) -> Result<Self, Error> {
         match n {
             0 => Ok(Color::White),
@@ -45,10 +46,19 @@ impl Color {
         }
     }
 
+    #[inline]
     pub fn get_back_rank(&self) -> Rank {
         match self {
             Color::White => Rank::First,
             Color::Black => Rank::Eighth,
+        }
+    }
+
+    #[inline]
+    pub fn get_promotion_rank(&self) -> Rank {
+        match self {
+            Color::White => Rank::Eighth,
+            Color::Black => Rank::First,
         }
     }
 }

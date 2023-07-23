@@ -23,6 +23,9 @@ pub enum LibChessError {
     #[error("Invalid square representation string")]
     InvalidSquareRepresentation,
 
+    #[error("Invalid castling index: only one from range 0..=3 is allowed")]
+    InvalidCastlingIndexRepresentation,
+
     // Piece Errors
     #[error("Invalid peace representation string")]
     InvalidPeaceRepresentation,

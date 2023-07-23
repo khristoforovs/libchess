@@ -105,9 +105,7 @@ impl Square {
     }
 
     pub fn is_light(&self) -> bool {
-        let rank_id = self.get_rank().to_index();
-        let file_id = self.get_file().to_index();
-        if (rank_id + file_id) % 2 == 0 {
+        if (self.get_rank().to_index() + self.get_file().to_index()) % 2 == 0 {
             return false;
         }
         true
