@@ -582,14 +582,20 @@ impl ChessBoard {
 
     /// Returns Some(Piece) if the square is not empty, None otherwise
     pub fn get_piece_on(&self, square: Square) -> Option<Piece> {
-        self.get_piece_type_on(square)
-            .map(|piece_type| Piece(piece_type, self.get_piece_color_on(square).unwrap()))
+        let piece_type = self.get_piece_type_on(square)?;
+        let color = if (self.get_color_mask(White) & BitBoard::from_square(square)).is_blank() {
+            Black
+        } else {
+            White
+        };
+        Some(Piece(piece_type, color))
     }
 
     /// Returns true if specified move is legal for current position
     pub fn is_legal_move(&self, chess_move: BoardMove) -> bool {
+        use BoardMove::*;
         match chess_move {
-            BoardMove::MovePiece(m) => {
+            MovePiece(m) => {
                 let source = m.get_source_square();
                 let destination = m.get_destination_square();
 
@@ -602,50 +608,42 @@ impl ChessBoard {
                     return false;
                 }
 
-                let is_blocked_path = || {
+                let block_path_mask = match m.get_piece_type() {
                     /* Checks direct visibility (in horizontal, vertical and diagonal directions)
                     from source to destination square. Is used to analyze move availability for
                     Queen, Rook and Bishop */
-                    let between = BETWEEN.get(source, destination);
-                    !(between.unwrap() & self.get_combined_mask()).is_blank()
+                    Bishop | Rook | Queen => {
+                        let between = BETWEEN.get(source, destination).unwrap();
+                        if (between & self.get_combined_mask()).is_blank() {
+                            !BLANK
+                        } else {
+                            BLANK
+                        }
+                    }
+                    _ => !BLANK, // for Pawn, King and Knight it is mask with all 1 by default
                 };
 
                 let destination_mask = match m.get_piece_type() {
                     /* Here we pre-compute all possible destination squares for chosen in chess_move
-                    piece including restrictions connected with other pieces on the board */
+                    piece */
+                    Bishop => BISHOP.get_moves(source) & !self.get_color_mask(self.side_to_move),
+                    Rook => ROOK.get_moves(source) & !self.get_color_mask(self.side_to_move),
+                    Queen => QUEEN.get_moves(source) & !self.get_color_mask(self.side_to_move),
+                    Knight => KNIGHT.get_moves(source) & !self.get_color_mask(self.side_to_move),
+                    King => KING.get_moves(source) & !self.get_color_mask(self.side_to_move),
                     Pawn => {
-                        let en_passant_mask = match self.get_en_passant() {
-                            Some(sq) => BitBoard::from_square(sq),
-                            None => BLANK,
-                        };
+                        let en_passant_mask =
+                            self.get_en_passant().map_or(BLANK, BitBoard::from_square);
                         PAWN.get_moves(source, self.side_to_move)
                             & !self.get_color_mask(self.side_to_move)
                             | PAWN.get_captures(source, self.side_to_move)
                                 & (self.get_color_mask(!self.side_to_move) | en_passant_mask)
                     }
-                    Knight => KNIGHT.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    Bishop => {
-                        if is_blocked_path() {
-                            return false;
-                        }
-                        BISHOP.get_moves(source) & !self.get_color_mask(self.side_to_move)
-                    }
-                    Rook => {
-                        if is_blocked_path() {
-                            return false;
-                        }
-                        ROOK.get_moves(source) & !self.get_color_mask(self.side_to_move)
-                    }
-                    Queen => {
-                        if is_blocked_path() {
-                            return false;
-                        }
-                        QUEEN.get_moves(source) & !self.get_color_mask(self.side_to_move)
-                    }
-                    King => KING.get_moves(source) & !self.get_color_mask(self.side_to_move),
                 };
                 // Check for chosen piece to move to the destination square
-                if (destination_mask & BitBoard::from_square(destination)).is_blank() {
+                if (block_path_mask & destination_mask & BitBoard::from_square(destination))
+                    .is_blank()
+                {
                     return false;
                 }
 
@@ -658,8 +656,8 @@ impl ChessBoard {
                     return false;
                 }
 
-                /* If current side's King is in check or it is King's move we must to analyze, if
-                on the next move the check will disappear. In other cases, actually, we simply can
+                /* If current side's King is in check or it is King's move we must analyze, if on
+                the next move the check will disappear. In other cases, actually, we simply can
                 accept the move */
                 if (m.get_piece_type() == King) | !self.get_check_mask().is_blank() {
                     return self
@@ -667,12 +665,8 @@ impl ChessBoard {
                         .is_blank();
                 }
             }
-            BoardMove::CastleKingSide => {
-                return self.castling_is_available_on_board().has_kingside()
-            }
-            BoardMove::CastleQueenSide => {
-                return self.castling_is_available_on_board().has_queenside()
-            }
+            CastleKingSide => return self.castling_is_available_on_board().has_kingside(),
+            CastleQueenSide => return self.castling_is_available_on_board().has_queenside(),
         }
 
         true
@@ -687,7 +681,6 @@ impl ChessBoard {
         let color_mask = self.get_color_mask(self.side_to_move);
         let opposite_color_mask = !color_mask;
         let is_check = !self.get_check_mask().is_blank();
-        let en_passant_mask = self.get_en_passant().map_or(BLANK, BitBoard::from_square);
 
         let truncate_rays = |mut full_moves_mask: BitBoard, square: Square| {
             let mut legals = BLANK;
@@ -710,6 +703,8 @@ impl ChessBoard {
             for square in free_pieces_mask {
                 let full = match piece_type {
                     Pawn => {
+                        let en_passant_mask =
+                            self.get_en_passant().map_or(BLANK, BitBoard::from_square);
                         (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
                             | (PAWN.get_captures(square, self.side_to_move)
                                 & (self.get_color_mask(!self.side_to_move) | en_passant_mask))
@@ -897,10 +892,23 @@ impl ChessBoard {
     /// println!("{}", board);
     /// ```
     pub fn make_move_mut(&mut self, next_move: BoardMove) -> Result<&mut Self, Error> {
-        if !self.is_legal_move(next_move) {
-            return Err(Error::IllegalMoveDetected);
+        if self.is_legal_move(next_move) {
+            unsafe {
+                return Ok(self.make_move_mut_unchecked(next_move));
+            }
         }
+        Err(Error::IllegalMoveDetected)
+    }
 
+    /// The unsafe version of ``ChessBoard::make_move_mut`` method. It does not perform the check if
+    /// the move is legal or not. It is only useful for performance reasons during the process of
+    /// engine search of the best move. Often used in pair with ``ChessBoard::get_legal_moves``
+    /// which guaranties that any provided move will be legal one.
+    /// (!!!) Be very careful while using this method because in case of illegal ``next_move`` it
+    /// can lead to application panic or to unpredictable changes of the position. If you are not
+    /// 100% sure that ``next_move`` will be a legal move - use ``ChessBoard::make_move_mut``
+    /// instead
+    pub unsafe fn make_move_mut_unchecked(&mut self, next_move: BoardMove) -> &mut Self {
         match next_move {
             BoardMove::MovePiece(m) => {
                 self.move_piece(m).clear_square_if_en_passant_capture(m);
@@ -958,7 +966,7 @@ impl ChessBoard {
             .update_pins_and_checks()
             .update_terminal_status();
 
-        Ok(self)
+        self
     }
 
     /// The method which allows to make moves on the board. Returns a new board instance
@@ -985,6 +993,19 @@ impl ChessBoard {
         let mut next_board = *self;
         next_board.make_move_mut(next_move)?;
         Ok(next_board)
+    }
+
+    /// The unsafe version of ``ChessBoard::make_move`` method. It does not perform the check if
+    /// the move is legal or not. It is only useful for performance reasons during the process of
+    /// engine search of the best move. Often used in pair with ``ChessBoard::get_legal_moves``
+    /// which guaranties that any provided move will be legal one.
+    /// (!!!) Be very careful while using this method because in case of illegal ``next_move`` it
+    /// can lead to application panic or to unpredictable changes of the position. If you are not
+    /// 100% sure that ``next_move`` will be a legal move - use ``ChessBoard::make_move`` instead
+    pub unsafe fn make_move_unchecked(&self, next_move: BoardMove) -> Self {
+        let mut next_board = *self;
+        next_board.make_move_mut_unchecked(next_move);
+        next_board
     }
 
     fn get_check_mask_after_piece_move(self, m: PieceMove) -> BitBoard {
