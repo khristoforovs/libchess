@@ -49,34 +49,26 @@ fn generate_rays(table: &mut RaysTable) {
         |dy: i32, dx: i32| -> bool { (dy.abs() - dx.abs() == 0) & (dx < 0) & (dy < 0) }, /* down-left */
     ];
 
-    for source_index in 0..SQUARES_NUMBER {
-        let source_square = Square::new(source_index as u8).unwrap();
-        let (rank, file) = (
-            source_square.get_rank().to_index() as i32,
-            source_square.get_file().to_index() as i32,
-        );
+    for source_index in 0..SQUARES_NUMBER as u8 {
+        let source_square = Square::new(source_index).unwrap();
 
-        let mut destination_mask = [BLANK; 8];
-        for destination_index in 0..SQUARES_NUMBER {
-            let s_ = Square::new(destination_index as u8).unwrap();
-            let diffs = (
-                (s_.get_rank().to_index() as i32 - rank),
-                (s_.get_file().to_index() as i32 - file),
-            );
+        let mut mask = [BLANK; 8];
+        for destination_index in 0..SQUARES_NUMBER as u8 {
+            let destination_square = Square::new(destination_index).unwrap();
+            let diffs = source_square.offsets_from(destination_square);
 
             conditions
                 .iter()
                 .enumerate()
                 .filter(|val| val.1(diffs.0, diffs.1))
                 .for_each(|val| {
-                    destination_mask[val.0] |= BitBoard::from_square(s_);
+                    mask[val.0] |= BitBoard::from_square(destination_square);
                 });
         }
-        table.set(source_square, destination_mask);
+        table.set(source_square, mask);
     }
 }
 
-#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,15 +78,33 @@ mod tests {
     fn create() {
         let rays_table = RaysTable::default();
         let square = E1;
-        assert_eq!(rays_table.get(square)[0], BitBoard::new(0x1010101010101000u64));
-        assert_eq!(rays_table.get(square)[4], BitBoard::new(0x0000000080402000u64));
+        assert_eq!(
+            rays_table.get(square)[0],
+            BitBoard::new(0x1010101010101000u64)
+        );
+        assert_eq!(
+            rays_table.get(square)[4],
+            BitBoard::new(0x0000000080402000u64)
+        );
 
         let square = D4;
-        assert_eq!(rays_table.get(square)[1], BitBoard::new(0x0000000000080808u64));
-        assert_eq!(rays_table.get(square)[5], BitBoard::new(0x0001020400000000u64));
+        assert_eq!(
+            rays_table.get(square)[1],
+            BitBoard::new(0x0000000000080808u64)
+        );
+        assert_eq!(
+            rays_table.get(square)[5],
+            BitBoard::new(0x0001020400000000u64)
+        );
 
         let square = G6;
-        assert_eq!(rays_table.get(square)[2], BitBoard::new(0x0000800000000000u64));
-        assert_eq!(rays_table.get(square)[6], BitBoard::new(0x0000008000000000u64));
+        assert_eq!(
+            rays_table.get(square)[2],
+            BitBoard::new(0x0000800000000000u64)
+        );
+        assert_eq!(
+            rays_table.get(square)[6],
+            BitBoard::new(0x0000008000000000u64)
+        );
     }
 }

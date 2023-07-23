@@ -2,29 +2,23 @@ use super::PieceMoveTable;
 use crate::{BitBoard, Square, BLANK, SQUARES_NUMBER};
 
 pub fn generate_knight_moves(table: &mut PieceMoveTable) {
-    for source_index in 0..SQUARES_NUMBER {
-        let source_square = Square::new(source_index as u8).unwrap();
-        let (rank, file) = (
-            source_square.get_rank().to_index() as i32,
-            source_square.get_file().to_index() as i32,
-        );
+    for source_index in 0..SQUARES_NUMBER as u8 {
+        let source_square = Square::new(source_index).unwrap();
 
         let mut destination_mask = BLANK;
-        for destination_index in 0..SQUARES_NUMBER {
-            let s_ = Square::new(destination_index as u8).unwrap();
-            let distances = (
-                (rank - s_.get_rank().to_index() as i32).abs(),
-                (file - s_.get_file().to_index() as i32).abs(),
-            );
+        for destination_index in 0..SQUARES_NUMBER as u8 {
+            let destination_square = Square::new(destination_index).unwrap();
+            let diffs = source_square.offsets_from(destination_square);
+            let distances = (diffs.0.abs(), diffs.1.abs());
+
             if (distances == (2, 1)) | (distances == (1, 2)) {
-                destination_mask |= BitBoard::from_square(s_);
+                destination_mask |= BitBoard::from_square(destination_square);
             }
         }
         table.set_moves(source_square, destination_mask);
     }
 }
 
-#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,7 +27,7 @@ mod tests {
     #[test]
     fn create() {
         let mut move_table = PieceMoveTable::new();
-        generate_knight_moves(&mut  move_table);
+        generate_knight_moves(&mut move_table);
         let square = E4;
         let result = 0x0000284400442800u64;
         let table = move_table.get_moves(square);

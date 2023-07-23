@@ -130,6 +130,9 @@ impl BitBoard {
 
     #[inline]
     pub fn to_square(&self) -> Square { Square::new(self.0.trailing_zeros() as u8).unwrap() }
+
+    #[inline]
+    pub fn is_blank(&self) -> bool { self == &BLANK }
 }
 
 #[rustfmt::skip]

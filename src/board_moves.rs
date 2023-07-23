@@ -1,5 +1,5 @@
 use crate::errors::LibChessError as Error;
-use crate::{BitBoard, ChessBoard, PieceType, Square, BLANK};
+use crate::{BitBoard, ChessBoard, PieceType, Square};
 use std::fmt;
 use std::str::FromStr;
 
@@ -158,7 +158,7 @@ impl PieceMove {
 
     pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
         let destination_mask = BitBoard::from_square(self.get_destination_square());
-        (destination_mask & board.get_color_mask(!board.get_side_to_move()) != BLANK)
+        !(destination_mask & board.get_color_mask(!board.get_side_to_move())).is_blank()
             | self.is_en_passant_move()
     }
 }

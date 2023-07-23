@@ -42,31 +42,24 @@ impl PawnMoveTable {
     }
 }
 
-fn get_rank_file_idx(square_idx: u8) -> (i32, i32) {
-    let square = Square::new(square_idx).unwrap();
-    (
-        square.get_rank().to_index() as i32,
-        square.get_file().to_index() as i32,
-    )
-}
-
 pub fn generate_pawn_moves(table: &mut PawnMoveTable, color: Color) {
     for source_index in 0..SQUARES_NUMBER as u8 {
         let source_square = Square::new(source_index).unwrap();
-        let (rank, file) = get_rank_file_idx(source_index);
+        let source_rank = source_square.get_rank().to_index();
 
         let mut dest_mask = BLANK;
         (0..SQUARES_NUMBER as u8).for_each(|dest_index| {
-            let (rank_, file_) = get_rank_file_idx(dest_index);
-            let d = ((rank - rank_), (file - file_));
+            let destination_square = Square::new(dest_index).unwrap();
+            let d = source_square.offsets_from(destination_square);
+
             match color {
                 Color::White => {
-                    if (d.0 == -1) & (d.1 == 0) | (d.0 == -2) & (d.1 == 0) & (rank == 1) {
+                    if (d.0 == 1) & (d.1 == 0) | (d.0 == 2) & (d.1 == 0) & (source_rank == 1) {
                         dest_mask |= BitBoard::from_square(Square::new(dest_index).unwrap());
                     }
                 }
                 Color::Black => {
-                    if (d.0 == 1) & (d.1 == 0) | (d.0 == 2) & (d.1 == 0) & (rank == 6) {
+                    if (d.0 == -1) & (d.1 == 0) | (d.0 == -2) & (d.1 == 0) & (source_rank == 6) {
                         dest_mask |= BitBoard::from_square(Square::new(dest_index).unwrap());
                     }
                 }
@@ -79,20 +72,20 @@ pub fn generate_pawn_moves(table: &mut PawnMoveTable, color: Color) {
 pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
     for source_index in 0..SQUARES_NUMBER as u8 {
         let source_square = Square::new(source_index).unwrap();
-        let (rank, file) = get_rank_file_idx(source_index);
 
         let mut dest_mask = BLANK;
         (0..SQUARES_NUMBER as u8).for_each(|dest_index| {
-            let (rank_, file_) = get_rank_file_idx(dest_index);
-            let d = ((rank - rank_), (file - file_));
+            let destination_square = Square::new(dest_index).unwrap();
+            let d = source_square.offsets_from(destination_square);
+
             match color {
                 Color::White => {
-                    if (d.0 == -1) & (d.1.abs() == 1) {
+                    if (d.0 == 1) & (d.1.abs() == 1) {
                         dest_mask |= BitBoard::from_square(Square::new(dest_index).unwrap());
                     }
                 }
                 Color::Black => {
-                    if (d.0 == 1) & (d.1.abs() == 1) {
+                    if (d.0 == -1) & (d.1.abs() == 1) {
                         dest_mask |= BitBoard::from_square(Square::new(dest_index).unwrap());
                     }
                 }
@@ -102,7 +95,6 @@ pub fn generate_pawn_captures(table: &mut PawnMoveTable, color: Color) {
     }
 }
 
-#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use super::*;

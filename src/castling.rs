@@ -1,3 +1,4 @@
+use crate::errors::LibChessError as Error;
 use std::fmt;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
@@ -71,14 +72,13 @@ impl CastlingRights {
     pub fn to_index(self) -> usize { self as usize }
 
     #[inline]
-    pub fn from_index(i: usize) -> CastlingRights {
-        #![allow(unreachable_patterns)]
+    pub fn from_index(i: usize) -> Result<CastlingRights, Error> {
         match i {
-            0 => CastlingRights::Neither,
-            1 => CastlingRights::KingSide,
-            2 => CastlingRights::QueenSide,
-            3 => CastlingRights::BothSides,
-            _ => unreachable!(),
+            0 => Ok(CastlingRights::Neither),
+            1 => Ok(CastlingRights::KingSide),
+            2 => Ok(CastlingRights::QueenSide),
+            3 => Ok(CastlingRights::BothSides),
+            _ => Err(Error::InvalidCastlingIndexRepresentation),
         }
     }
 
@@ -93,7 +93,7 @@ impl CastlingRights {
     }
 
     #[inline]
-    pub fn has_any(&self) -> bool { self.has_kingside() | self.has_queenside() }
+    pub fn has_any(&self) -> bool { self != &CastlingRights::Neither }
 }
 
 #[cfg(test)]
