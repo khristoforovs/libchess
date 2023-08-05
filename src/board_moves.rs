@@ -19,7 +19,7 @@ pub struct MovePropertiesOnBoard {
 }
 
 impl MovePropertiesOnBoard {
-    pub fn new(board_move: BoardMove, board: ChessBoard) -> Result<Self, Error> {
+    pub fn new(board_move: &BoardMove, board: &ChessBoard) -> Result<Self, Error> {
         let board_after_move = board.make_move(board_move)?;
         let is_check = board_after_move.get_check_mask().count_ones() > 0;
         let is_checkmate = board_after_move.is_terminal() & is_check;
@@ -151,15 +151,16 @@ impl PieceMove {
     pub fn get_promotion(&self) -> Option<PieceType> { self.promotion }
 
     #[inline]
-    fn is_en_passant_move(&self) -> bool {
-        (self.piece_type == PieceType::Pawn)
-            & (self.square_from.get_file() != self.square_to.get_file())
+    pub fn is_en_passant_move(&self, board: &ChessBoard) -> bool {
+        board.get_en_passant().map_or(false, |ep| {
+            (self.piece_type == PieceType::Pawn) & (self.square_to == ep)
+        })
     }
 
-    pub fn is_capture_on_board(&self, board: ChessBoard) -> bool {
-        let destination_mask = BitBoard::from_square(self.get_destination_square());
-        !(destination_mask & board.get_color_mask(!board.get_side_to_move())).is_blank()
-            | self.is_en_passant_move()
+    pub fn is_capture_on_board(&self, board: &ChessBoard) -> bool {
+        let destination_mask = BitBoard::from_square(self.square_to);
+        let opposite_pieces_mask = board.get_color_mask(!board.get_side_to_move());
+        !(destination_mask & opposite_pieces_mask).is_blank() | self.is_en_passant_move(board)
     }
 }
 
@@ -193,6 +194,7 @@ impl fmt::Display for BoardMove {
 }
 
 impl BoardMove {
+    #[inline]
     pub fn piece_move(&self) -> Result<PieceMove, Error> {
         if let BoardMove::MovePiece(m) = self {
             Ok(*m)
@@ -243,6 +245,13 @@ impl BoardMove {
             }
             BoardMove::CastleKingSide => format!("O-O{check_string}"),
             BoardMove::CastleQueenSide => format!("O-O-O{check_string}"),
+        }
+    }
+
+    pub fn is_capture_on_board(&self, board: &ChessBoard) -> bool {
+        match self {
+            BoardMove::MovePiece(m) => m.is_capture_on_board(board),
+            _ => false,
         }
     }
 }
@@ -307,11 +316,11 @@ mod tests {
     fn capture() {
         let board = ChessBoard::from_str("k7/1q6/8/8/8/8/6Q1/5K2 w - - 0 1").unwrap();
         let board_move = mv!(Queen, G2, B7);
-        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        let metadata = MovePropertiesOnBoard::new(&board_move, &board).unwrap();
         assert_eq!(metadata.is_capture, true);
 
         let board_move = mv!(Queen, G2, C6);
-        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        let metadata = MovePropertiesOnBoard::new(&board_move, &board).unwrap();
         assert_eq!(metadata.is_capture, false);
 
         let board = ChessBoard::from_str(
@@ -319,7 +328,7 @@ mod tests {
         )
         .unwrap();
         let board_move = mv!(Pawn, D5, C6);
-        let metadata = MovePropertiesOnBoard::new(board_move, board).unwrap();
+        let metadata = MovePropertiesOnBoard::new(&board_move, &board).unwrap();
         assert_eq!(metadata.is_capture, true);
     }
 
@@ -360,5 +369,12 @@ mod tests {
         assert!(BoardMove::from_str("gc1h6").is_err());
         assert!(BoardMove::from_str("Bz1h6").is_err());
         assert!(BoardMove::from_str("Bc1h61").is_err());
+    }
+
+    #[test]
+    fn en_passant_check() {
+        let board = ChessBoard::from_str("8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 1").unwrap();
+        let pm = PieceMove::new(Pawn, F4, E3, None).unwrap();
+        assert_eq!(pm.is_en_passant_move(&board), true);
     }
 }

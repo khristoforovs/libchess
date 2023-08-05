@@ -1,9 +1,9 @@
 [package]
 name = "libchess"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
-description = "Simple Rust library to simulate the game of chess"
+description = "Rust environment for the game of chess. Can be used as a basis for your own engine"
 keywords = ["game", "rust", "chess", "chess-game", "chess-board"]
 license = "MIT"
 
