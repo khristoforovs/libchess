@@ -2,7 +2,7 @@ use crate::errors::LibChessError as Error;
 use crate::{BoardMove, ChessBoard, Color, MovePropertiesOnBoard};
 use std::fmt;
 
-const HISTORY_CAPACITY: usize = 80;
+const HISTORY_DEFAULT_CAPACITY: usize = 200;
 
 #[derive(Debug, Clone)]
 pub struct GameHistory {
@@ -15,9 +15,9 @@ impl Default for GameHistory {
     #[inline]
     fn default() -> Self {
         Self {
-            positions: Vec::with_capacity(HISTORY_CAPACITY),
-            moves:     Vec::with_capacity(HISTORY_CAPACITY),
-            metadata:  Vec::with_capacity(HISTORY_CAPACITY),
+            positions: Vec::with_capacity(HISTORY_DEFAULT_CAPACITY),
+            moves:     Vec::with_capacity(HISTORY_DEFAULT_CAPACITY),
+            metadata:  Vec::with_capacity(HISTORY_DEFAULT_CAPACITY),
         }
     }
 }
@@ -68,7 +68,7 @@ impl GameHistory {
 
     pub fn push(&mut self, board_move: BoardMove, new_position: ChessBoard) -> &mut Self {
         self.metadata
-            .push(MovePropertiesOnBoard::new(board_move, self.get_last_position()).unwrap());
+            .push(MovePropertiesOnBoard::new(&board_move, &self.get_last_position()).unwrap());
         self.positions.push(new_position);
         self.moves.push(board_move);
         self
@@ -131,10 +131,10 @@ mod tests {
             mv!(Bishop, C1, D2), // 20.
             mv!(Rook, F8, F6),
         ];
-        for m in moves.iter() {
-            game.make_move(Action::MakeMove(*m)).unwrap();
+        for m in moves.into_iter() {
+            game.make_move(&Action::MakeMove(m)).unwrap();
         }
-        game.make_move(Action::Resign(Color::White)).unwrap();
+        game.make_move(&Action::Resign(Color::White)).unwrap();
 
         println!("{}", game.get_position());
         println!("{}", game.get_action_history());

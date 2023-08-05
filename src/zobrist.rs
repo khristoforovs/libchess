@@ -137,7 +137,7 @@ mod tests {
         let board = ChessBoard::default();
 
         let chess_move = mv!(Pawn, E2, E4);
-        let new_board = board.make_move(chess_move).unwrap();
+        let new_board = board.make_move(&chess_move).unwrap();
 
         assert_ne!(
             ZOBRIST.calculate_position_hash(&board),

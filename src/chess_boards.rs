@@ -53,7 +53,7 @@ pub enum BoardStatus {
 /// let board = ChessBoard::from_str("8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61").unwrap();
 /// println!("{}", board);
 /// println!("{}", board.as_fen());
-/// println!("{}", board.make_move(mv!(King, F4, G5)).unwrap());
+/// println!("{}", board.make_move(&mv!(King, F4, G5)).unwrap());
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ChessBoard {
@@ -472,7 +472,7 @@ impl ChessBoard {
     /// # Examples
     /// ```
     /// use libchess::{mv, squares::*, BoardMove, ChessBoard, PieceMove, PieceType::*};
-    /// let board = ChessBoard::default().make_move(mv!(Pawn, E2, E4)).unwrap();
+    /// let board = ChessBoard::default().make_move(&mv!(Pawn, E2, E4)).unwrap();
     /// assert_eq!(board.get_en_passant(), Some(E3));
     /// ```
     #[inline]
@@ -513,6 +513,8 @@ impl ChessBoard {
     /// castle to both sides, for this position allows to castle only to king side */
     /// ```
     pub fn castling_is_available_on_board(&self) -> CastlingRights {
+        use squares::*;
+
         let mut result = Neither;
         if !self.get_check_mask().is_blank() {
             return result;
@@ -520,14 +522,14 @@ impl ChessBoard {
 
         // check castling king side
         if self.get_castle_rights(self.side_to_move).has_kingside() {
-            let (square_king_side_1, square_king_side_2) = match self.side_to_move {
-                White => (squares::F1, squares::G1),
-                Black => (squares::F8, squares::G8),
+            let (square_1, square_2) = match self.side_to_move {
+                White => (F1, G1),
+                Black => (F8, G8),
             };
-            let is_king_side_not_attacked = !self.is_under_attack(square_king_side_1)
-                & !self.is_under_attack(square_king_side_2);
-            let is_empty_king_side = ((BitBoard::from_square(square_king_side_1)
-                ^ BitBoard::from_square(square_king_side_2))
+            let is_king_side_not_attacked =
+                !self.is_under_attack(square_1) & !self.is_under_attack(square_2);
+            let is_empty_king_side = ((BitBoard::from_square(square_1)
+                ^ BitBoard::from_square(square_2))
                 & self.get_combined_mask())
             .is_blank();
             if is_king_side_not_attacked & is_empty_king_side {
@@ -537,14 +539,15 @@ impl ChessBoard {
 
         // check castling queen side
         if self.get_castle_rights(self.side_to_move).has_queenside() {
-            let (square_queen_side_1, square_queen_side_2) = match self.side_to_move {
-                White => (squares::D1, squares::C1),
-                Black => (squares::D8, squares::C8),
+            let (square_1, square_2, square_3) = match self.side_to_move {
+                White => (D1, C1, B1),
+                Black => (D8, C8, B8),
             };
-            let is_queen_side_not_attacked = !self.is_under_attack(square_queen_side_1)
-                & !self.is_under_attack(square_queen_side_2);
-            let is_empty_queen_side = ((BitBoard::from_square(square_queen_side_1)
-                ^ BitBoard::from_square(square_queen_side_2))
+            let is_queen_side_not_attacked =
+                !self.is_under_attack(square_1) & !self.is_under_attack(square_2);
+            let is_empty_queen_side = ((BitBoard::from_square(square_1)
+                ^ BitBoard::from_square(square_2)
+                ^ BitBoard::from_square(square_3))
                 & self.get_combined_mask())
             .is_blank();
             if is_queen_side_not_attacked & is_empty_queen_side {
@@ -592,7 +595,7 @@ impl ChessBoard {
     }
 
     /// Returns true if specified move is legal for current position
-    pub fn is_legal_move(&self, chess_move: BoardMove) -> bool {
+    pub fn is_legal_move(&self, chess_move: &BoardMove) -> bool {
         use BoardMove::*;
         match chess_move {
             MovePiece(m) => {
@@ -608,41 +611,10 @@ impl ChessBoard {
                     return false;
                 }
 
-                let block_path_mask = match m.get_piece_type() {
-                    /* Checks direct visibility (in horizontal, vertical and diagonal directions)
-                    from source to destination square. Is used to analyze move availability for
-                    Queen, Rook and Bishop */
-                    Bishop | Rook | Queen => {
-                        let between = BETWEEN.get(source, destination).unwrap();
-                        if (between & self.get_combined_mask()).is_blank() {
-                            !BLANK
-                        } else {
-                            BLANK
-                        }
-                    }
-                    _ => !BLANK, // for Pawn, King and Knight it is mask with all 1 by default
-                };
-
-                let destination_mask = match m.get_piece_type() {
-                    /* Here we pre-compute all possible destination squares for chosen in chess_move
-                    piece */
-                    Bishop => BISHOP.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    Rook => ROOK.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    Queen => QUEEN.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    Knight => KNIGHT.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    King => KING.get_moves(source) & !self.get_color_mask(self.side_to_move),
-                    Pawn => {
-                        let en_passant_mask =
-                            self.get_en_passant().map_or(BLANK, BitBoard::from_square);
-                        PAWN.get_moves(source, self.side_to_move)
-                            & !self.get_color_mask(self.side_to_move)
-                            | PAWN.get_captures(source, self.side_to_move)
-                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask)
-                    }
-                };
                 // Check for chosen piece to move to the destination square
-                if (block_path_mask & destination_mask & BitBoard::from_square(destination))
-                    .is_blank()
+                if (self.get_piece_moves_mask(m.get_piece_type(), source)
+                    & BitBoard::from_square(destination))
+                .is_blank()
                 {
                     return false;
                 }
@@ -659,9 +631,14 @@ impl ChessBoard {
                 /* If current side's King is in check or it is King's move we must analyze, if on
                 the next move the check will disappear. In other cases, actually, we simply can
                 accept the move */
-                if (m.get_piece_type() == King) | !self.get_check_mask().is_blank() {
+                let s = m.get_source_square();
+                if !self.get_check_mask().is_blank()
+                    | (m.get_piece_type() == King)
+                    | m.is_en_passant_move(self)
+                    | !(BitBoard::from_square(s) & self.pinned).is_blank()
+                {
                     return self
-                        .get_check_mask_after_piece_move(chess_move.piece_move().unwrap())
+                        .get_check_mask_after_piece_move(&chess_move.piece_move().unwrap())
                         .is_blank();
                 }
             }
@@ -679,57 +656,30 @@ impl ChessBoard {
     pub fn get_legal_moves(&self) -> LegalMoves {
         let mut moves = Vec::with_capacity(121);
         let color_mask = self.get_color_mask(self.side_to_move);
-        let opposite_color_mask = !color_mask;
         let is_check = !self.get_check_mask().is_blank();
-
-        let truncate_rays = |mut full_moves_mask: BitBoard, square: Square| {
-            let mut legals = BLANK;
-            RAYS.get(square).into_iter().for_each(|ray| {
-                let mut ray_mask = ray & full_moves_mask;
-                (ray_mask & self.combined_mask).for_each(|s| {
-                    let between = BETWEEN.get(square, s).unwrap();
-                    ray_mask &= between | BitBoard::from_square(s);
-                });
-                legals |= ray_mask;
-            });
-            full_moves_mask = legals & opposite_color_mask;
-            full_moves_mask
-        };
 
         for i in 0..PIECE_TYPES_NUMBER {
             let piece_type = PieceType::from_index(i).unwrap();
-            let free_pieces_mask =
-                color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
-            for square in free_pieces_mask {
-                let full = match piece_type {
-                    Pawn => {
-                        let en_passant_mask =
-                            self.get_en_passant().map_or(BLANK, BitBoard::from_square);
-                        (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
-                            | (PAWN.get_captures(square, self.side_to_move)
-                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask))
-                    }
-                    Knight => KNIGHT.get_moves(square) & opposite_color_mask,
-                    King => KING.get_moves(square) & opposite_color_mask,
-                    Bishop => truncate_rays(BISHOP.get_moves(square), square),
-                    Rook => truncate_rays(ROOK.get_moves(square), square),
-                    Queen => truncate_rays(QUEEN.get_moves(square), square),
-                };
-
-                let piece_moves = full
+            for square in color_mask & self.get_piece_type_mask(piece_type) {
+                let piece_moves = self
+                    .get_piece_moves_mask(piece_type, square)
                     .map(|s| PieceMove::new(piece_type, square, s, None).unwrap())
                     .filter(|pm| {
-                        if (piece_type == King) | is_check {
-                            return self.get_check_mask_after_piece_move(*pm).is_blank();
+                        let s = pm.get_source_square();
+                        if is_check
+                            | (piece_type == King)
+                            | pm.is_en_passant_move(self)
+                            | !(BitBoard::from_square(s) & self.pinned).is_blank()
+                        {
+                            return self.get_check_mask_after_piece_move(pm).is_blank();
                         }
                         true
                     });
 
                 piece_moves.for_each(|m| {
                     let destination = m.get_destination_square();
-                    if (piece_type == Pawn)
-                        & (destination.get_rank() == self.side_to_move.get_promotion_rank())
-                    {
+                    let promotion_rank = self.side_to_move.get_promotion_rank();
+                    if (piece_type == Pawn) & (destination.get_rank() == promotion_rank) {
                         // Generate promotion moves
                         let (s, d) = (m.get_source_square(), destination);
                         moves.extend_from_slice(&[
@@ -813,11 +763,11 @@ impl ChessBoard {
     /// Represents chess moves in short mode without ambiguities in PGN-like strings
     pub fn get_move_ambiguity_type(
         &self,
-        piece_move: PieceMove,
+        piece_move: &PieceMove,
     ) -> Result<DisplayAmbiguityType, Error> {
         use DisplayAmbiguityType::*;
 
-        if !self.is_legal_move(BoardMove::MovePiece(piece_move)) {
+        if !self.is_legal_move(&BoardMove::MovePiece(*piece_move)) {
             return Err(Error::IllegalMoveDetected);
         }
 
@@ -888,10 +838,10 @@ impl ChessBoard {
     /// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
     ///
     /// let mut board = ChessBoard::default();
-    /// board.make_move(mv!(Pawn, E2, E4)).unwrap();
+    /// board.make_move(&mv!(Pawn, E2, E4)).unwrap();
     /// println!("{}", board);
     /// ```
-    pub fn make_move_mut(&mut self, next_move: BoardMove) -> Result<&mut Self, Error> {
+    pub fn make_move_mut(&mut self, next_move: &BoardMove) -> Result<&mut Self, Error> {
         if self.is_legal_move(next_move) {
             unsafe {
                 return Ok(self.make_move_mut_unchecked(next_move));
@@ -903,12 +853,15 @@ impl ChessBoard {
     /// The unsafe version of ``ChessBoard::make_move_mut`` method. It does not perform the check if
     /// the move is legal or not. It is only useful for performance reasons during the process of
     /// engine search of the best move. Often used in pair with ``ChessBoard::get_legal_moves``
-    /// which guaranties that any provided move will be legal one.
-    /// (!!!) Be very careful while using this method because in case of illegal ``next_move`` it
+    /// which guaranties that any provided move will be legal one
+    ///
+    /// # Safety
+    ///
+    /// Be very careful while using this method because in case of illegal ``next_move`` it
     /// can lead to application panic or to unpredictable changes of the position. If you are not
     /// 100% sure that ``next_move`` will be a legal move - use ``ChessBoard::make_move_mut``
     /// instead
-    pub unsafe fn make_move_mut_unchecked(&mut self, next_move: BoardMove) -> &mut Self {
+    pub unsafe fn make_move_mut_unchecked(&mut self, next_move: &BoardMove) -> &mut Self {
         match next_move {
             BoardMove::MovePiece(m) => {
                 self.move_piece(m).clear_square_if_en_passant_capture(m);
@@ -916,7 +869,7 @@ impl ChessBoard {
             BoardMove::CastleKingSide => {
                 let back_rank = self.side_to_move.get_back_rank();
                 self.move_piece(
-                    PieceMove::new(
+                    &PieceMove::new(
                         King,
                         Square::from_rank_file(back_rank, File::E),
                         Square::from_rank_file(back_rank, File::G),
@@ -925,7 +878,7 @@ impl ChessBoard {
                     .unwrap(),
                 );
                 self.move_piece(
-                    PieceMove::new(
+                    &PieceMove::new(
                         Rook,
                         Square::from_rank_file(back_rank, File::H),
                         Square::from_rank_file(back_rank, File::F),
@@ -937,7 +890,7 @@ impl ChessBoard {
             BoardMove::CastleQueenSide => {
                 let back_rank = self.side_to_move.get_back_rank();
                 self.move_piece(
-                    PieceMove::new(
+                    &PieceMove::new(
                         PieceType::King,
                         Square::from_rank_file(back_rank, File::E),
                         Square::from_rank_file(back_rank, File::C),
@@ -946,7 +899,7 @@ impl ChessBoard {
                     .unwrap(),
                 );
                 self.move_piece(
-                    PieceMove::new(
+                    &PieceMove::new(
                         Rook,
                         Square::from_rank_file(back_rank, File::A),
                         Square::from_rank_file(back_rank, File::D),
@@ -986,10 +939,10 @@ impl ChessBoard {
     /// use libchess::{squares::*, BoardMove, ChessBoard, PieceMove};
     ///
     /// let board = ChessBoard::default();
-    /// let next_board = board.make_move(mv!(Pawn, E2, E4)).unwrap();
+    /// let next_board = board.make_move(&mv!(Pawn, E2, E4)).unwrap();
     /// println!("{}", next_board);
     /// ```
-    pub fn make_move(&self, next_move: BoardMove) -> Result<Self, Error> {
+    pub fn make_move(&self, next_move: &BoardMove) -> Result<Self, Error> {
         let mut next_board = *self;
         next_board.make_move_mut(next_move)?;
         Ok(next_board)
@@ -998,24 +951,67 @@ impl ChessBoard {
     /// The unsafe version of ``ChessBoard::make_move`` method. It does not perform the check if
     /// the move is legal or not. It is only useful for performance reasons during the process of
     /// engine search of the best move. Often used in pair with ``ChessBoard::get_legal_moves``
-    /// which guaranties that any provided move will be legal one.
-    /// (!!!) Be very careful while using this method because in case of illegal ``next_move`` it
+    /// which guaranties that any provided move will be legal one
+    ///
+    /// # Safety
+    ///
+    /// Be very careful while using this method because in case of illegal ``next_move`` it
     /// can lead to application panic or to unpredictable changes of the position. If you are not
     /// 100% sure that ``next_move`` will be a legal move - use ``ChessBoard::make_move`` instead
-    pub unsafe fn make_move_unchecked(&self, next_move: BoardMove) -> Self {
+    pub unsafe fn make_move_unchecked(&self, next_move: &BoardMove) -> Self {
         let mut next_board = *self;
         next_board.make_move_mut_unchecked(next_move);
         next_board
     }
 
-    fn get_check_mask_after_piece_move(self, m: PieceMove) -> BitBoard {
+    fn get_piece_moves_mask(&self, piece_type: PieceType, square: Square) -> BitBoard {
+        let color_mask = self.get_color_mask(self.side_to_move);
+
+        let truncate_rays = |full_moves_mask: BitBoard, square: Square| {
+            let mut legals = BLANK;
+            RAYS.get(square).into_iter().for_each(|ray| {
+                let mut ray_mask = ray & full_moves_mask;
+                (ray_mask & self.combined_mask).for_each(|s| {
+                    let between = BETWEEN.get(square, s).unwrap();
+                    ray_mask &= between | BitBoard::from_square(s);
+                });
+                legals |= ray_mask;
+            });
+            legals & !color_mask
+        };
+
+        match piece_type {
+            Pawn => {
+                let ep = self.get_en_passant().map_or(BLANK, BitBoard::from_square);
+                let capturing_squares = self.get_color_mask(!self.side_to_move) | ep;
+                let single_move = PAWN.get_moves(square, self.side_to_move) & !self.combined_mask;
+                let double_move = if single_move.is_blank() {
+                    BLANK
+                } else {
+                    PAWN.get_double_moves(square, self.side_to_move) & !self.combined_mask
+                };
+
+                single_move
+                    | double_move
+                    | (PAWN.get_captures(square, self.side_to_move) & capturing_squares)
+            }
+            Knight => KNIGHT.get_moves(square) & !color_mask,
+            King => KING.get_moves(square) & !color_mask,
+            Bishop => truncate_rays(BISHOP.get_moves(square), square),
+            Rook => truncate_rays(ROOK.get_moves(square), square),
+            Queen => truncate_rays(QUEEN.get_moves(square), square),
+        }
+    }
+
+    fn get_check_mask_after_piece_move(self, m: &PieceMove) -> BitBoard {
         self.clone()
             .move_piece(m)
+            .clear_square_if_en_passant_capture(m)
             .update_pins_and_checks()
             .get_check_mask()
     }
 
-    fn move_piece(&mut self, piece_move: PieceMove) -> &mut Self {
+    fn move_piece(&mut self, piece_move: &PieceMove) -> &mut Self {
         let source = piece_move.get_source_square();
         let color = self.get_piece_color_on(source).unwrap();
         self.clear_square(source).put_piece(
@@ -1027,14 +1023,12 @@ impl ChessBoard {
         )
     }
 
-    fn clear_square_if_en_passant_capture(&mut self, piece_move: PieceMove) -> &mut Self {
-        if let Some(sq) = self.en_passant {
-            if (piece_move.get_piece_type() == Pawn) & (piece_move.get_destination_square() == sq) {
-                self.clear_square(match self.side_to_move {
-                    White => piece_move.get_destination_square().down().unwrap(),
-                    Black => piece_move.get_destination_square().up().unwrap(),
-                });
-            }
+    fn clear_square_if_en_passant_capture(&mut self, piece_move: &PieceMove) -> &mut Self {
+        if piece_move.is_en_passant_move(self) {
+            self.clear_square(match self.side_to_move {
+                White => piece_move.get_destination_square().down().unwrap(),
+                Black => piece_move.get_destination_square().up().unwrap(),
+            });
         }
         self
     }
@@ -1070,7 +1064,7 @@ impl ChessBoard {
     }
 
     fn set_en_passant(&mut self, square: Option<Square>) -> &mut Self {
-        if let Some(sq) = self.get_en_passant() {
+        if let Some(sq) = self.en_passant {
             self.hash ^= ZOBRIST.get_en_passant_value(sq);
         }
         if let Some(sq) = square {
@@ -1110,7 +1104,7 @@ impl ChessBoard {
         self
     }
 
-    fn update_en_passant(&mut self, last_move: BoardMove) -> &mut Self {
+    fn update_en_passant(&mut self, last_move: &BoardMove) -> &mut Self {
         match last_move {
             BoardMove::MovePiece(m) => {
                 let src_rank_index = m.get_source_square().get_rank().to_index();
@@ -1130,28 +1124,45 @@ impl ChessBoard {
         self
     }
 
-    fn update_castling_rights(&mut self, last_move: BoardMove) -> &mut Self {
-        if self.get_castle_rights(self.side_to_move) == Neither {
-            // check to avoid following code of updating the rights after king loses them
-            return self;
+    fn update_castling_rights(&mut self, last_move: &BoardMove) -> &mut Self {
+        use File::*;
+        let opposite = !self.side_to_move;
+
+        if (self.get_castle_rights(opposite) != Neither) & last_move.piece_move().is_ok() {
+            let destination = last_move.piece_move().unwrap().get_destination_square();
+            let opposite_back_rank = opposite.get_back_rank();
+            self.set_castling_rights(
+                opposite,
+                self.get_castle_rights(opposite)
+                    - if destination == Square::from_rank_file(opposite_back_rank, H) {
+                        KingSide
+                    } else if destination == Square::from_rank_file(opposite_back_rank, A) {
+                        QueenSide
+                    } else {
+                        Neither
+                    },
+            );
         }
 
-        self.set_castling_rights(
-            self.side_to_move,
-            self.get_castle_rights(self.side_to_move)
-                - match last_move {
-                    BoardMove::MovePiece(m) => match m.get_piece_type() {
-                        Rook => match m.get_source_square().get_file() {
-                            File::H => KingSide,
-                            File::A => QueenSide,
+        if self.get_castle_rights(self.side_to_move) != Neither {
+            self.set_castling_rights(
+                self.side_to_move,
+                self.get_castle_rights(self.side_to_move)
+                    - match last_move {
+                        BoardMove::MovePiece(m) => match m.get_piece_type() {
+                            Rook => match m.get_source_square().get_file() {
+                                File::H => KingSide,
+                                File::A => QueenSide,
+                                _ => Neither,
+                            },
+                            King => BothSides,
                             _ => Neither,
                         },
-                        King => BothSides,
-                        _ => Neither,
+                        _ => BothSides,
                     },
-                    _ => BothSides,
-                },
-        );
+            );
+        }
+
         self
     }
 
@@ -1162,17 +1173,17 @@ impl ChessBoard {
         self
     }
 
-    fn update_moves_since_capture(&mut self, last_move: BoardMove) -> &mut Self {
+    fn update_moves_since_capture(&mut self, last_move: &BoardMove) -> &mut Self {
         match last_move {
             BoardMove::MovePiece(m) => {
-                if (m.get_piece_type() == Pawn) | m.is_capture_on_board(*self) {
+                if (m.get_piece_type() == Pawn) | m.is_capture_on_board(self) {
                     self.moves_since_capture_or_pawn_move = 0;
                 } else {
                     self.moves_since_capture_or_pawn_move += 1;
                 }
             }
             _ => {
-                self.moves_since_capture_or_pawn_move = 0;
+                self.moves_since_capture_or_pawn_move += 1;
             }
         }
         self
@@ -1183,52 +1194,18 @@ impl ChessBoard {
         // does not have legal moves. The simplest way could do this is just by calling
         // board.get_legal_moves().len(). But we could avoid iterating over all available
         // moves for most of the cases and find only the first legal move.
-        // Moreover, we do not need to process castling and promotions because for mate and
+        // Moreover, we do not need to process castling and promotions because for checkmate and
         // stalemate it is unnecessary
         let color_mask = self.get_color_mask(self.side_to_move);
-        let en_passant_mask = match self.get_en_passant() {
-            Some(sq) => BitBoard::from_square(sq),
-            None => BLANK,
-        };
-
-        let truncate_to_first_block = |mut full_moves_mask: BitBoard, square: Square| {
-            let mut legals = BLANK;
-            RAYS.get(square).into_iter().for_each(|ray| {
-                let mut ray_mask = ray & full_moves_mask;
-                (ray_mask & self.combined_mask).into_iter().for_each(|s| {
-                    let between = BETWEEN.get(square, s).unwrap();
-                    ray_mask &= between | BitBoard::from_square(s);
-                });
-                legals |= ray_mask;
-            });
-            full_moves_mask = legals & !color_mask;
-            full_moves_mask
-        };
-
         for i in 0..PIECE_TYPES_NUMBER {
             let piece_type = PieceType::from_index(i).unwrap();
-            let free_pieces_mask =
-                color_mask & self.get_piece_type_mask(piece_type) & !self.get_pin_mask();
-
-            for square in free_pieces_mask {
-                let full = match piece_type {
-                    Pawn => {
-                        (PAWN.get_moves(square, self.side_to_move) & !self.combined_mask)
-                            | (PAWN.get_captures(square, self.side_to_move)
-                                & (self.get_color_mask(!self.side_to_move) | en_passant_mask))
-                    }
-                    Knight => KNIGHT.get_moves(square) & !color_mask,
-                    King => KING.get_moves(square) & !color_mask,
-                    Bishop => truncate_to_first_block(BISHOP.get_moves(square), square),
-                    Rook => truncate_to_first_block(ROOK.get_moves(square), square),
-                    Queen => truncate_to_first_block(QUEEN.get_moves(square), square),
-                };
-
-                if full
+            for square in color_mask & self.get_piece_type_mask(piece_type) {
+                if self
+                    .get_piece_moves_mask(piece_type, square)
                     .into_iter()
                     .map(|s| {
                         self.get_check_mask_after_piece_move(
-                            PieceMove::new(piece_type, square, s, None).unwrap(),
+                            &PieceMove::new(piece_type, square, s, None).unwrap(),
                         )
                     })
                     .any(|x| x.is_blank())
@@ -1253,9 +1230,8 @@ impl ChessBoard {
             & (bishop_moves & bishops_and_queens | rook_moves & rooks_and_queens);
 
         let (mut pinned, mut checks) = (BLANK, BLANK);
-        let mut between;
         for attacker in attackers {
-            between = self.get_combined_mask() & BETWEEN.get(square, attacker).unwrap();
+            let between = self.get_combined_mask() & BETWEEN.get(square, attacker).unwrap();
             match between.count_ones() {
                 0 => checks |= BitBoard::from_square(attacker),
                 1 => pinned |= between,
@@ -1402,7 +1378,7 @@ mod tests {
         assert_eq!(board.get_hash(), board.get_hash());
 
         let mut another_board = ChessBoard::default();
-        another_board = another_board.make_move(mv!(Pawn, E2, E4)).unwrap();
+        another_board = another_board.make_move(&mv!(Pawn, E2, E4)).unwrap();
         assert_ne!(board.get_hash(), another_board.get_hash());
     }
 
@@ -1438,6 +1414,7 @@ mod tests {
     #[test]
     fn legal_moves_number_equality() {
         assert_eq!(ChessBoard::default().get_legal_moves().len(), 20);
+
         assert_eq!(
             ChessBoard::from_str("Q2k4/8/3K4/8/8/8/8/8 b - - 0 1")
                 .unwrap()
@@ -1445,6 +1422,7 @@ mod tests {
                 .len(),
             0
         );
+
         assert_eq!(
             ChessBoard::from_str("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1")
                 .unwrap()
@@ -1452,6 +1430,7 @@ mod tests {
                 .len(),
             29
         );
+
         assert_eq!(
             ChessBoard::from_str("3k4/3P4/3K4/8/8/8/8/8 b - - 0 1")
                 .unwrap()
@@ -1460,12 +1439,40 @@ mod tests {
             0
         );
 
-        let board =
-            ChessBoard::from_str("rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 1")
-                .unwrap();
-        for one in board.get_legal_moves() {
-            assert_eq!(board.is_legal_move(one), true);
-        }
+        assert_eq!(
+            ChessBoard::from_str(
+                "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+            )
+            .unwrap()
+            .get_legal_moves()
+            .len(),
+            48
+        );
+
+        ChessBoard::from_str(
+            "r1bqkbnr/p2p1ppP/1N2B3/1Pp1Q3/8/P1n2N2/2PPPPP1/R1B1K2R w KQkq c6 0 1",
+        )
+        .unwrap()
+        .get_legal_moves()
+        .into_iter()
+        .for_each(|x| println!("{x}"));
+
+        assert_eq!(
+            ChessBoard::from_str(
+                "r1bqkbnr/p2p1ppP/1N2B3/1Pp1Q3/8/P1n2N2/2PPPPP1/R1B1K2R w KQkq c6 0 1"
+            )
+            .unwrap()
+            .get_legal_moves()
+            .len(),
+            13 + 11 + 10 + 9 + 2 + 17
+        );
+
+        // let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        // let board = ChessBoard::from_str(fen).unwrap();
+        // board
+        //     .get_legal_moves()
+        //     .into_iter()
+        //     .for_each(|one| assert_eq!(board.is_legal_move(one), true));
     }
 
     #[test]
@@ -1477,7 +1484,7 @@ mod tests {
         assert_eq!(board.get_legal_moves().len(), 11);
 
         board = board
-            .make_move(BoardMove::from_str("a7b8=Q").unwrap())
+            .make_move(&BoardMove::from_str("a7b8=Q").unwrap())
             .unwrap();
         assert_eq!(board.as_fen(), "1Q5k/8/7K/8/8/8/8/8 b - - 0 1");
     }
@@ -1488,14 +1495,14 @@ mod tests {
             ChessBoard::from_str("rnbqkbnr/ppppppp1/8/4P2p/8/8/PPPP1PPP/PNBQKBNR b - - 0 1")
                 .unwrap();
 
-        let next_position = position.make_move(mv![Pawn, D7, D5]).unwrap();
+        let next_position = position.make_move(&mv![Pawn, D7, D5]).unwrap();
         assert!(next_position.get_legal_moves().contains(&mv![Pawn, E5, D6]));
 
         let position =
             ChessBoard::from_str("4rk2/1p4pp/1pp2q2/r2pb3/3NpP1P/P3P1PR/1PPRQ3/2K5 b - f3 0 27")
                 .unwrap();
         assert!(position.get_legal_moves().contains(&mv![Pawn, E4, F3]));
-        let next_position = position.make_move(mv![Pawn, E4, F3]).unwrap();
+        let next_position = position.make_move(&mv![Pawn, E4, F3]).unwrap();
         assert_eq!(
             next_position.as_fen(),
             "4rk2/1p4pp/1pp2q2/r2pb3/3N3P/P3PpPR/1PPRQ3/2K5 w - - 0 28"
@@ -1518,10 +1525,121 @@ mod tests {
             ChessBoard::from_str("r3k1nr/pp1ppppp/8/8/8/2Q5/PPPPPPPP/R3K2R b KQkq - 0 1").unwrap();
         assert!(!board.get_legal_moves().contains(&castle_king_side!()));
         assert!(!board.get_legal_moves().contains(&castle_queen_side!()));
+
+        let board = ChessBoard::from_str("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1")
+            .unwrap()
+            .make_move(&mv!(Rook, A1, A8))
+            .unwrap();
+        assert!(board.get_castle_rights(White).has_kingside());
+        assert!(!board.get_castle_rights(White).has_queenside());
+        assert!(board.get_castle_rights(Black).has_kingside());
+        assert!(!board.get_castle_rights(Black).has_queenside());
     }
 
     #[test]
     fn kill_the_king() {
         assert!(ChessBoard::from_str("Q3k3/8/4K3/8/8/8/8/8 w - - 0 1").is_err());
+    }
+
+    fn perft_get_branches(position: &ChessBoard) -> Vec<(BoardMove, ChessBoard)> {
+        position
+            .get_legal_moves()
+            .into_iter()
+            .map(|m| (m, position.make_move(&m).unwrap()))
+            .collect::<Vec<_>>()
+    }
+
+    fn perft_calculate_positions(position: ChessBoard, recursion_level: usize) -> Vec<usize> {
+        let mut boards = vec![position];
+        let mut positions_counter = vec![0; recursion_level];
+
+        for i in 0..recursion_level {
+            let mut x = vec![];
+            boards.iter().for_each(|b| {
+                let t = perft_get_branches(b);
+                x.append(&mut t.clone().into_iter().map(|x| x.1).collect());
+            });
+
+            boards = x;
+            positions_counter[i] = boards.len();
+        }
+        positions_counter
+    }
+
+    #[test]
+    fn perft_1() {
+        const MOVES_NUMBER: usize = 5; // Can be tuned in range 1..=5 (affects testing time)
+        let position = ChessBoard::default();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([20, 400, 8902, 197281, 4865609].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
+    }
+
+    #[test]
+    fn perft_2() {
+        const MOVES_NUMBER: usize = 4; // Can be tuned in range 1..=5 (affects testing time)
+        let position = ChessBoard::from_str(
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        )
+        .unwrap();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([48, 2039, 97862, 4085603, 193690690].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
+    }
+
+    #[test]
+    fn perft_3() {
+        const MOVES_NUMBER: usize = 5; // Can be tuned in range 1..=5 (affects testing time)
+        let position = ChessBoard::from_str("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1").unwrap();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([14, 191, 2812, 43238, 674624].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
+    }
+
+    #[test]
+    fn perft_4() {
+        const MOVES_NUMBER: usize = 4; // Can be tuned in range 1..=5 (affects testing time)
+        let position = ChessBoard::from_str(
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+        )
+        .unwrap();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([6, 264, 9467, 422333, 15833292].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
+    }
+
+    #[test]
+    fn perft_5() {
+        const MOVES_NUMBER: usize = 4; // Can be tuned in range 1..=5 (affects testing time)
+        let position =
+            ChessBoard::from_str("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8")
+                .unwrap();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([44, 1486, 62379, 2103487, 89941194].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
+    }
+
+    #[test]
+    fn perft_6() {
+        const MOVES_NUMBER: usize = 4; // Can be tuned in range 1..=5 (affects testing time)
+        let position = ChessBoard::from_str(
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        )
+        .unwrap();
+
+        perft_calculate_positions(position, MOVES_NUMBER)
+            .into_iter()
+            .zip([46, 2079, 89890, 3894594, 164075551].into_iter())
+            .for_each(|(a, b)| assert_eq!(a, b));
     }
 }

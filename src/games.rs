@@ -107,7 +107,7 @@ impl GameMetadata {
 /// ];
 ///
 /// for one in moves.iter() {
-///     game.make_move(Action::MakeMove(*one)).unwrap();
+///     game.make_move(&Action::MakeMove(*one)).unwrap();
 /// }
 /// assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
 /// ```
@@ -124,7 +124,7 @@ impl GameMetadata {
 ///     "e2e4", "c7c5", "Ng1f3", "d7d6", "d2d4", "c5d4", "Nf3d4", "Ng8f6",
 /// ];
 /// for m in moves.iter() {
-///     game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
+///     game.make_move(&Action::MakeMove(mv_str!(m))).unwrap();
 /// }
 /// println!("{}", game.get_position());
 /// ```
@@ -273,12 +273,12 @@ impl Game {
             let legal_moves = BTreeMap::from_iter(
                 game.get_legal_moves()
                     .into_iter()
-                    .map(|m| (m, MovePropertiesOnBoard::new(m, pos).unwrap()))
+                    .map(|m| (m, MovePropertiesOnBoard::new(&m, &pos).unwrap()))
                     .map(|(m, metadata)| (m.to_string(metadata), m)),
             );
 
             let current_move = *legal_moves.get(&capture).ok_or(Error::InvalidPGNString)?;
-            game.make_move(Action::MakeMove(current_move))?;
+            game.make_move(&Action::MakeMove(current_move))?;
         }
 
         if game.get_game_status() == GameStatus::Ongoing {
@@ -290,12 +290,12 @@ impl Game {
                 .ok_or(Error::InvalidPGNString)?;
 
             match result_cap.as_str() {
-                "1-0" => game.make_move(Action::Resign(Black)).unwrap(),
-                "0-1" => game.make_move(Action::Resign(White)).unwrap(),
+                "1-0" => game.make_move(&Action::Resign(Black)).unwrap(),
+                "0-1" => game.make_move(&Action::Resign(White)).unwrap(),
                 "1/2-1/2" => game
-                    .make_move(Action::OfferDraw(White))
+                    .make_move(&Action::OfferDraw(White))
                     .unwrap()
-                    .make_move(Action::AcceptDraw)
+                    .make_move(&Action::AcceptDraw)
                     .unwrap(),
                 _ => return Err(Error::InvalidPGNString),
             };
@@ -333,10 +333,12 @@ impl Game {
     /// use libchess::{mv, Action, BoardMove, Game, PieceMove};
     /// use libchess::{squares::*, Color::*, PieceType::*};
     /// let mut game = Game::default();
-    /// game.make_move(Action::MakeMove(mv!(Pawn, E2, E4))).unwrap();
-    /// game.make_move(Action::MakeMove(mv!(Pawn, E7, E5))).unwrap();
-    /// game.make_move(Action::OfferDraw(White)).unwrap();
-    /// game.make_move(Action::AcceptDraw).unwrap();
+    /// game.make_move(&Action::MakeMove(mv!(Pawn, E2, E4)))
+    ///     .unwrap();
+    /// game.make_move(&Action::MakeMove(mv!(Pawn, E7, E5)))
+    ///     .unwrap();
+    /// game.make_move(&Action::OfferDraw(White)).unwrap();
+    /// game.make_move(&Action::AcceptDraw).unwrap();
     /// println!("{}", game.as_pgn());
     /// ```
     pub fn as_pgn(&self) -> String {
@@ -396,7 +398,7 @@ impl Game {
 
     /// Returns number of times current position was arise
     #[inline]
-    pub fn get_position_counter(&self, position: ChessBoard) -> usize {
+    pub fn get_position_counter(&self, position: &ChessBoard) -> usize {
         match self.unique_positions_counter.get(&position.get_hash()) {
             Some(counter) => *counter,
             None => 0,
@@ -449,12 +451,12 @@ impl Game {
     fn position_counter_increment(&mut self) -> &mut Self {
         self.unique_positions_counter.insert(
             self.get_position().get_hash(),
-            self.get_position_counter(self.get_position()) + 1,
+            self.get_position_counter(&self.get_position()) + 1,
         );
         self
     }
 
-    fn update_game_status(&mut self, last_action: Option<Action>) -> &mut Self {
+    fn update_game_status(&mut self, last_action: Option<&Action>) -> &mut Self {
         self.set_game_status(match last_action {
             None | Some(Action::MakeMove(_)) => {
                 let position = self.get_position();
@@ -464,7 +466,7 @@ impl Game {
                     BoardStatus::Stalemate => GameStatus::Stalemate,
                     BoardStatus::FiftyMovesDrawDeclared => GameStatus::FiftyMovesDrawDeclared,
                     BoardStatus::Ongoing => {
-                        if self.get_position_counter(position) >= 3 {
+                        if self.get_position_counter(&position) >= 3 {
                             GameStatus::RepetitionDrawDeclared
                         } else {
                             GameStatus::Ongoing
@@ -472,10 +474,10 @@ impl Game {
                     }
                 }
             }
-            Some(Action::OfferDraw(color)) => GameStatus::DrawOffered(color),
+            Some(Action::OfferDraw(color)) => GameStatus::DrawOffered(*color),
             Some(Action::DeclineDraw) => GameStatus::Ongoing,
             Some(Action::AcceptDraw) => GameStatus::DrawAccepted,
-            Some(Action::Resign(color)) => GameStatus::Resigned(color),
+            Some(Action::Resign(color)) => GameStatus::Resigned(*color),
         });
 
         if self.get_game_status() != GameStatus::Ongoing {
@@ -502,16 +504,17 @@ impl Game {
     /// use libchess::{mv, Action, BoardMove, Game, PieceMove};
     /// use libchess::{squares::*, PieceType::*};
     /// let mut game = Game::default();
-    /// game.make_move(Action::MakeMove(mv!(Pawn, E2, E4))).unwrap();
+    /// game.make_move(&Action::MakeMove(mv!(Pawn, E2, E4)))
+    ///     .unwrap();
     /// ```
-    pub fn make_move(&mut self, action: Action) -> Result<&mut Self, Error> {
+    pub fn make_move(&mut self, action: &Action) -> Result<&mut Self, Error> {
         use Action::*;
         match self.get_game_status() {
-            GameStatus::Ongoing => match action {
+            GameStatus::Ongoing => match &action {
                 MakeMove(m) => match self.get_position_mut().make_move_mut(m) {
                     Ok(_) => {
                         self.position_counter_increment();
-                        self.history.push(m, self.position);
+                        self.history.push(*m, self.position);
                     }
                     Err(_) => return Err(Error::IllegalActionDetected),
                 },
@@ -555,8 +558,8 @@ mod tests {
             mv!(King, E8, E7),
             mv!(Queen, H5, E5),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for one in moves.into_iter() {
+            game.make_move(&Action::MakeMove(one)).unwrap();
         }
         assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
 
@@ -570,8 +573,8 @@ mod tests {
             mv!(Knight, C6, D4),
             mv!(Queen, F3, F7),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for one in moves.into_iter() {
+            game.make_move(&Action::MakeMove(one)).unwrap();
         }
         assert_eq!(game.get_game_status(), GameStatus::CheckMated(Color::Black));
     }
@@ -580,8 +583,8 @@ mod tests {
     fn stalemate() {
         let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
         let moves = vec![mv!(King, E6, D6)];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for one in moves.into_iter() {
+            game.make_move(&Action::MakeMove(one)).unwrap();
         }
         assert_eq!(game.get_game_status(), GameStatus::Stalemate);
     }
@@ -599,8 +602,8 @@ mod tests {
             mv!(King, D3, E3),
             mv!(King, D5, E5),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for one in moves.into_iter() {
+            game.make_move(&Action::MakeMove(one)).unwrap();
         }
         assert_eq!(game.get_game_status(), GameStatus::RepetitionDrawDeclared);
     }
@@ -608,11 +611,11 @@ mod tests {
     #[test]
     fn resignation() {
         let mut game = Game::default();
-        game.make_move(Action::Resign(White)).unwrap();
+        game.make_move(&Action::Resign(White)).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(White));
 
         let mut game = Game::default();
-        game.make_move(Action::Resign(Black)).unwrap();
+        game.make_move(&Action::Resign(Black)).unwrap();
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
     }
 
@@ -671,10 +674,10 @@ mod tests {
             mv!(Queen, D5, G5), // 22.
             mv!(Bishop, C8, H3),
         ];
-        for m in moves.iter() {
-            game.make_move(Action::MakeMove(*m)).unwrap();
+        for m in moves.into_iter() {
+            game.make_move(&Action::MakeMove(m)).unwrap();
         }
-        game.make_move(Action::Resign(White)).unwrap();
+        game.make_move(&Action::Resign(White)).unwrap();
 
         assert_eq!(game.get_game_status(), GameStatus::Resigned(White));
     }
@@ -712,9 +715,9 @@ mod tests {
             "Qh7h8", // 27.
         ];
         for m in moves.iter() {
-            game.make_move(Action::MakeMove(mv_str!(m))).unwrap();
+            game.make_move(&Action::MakeMove(mv_str!(m))).unwrap();
         }
-        game.make_move(Action::Resign(Black)).unwrap();
+        game.make_move(&Action::Resign(Black)).unwrap();
 
         assert_eq!(game.get_game_status(), GameStatus::Resigned(Black));
     }
@@ -768,8 +771,8 @@ mod tests {
             mv!(Queen, D5, G5), // 22.
             mv!(Bishop, C8, H3),
         ];
-        for one in moves.iter() {
-            game.make_move(Action::MakeMove(*one)).unwrap();
+        for one in moves.into_iter() {
+            game.make_move(&Action::MakeMove(one)).unwrap();
         }
 
         let direct_calculated_hash = ZOBRIST.calculate_position_hash(&game.get_position());
