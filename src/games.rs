@@ -805,16 +805,16 @@ mod tests {
     #[test]
     fn readme_examples() {
         // Initializing a ChessBoard:
-        use crate::ChessBoard; 
+        use crate::ChessBoard;
 
-        println!("{}", ChessBoard::default());  // draw the starting chess position
-        
+        println!("{}", ChessBoard::default()); // draw the starting chess position
+
         let fen = "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61";
-        let board = ChessBoard::from_str(fen).unwrap();  // the board could be initialized from fen-string
-        println!("{}", board);  // this will draw the board representation in terminal:
+        let board = ChessBoard::from_str(fen).unwrap(); // the board could be initialized from fen-string
+        println!("{}", board); // this will draw the board representation in terminal:
 
-        println!("{}", board.render_flipped());  // or you can render this board from black's perspective (flipped)
-        println!("{}", board.as_fen());  // will return a FEN-string "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
+        println!("{}", board.render_flipped()); // or you can render this board from black's perspective (flipped)
+        println!("{}", board.as_fen()); // will return a FEN-string "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
 
         // Initializing a Game object
         use crate::*;
@@ -828,7 +828,7 @@ mod tests {
         });
         assert_eq!(game.get_game_status(), GameStatus::Stalemate);
 
-        // Making moves: 
+        // Making moves:
         // use crate::*;
         // use crate::{coordinates::squares::*, Color::*, PieceType::*};
 
@@ -846,19 +846,16 @@ mod tests {
         });
         assert_eq!(game.get_game_status(), GameStatus::CheckMated(Black));
 
-        // Also you can define moves by str: 
+        // Also you can define moves by str:
         // use crate::*;
         // use crate::{PieceType::*, coordinates::squares::*};
         use std::str::FromStr;
-        
+
         let mut game = Game::default();
         let moves = vec![
-            "e2e4", "c7c5",
-            "Ng1f3", "d7d6",
-            "d2d4", "c5d4",
-            "Nf3d4", "Ng8f6",
+            "e2e4", "c7c5", "Ng1f3", "d7d6", "d2d4", "c5d4", "Nf3d4", "Ng8f6",
         ];
-        
+
         moves.into_iter().for_each(|one| {
             game.make_move(&Action::MakeMove(mv_str!(one))).unwrap();
         });
