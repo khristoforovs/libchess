@@ -467,7 +467,7 @@ impl ChessBoard {
     #[inline]
     pub fn get_side_to_move(&self) -> Color { self.side_to_move }
 
-    /// Returns en-passant square if it exists at hte current move
+    /// Returns en-passant square if it exists after the last move
     ///
     /// # Examples
     /// ```
@@ -597,6 +597,10 @@ impl ChessBoard {
     /// Returns true if specified move is legal for current position
     pub fn is_legal_move(&self, chess_move: &BoardMove) -> bool {
         use BoardMove::*;
+        if self.is_terminal() {
+            return false;
+        }
+
         match chess_move {
             MovePiece(m) => {
                 let source = m.get_source_square();
@@ -650,6 +654,7 @@ impl ChessBoard {
     }
 
     /// Returns true if current side has at least one legal move
+    #[inline]
     pub fn is_terminal(&self) -> bool { self.is_terminal_position }
 
     /// Returns a Vec of all legal moves for current board
@@ -707,6 +712,7 @@ impl ChessBoard {
     }
 
     /// Returns the Zobrist-hash of the position. Is used to detect the repetition draw
+    #[inline]
     pub fn get_hash(&self) -> PositionHashValueType { self.hash }
 
     /// Returns position status on the board
@@ -747,12 +753,12 @@ impl ChessBoard {
             self.get_piece_type_mask(Knight) | self.get_piece_type_mask(Bishop);
 
         let white_can_not_checkmate = match white_pieces_number {
-            1 => true, // Only white king on the board
+            1 => true, // Only white king is on the board
             2 => !(self.get_color_mask(White) & bishops_and_knights).is_blank(), /* only white king and white bishop or knight are on the board */
             _ => unreachable!(),
         };
         let black_can_not_checkmate = match black_pieces_number {
-            1 => true, // Only black king on the board
+            1 => true, // Only black king is on the board
             2 => !(self.get_color_mask(Black) & bishops_and_knights).is_blank(), /* only black king and white black or knight are on the board */
             _ => unreachable!(),
         };
@@ -772,45 +778,36 @@ impl ChessBoard {
         }
 
         let piece_type = piece_move.get_piece_type();
-        let source_square = piece_move.get_source_square();
-        let destination_square = piece_move.get_destination_square();
+        let source = piece_move.get_source_square();
+        let destination = piece_move.get_destination_square();
 
         if piece_type == Pawn {
-            if source_square.get_file() != destination_square.get_file() {
+            if source.get_file() != destination.get_file() {
                 return Ok(ExtraFile);
             }
         } else if piece_type == King {
             return Ok(Neither);
         } else {
-            let pieces_mask =
-                self.get_piece_type_mask(piece_type) & self.get_color_mask(self.side_to_move);
             let piece_moves = match piece_type {
-                Knight => KNIGHT.get_moves(destination_square),
-                Bishop => BISHOP.get_moves(destination_square),
-                Rook => ROOK.get_moves(destination_square),
-                Queen => QUEEN.get_moves(destination_square),
-                _ => BLANK,
+                Knight => KNIGHT.get_moves(destination),
+                Bishop => BISHOP.get_moves(destination),
+                Rook => ROOK.get_moves(destination),
+                Queen => QUEEN.get_moves(destination),
+                _ => unreachable!(),
             };
 
             let between_filter = |x: &Square| match piece_type {
                 Knight => true,
-                _ => {
-                    (BETWEEN
-                        .get(*x, piece_move.get_destination_square())
-                        .unwrap()
-                        & self.combined_mask)
-                        .count_ones()
-                        == 0
-                }
+                _ => BETWEEN
+                    .get(*x, piece_move.get_destination_square())
+                    .map_or(BLANK, |x| x & self.combined_mask)
+                    .is_blank(),
             };
 
-            if (piece_moves & pieces_mask)
-                .into_iter()
-                .filter(between_filter)
-                .count()
-                > 1
-            {
-                if (BitBoard::from_file(source_square.get_file()) & pieces_mask).count_ones() > 1 {
+            let pieces_mask =
+                self.get_piece_type_mask(piece_type) & self.get_color_mask(self.side_to_move);
+            if (piece_moves & pieces_mask).filter(between_filter).count() > 1 {
+                if (BitBoard::from_file(source.get_file()) & pieces_mask).count_ones() > 1 {
                     return Ok(ExtraRank);
                 } else {
                     return Ok(ExtraFile);
@@ -842,12 +839,10 @@ impl ChessBoard {
     /// println!("{}", board);
     /// ```
     pub fn make_move_mut(&mut self, next_move: &BoardMove) -> Result<&mut Self, Error> {
-        if self.is_legal_move(next_move) {
-            unsafe {
-                return Ok(self.make_move_mut_unchecked(next_move));
-            }
+        if !self.is_legal_move(next_move) {
+            return Err(Error::IllegalMoveDetected);
         }
-        Err(Error::IllegalMoveDetected)
+        unsafe { Ok(self.make_move_mut_unchecked(next_move)) }
     }
 
     /// The unsafe version of ``ChessBoard::make_move_mut`` method. It does not perform the check if
@@ -1221,12 +1216,12 @@ impl ChessBoard {
     }
 
     fn get_pins_and_checks(&self, square: Square) -> (BitBoard, BitBoard) {
-        let opposite_color = !self.side_to_move;
+        let opposite = !self.side_to_move;
         let bishops_and_queens = self.get_piece_type_mask(Bishop) | self.get_piece_type_mask(Queen);
         let rooks_and_queens = self.get_piece_type_mask(Rook) | self.get_piece_type_mask(Queen);
 
         let (bishop_moves, rook_moves) = (BISHOP.get_moves(square), ROOK.get_moves(square));
-        let attackers = self.get_color_mask(opposite_color)
+        let attackers = self.get_color_mask(opposite)
             & (bishop_moves & bishops_and_queens | rook_moves & rooks_and_queens);
 
         let (mut pinned, mut checks) = (BLANK, BLANK);
@@ -1240,15 +1235,31 @@ impl ChessBoard {
         }
         pinned &= self.get_color_mask(self.side_to_move);
 
-        checks |= self.get_color_mask(opposite_color)
+        checks |= self.get_color_mask(opposite)
             & (KNIGHT.get_moves(square) & self.get_piece_type_mask(Knight)
                 | KING.get_moves(square) & self.get_piece_type_mask(King));
 
         checks |= {
-            let mut all_pawn_attacks = BLANK;
-            (self.get_color_mask(opposite_color) & self.get_piece_type_mask(Pawn))
-                .for_each(|sq| all_pawn_attacks |= PAWN.get_captures(sq, opposite_color));
-            all_pawn_attacks & BitBoard::from_square(square)
+            let mut pawns_attacks = BLANK;
+            if let Ok(rank) = match self.side_to_move {
+                White => square.up(),
+                Black => square.down(),
+            }
+            .map(|x| x.get_rank())
+            {
+                let opposite_pawns = self.get_color_mask(opposite) & self.get_piece_type_mask(Pawn);
+
+                if let Ok(file) = square.left().map(|x| x.get_file()) {
+                    let pawn_square = Square::from_rank_file(rank, file);
+                    pawns_attacks |= opposite_pawns & BitBoard::from_square(pawn_square);
+                }
+
+                if let Ok(file) = square.right().map(|x| x.get_file()) {
+                    let pawn_square = Square::from_rank_file(rank, file);
+                    pawns_attacks |= opposite_pawns & BitBoard::from_square(pawn_square);
+                }
+            }
+            pawns_attacks
         };
 
         (pinned, checks)
