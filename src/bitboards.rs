@@ -133,6 +133,22 @@ impl BitBoard {
 
     #[inline]
     pub fn is_blank(&self) -> bool { self == &BLANK }
+
+    #[inline]
+    pub fn first_bit_square(&self) -> Option<Square> {
+        if self.is_blank() {
+            return None;
+        }
+        Some(Square::new(63 - self.0.leading_zeros() as u8).unwrap())
+    }
+
+    #[inline]
+    pub fn last_bit_square(&self) -> Option<Square> {
+        if self.is_blank() {
+            return None;
+        }
+        Some(Square::new(self.0.trailing_zeros() as u8).unwrap())
+    }
 }
 
 #[rustfmt::skip]
@@ -169,5 +185,5 @@ mod tests {
         let bit_board = !bit_board;
         let result = 0xffffffffefffffffu64;
         assert_eq!(bit_board.0, result);
-        }
+    }
 }

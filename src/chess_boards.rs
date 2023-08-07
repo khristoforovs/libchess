@@ -962,16 +962,27 @@ impl ChessBoard {
     fn get_piece_moves_mask(&self, piece_type: PieceType, square: Square) -> BitBoard {
         let color_mask = self.get_color_mask(self.side_to_move);
 
-        let truncate_rays = |full_moves_mask: BitBoard, square: Square| {
+        let truncate_rays = |pt: PieceType, square: Square| {
+            let slice = match pt {
+                Bishop => 4..8,
+                Rook => 0..4,
+                Queen => 0..8,
+                _ => unreachable!(),
+            };
+
             let mut legals = BLANK;
-            RAYS.get(square).into_iter().for_each(|ray| {
-                let mut ray_mask = ray & full_moves_mask;
-                (ray_mask & self.combined_mask).for_each(|s| {
-                    let between = BETWEEN.get(square, s).unwrap();
-                    ray_mask &= between | BitBoard::from_square(s);
+            slice
+                .for_each(|i| {
+                    let ray = RAYS.get(square)[i];
+                    legals ^= match i {
+                        0 | 2 | 4 | 5 => (ray & self.combined_mask).last_bit_square(),
+                        1 | 3 | 6 | 7 => (ray & self.combined_mask).first_bit_square(),
+                        _ => unreachable!(),
+                    }
+                    .map_or(ray, |s| {
+                        BETWEEN.get(square, s).unwrap() ^ BitBoard::from_square(s)
+                    });
                 });
-                legals |= ray_mask;
-            });
             legals & !color_mask
         };
 
@@ -992,9 +1003,9 @@ impl ChessBoard {
             }
             Knight => KNIGHT.get_moves(square) & !color_mask,
             King => KING.get_moves(square) & !color_mask,
-            Bishop => truncate_rays(BISHOP.get_moves(square), square),
-            Rook => truncate_rays(ROOK.get_moves(square), square),
-            Queen => truncate_rays(QUEEN.get_moves(square), square),
+            Bishop => truncate_rays(Bishop, square),
+            Rook => truncate_rays(Rook, square),
+            Queen => truncate_rays(Queen, square),
         }
     }
 

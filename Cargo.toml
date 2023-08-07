@@ -1,6 +1,6 @@
 [package]
 name = "libchess"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
 description = "Rust environment for the game of chess. Can be used as a basis for your own engine"
@@ -11,6 +11,6 @@ license = "MIT"
 colored = "2.0.4"
 lazy_static = "1.4.0"
 rand = "0.8.5"
-regex = "1.9.1"
+regex = "1.9.3"
 textwrap = "0.16.0"
 thiserror = "1.0.44"
