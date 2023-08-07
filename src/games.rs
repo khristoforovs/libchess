@@ -808,18 +808,34 @@ mod tests {
         use crate::ChessBoard;
 
         println!("{}", ChessBoard::default()); // draw the starting chess position
-
         let fen = "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61";
         let board = ChessBoard::from_str(fen).unwrap(); // the board could be initialized from fen-string
         println!("{}", board); // this will draw the board representation in terminal:
-
         println!("{}", board.render_flipped()); // or you can render this board from black's perspective (flipped)
         println!("{}", board.as_fen()); // will return a FEN-string "8/P5k1/2b3p1/5p2/5K2/7R/8/8 w - - 13 61"
 
-        // Initializing a Game object
+        // Another way to create board is to set all properties manually:
         use crate::*;
-        use crate::{coordinates::squares::*, PieceType::*};
+        use crate::{squares::*, Color::*, PieceType::*};
+        let board = ChessBoard::setup(
+            &[
+                (E1, Piece(King, White)),
+                (E8, Piece(King, Black)),
+                (E2, Piece(Pawn, White)),
+            ], // iterable container of pairs Square + Piece
+            White,                   // side to move
+            CastlingRights::Neither, // white castling rights
+            CastlingRights::Neither, // black castling rights
+            None,                    // Optional en-passant square
+            0,                       // Moves number since last capture or pawn move
+            1,                       // Move number
+        )
+        .unwrap();
+        println!("{}", board);
 
+        // Initializing a Game object
+        // use crate::*;
+        // use crate::{squares::*, PieceType::*};
         // initializing the game is almost the same as for boards
         let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
         let moves = vec![mv!(King, E6, D6)]; // defining vec of chess moves to be applied to the board
@@ -830,8 +846,7 @@ mod tests {
 
         // Making moves:
         // use crate::*;
-        // use crate::{coordinates::squares::*, Color::*, PieceType::*};
-
+        // use crate::{squares::*, Color::*, PieceType::*};
         let mut game = Game::default();
         let moves = vec![
             mv!(Pawn, E2, E4),
@@ -840,7 +855,6 @@ mod tests {
             mv!(King, E8, E7),
             mv!(Queen, H5, E5),
         ];
-
         moves.into_iter().for_each(|one| {
             game.make_move(&Action::MakeMove(one)).unwrap();
         });
@@ -848,14 +862,12 @@ mod tests {
 
         // Also you can define moves by str:
         // use crate::*;
-        // use crate::{PieceType::*, coordinates::squares::*};
+        // use crate::{PieceType::*, squares::*};
         use std::str::FromStr;
-
         let mut game = Game::default();
         let moves = vec![
             "e2e4", "c7c5", "Ng1f3", "d7d6", "d2d4", "c5d4", "Nf3d4", "Ng8f6",
         ];
-
         moves.into_iter().for_each(|one| {
             game.make_move(&Action::MakeMove(mv_str!(one))).unwrap();
         });

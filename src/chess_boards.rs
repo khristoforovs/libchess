@@ -153,6 +153,66 @@ impl ChessBoard {
         }
     }
 
+    /// Creates new instance of ChessBoard by setting up all board's properties manually
+    /// 
+    /// # Errors
+    /// ``LibChessError::InvalidPositionColorsOverlap`` if there is any square taken by white and
+    /// black color simultaneously
+    ///
+    /// ``LibChessError::InvalidPositionPieceTypeOverlap`` if there is any square taken by 2 or more
+    /// different piece types simultaneously
+    ///
+    /// ``LibChessError::InvalidBoardMultipleOneColorKings`` if there is more than 1 king of each
+    /// color
+    ///
+    /// ``LibChessError::InvalidBoardOpponentIsOnCheck`` if opponent is on check and it is our move
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentEnPassant`` if there is not any pawn in front of en
+    /// passant square
+    ///
+    /// ``LibChessError::InvalidBoardInconsistentCastlingRights`` if there is any incompatible
+    /// conditions of king an rooks positions and castling rights for any of color
+    /// 
+    /// # Examples
+    /// ```
+    /// use libchess::*;
+    /// use libchess::{squares::*, Color::*, PieceType::*};
+    /// let board = ChessBoard::setup(
+    ///     &[
+    ///         (E1, Piece(King, White)),
+    ///         (E8, Piece(King, Black)),
+    ///         (E2, Piece(Pawn, White)),
+    ///     ], // iterable container of pairs Square + Piece
+    ///     White,                   // side to move
+    ///     CastlingRights::Neither, // white castling rights
+    ///     CastlingRights::Neither, // black castling rights
+    ///     None,                    // Optional en-passant square
+    ///     0,                       // Moves number since last capture or pawn move
+    ///     1,                       // Move number
+    /// )
+    /// .unwrap();
+    /// println!("{}", board);
+    /// ```
+    pub fn setup<'a>(
+        pieces: impl IntoIterator<Item = &'a (Square, Piece)>,
+        side_to_move: Color,
+        white_castle_rights: CastlingRights,
+        black_castle_rights: CastlingRights,
+        en_passant: Option<Square>,
+        moves_since_capture_or_pawn_move: usize,
+        move_number: usize,
+    ) -> Result<Self, Error> {
+        ChessBoard::try_from(BoardBuilder::setup(
+            pieces,
+            side_to_move,
+            white_castle_rights,
+            black_castle_rights,
+            en_passant,
+            moves_since_capture_or_pawn_move,
+            move_number,
+        ))
+    }
+
     /// Initializes the ChessBoard structure by a FEN-string
     ///
     /// [FEN-string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
@@ -971,18 +1031,17 @@ impl ChessBoard {
             };
 
             let mut legals = BLANK;
-            slice
-                .for_each(|i| {
-                    let ray = RAYS.get(square)[i];
-                    legals ^= match i {
-                        0 | 2 | 4 | 5 => (ray & self.combined_mask).last_bit_square(),
-                        1 | 3 | 6 | 7 => (ray & self.combined_mask).first_bit_square(),
-                        _ => unreachable!(),
-                    }
-                    .map_or(ray, |s| {
-                        BETWEEN.get(square, s).unwrap() ^ BitBoard::from_square(s)
-                    });
+            slice.for_each(|i| {
+                let ray = RAYS.get(square)[i];
+                legals ^= match i {
+                    0 | 2 | 4 | 5 => (ray & self.combined_mask).last_bit_square(),
+                    1 | 3 | 6 | 7 => (ray & self.combined_mask).first_bit_square(),
+                    _ => unreachable!(),
+                }
+                .map_or(ray, |s| {
+                    BETWEEN.get(square, s).unwrap() ^ BitBoard::from_square(s)
                 });
+            });
             legals & !color_mask
         };
 
