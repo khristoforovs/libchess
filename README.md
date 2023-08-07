@@ -23,6 +23,33 @@ println!("{}", board); // this will draw the board representation in terminal:
 
 *Here uppercase letters represent white's pieces and lowercase - black's.*
 
+Another way to create board is to convert it from manually created `BoardBuilder` structure:
+
+```rust
+use libchess::*;
+use libchess::{squares::*, Color::*, PieceType::*};
+
+let board = ChessBoard::setup(
+    &[
+        (E1, Piece(King, White)),
+        (E8, Piece(King, Black)),
+        (E2, Piece(Pawn, White)),
+    ], // iterable container of pairs Square + Piece
+    White, // side to move
+    CastlingRights::Neither, // white castling rights
+    CastlingRights::Neither, // black castling rights
+    None, // Optional en-passant square
+    0, // Moves number since last capture or pawn move
+    1, // Move number
+)
+.unwrap();
+
+println!("{}", board);
+```
+
+Of course, you need to be ensured that this set of settings will generate valid board, in other case board validation method will return `Err(LibChessError)` while you call `builder.try_into()` (as it does if you try to initialize the board by an invalid FEN-string)
+
+### Rendering options:
 
 ```rust
 println!("{}", board.render_flipped()); // or you can render this board from black's perspective (flipped)
@@ -33,7 +60,7 @@ println!("{}", board.as_fen()); // will return a FEN-string "8/P5k1/2b3p1/5p2/5K
 ### Initializing a Game object:
 ```rust
 use libchess::*;
-use libchess::{PieceType::*, coordinates::squares::*};
+use libchess::{PieceType::*, squares::*};
 
 // initializing the game is almost the same as for boards
 let mut game = Game::from_fen("3k4/3P4/4K3/8/8/8/8/8 w - - 0 1").unwrap();
@@ -48,7 +75,7 @@ assert_eq!(game.get_game_status(), GameStatus::Stalemate);
 ### Making moves:
 ```rust
 use libchess::*;
-use libchess::{PieceType::*, coordinates::squares::*, Color::*};
+use libchess::{PieceType::*, squares::*, Color::*};
 
 let mut game = Game::default();
 let moves = vec![
@@ -68,7 +95,7 @@ assert_eq!(game.get_game_status(), GameStatus::CheckMated(Black));
 Also you can define moves by str: 
 ```rust
 use libchess::*;
-use libchess::{PieceType::*, coordinates::squares::*};
+use libchess::{PieceType::*, squares::*};
 use std::str::FromStr;
 
 let mut game = Game::default();
