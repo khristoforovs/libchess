@@ -112,7 +112,7 @@ impl BitBoard {
     pub fn from_file(file: File) -> Self {
         let mut result = BLANK;
         for rank in RANKS.iter() {
-            result |= Self::from_square(Square::from_rank_file(*rank, file));
+            result ^= Self::from_square(Square::from_rank_file(*rank, file));
         }
         result
     }
@@ -120,7 +120,7 @@ impl BitBoard {
     pub fn from_rank(rank: Rank) -> Self {
         let mut result = BLANK;
         for file in FILES.iter() {
-            result |= Self::from_square(Square::from_rank_file(rank, *file));
+            result ^= Self::from_square(Square::from_rank_file(rank, *file));
         }
         result
     }
