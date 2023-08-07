@@ -107,4 +107,49 @@ mod tests {
             BitBoard::new(0x0000008000000000u64)
         );
     }
+
+    #[test]
+    fn blocked_ray_square() {
+        let rays_table = RaysTable::default();
+
+        // up
+        let combined = rays_table.get(E1)[0] & BitBoard::from_square(E2);
+        println!("{}", combined);
+        assert_eq!(E2, combined.last_bit_square().unwrap());
+
+        // down
+        let combined = rays_table.get(E6)[1] & BitBoard::from_square(E2);
+        println!("{}", combined);
+        assert_eq!(E2, combined.first_bit_square().unwrap());
+
+        // right
+        let combined = rays_table.get(D4)[2] & BitBoard::from_square(F4);
+        println!("{}", combined);
+        assert_eq!(F4, combined.last_bit_square().unwrap());
+
+        // left
+        let combined = rays_table.get(E7)[3] & BitBoard::from_square(C7);
+        println!("{}", combined);
+        assert_eq!(C7, combined.first_bit_square().unwrap());
+
+        // up-right
+        let combined = rays_table.get(B2)[4] & BitBoard::from_square(F6);
+        println!("{}", combined);
+        assert_eq!(F6, combined.last_bit_square().unwrap());
+
+        // up-left
+        let combined = rays_table.get(G2)[5] & BitBoard::from_square(C6);
+        println!("{}", combined);
+        assert_eq!(C6, combined.last_bit_square().unwrap());
+
+        // down-right
+        let combined = rays_table.get(B7)[6] & BitBoard::from_square(F3);
+        println!("{}", combined);
+        assert_eq!(F3, combined.first_bit_square().unwrap());
+
+        // down-left
+        let combined = rays_table.get(G7)[7] & BitBoard::from_square(C3);
+        println!("{}", combined);
+        assert_eq!(C3, combined.first_bit_square().unwrap());
+    }
 }
