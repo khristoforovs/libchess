@@ -1,7 +1,20 @@
 # libchess: Rust chess library
 
- 
 This library implements the game of chess: chess board, pieces, rules and legal moves.
+
+What libchess can be used for:
+
+- [x] Parse / write FEN-string
+- [x] Represent / render the chess board
+- [x] View and set board properties like castling rights
+- [x] Generate legal moves
+- [x] Make moves
+- [x] Recognize terminals on the board (stalemate, checkmate, insufficient material draws, 50-moves draws)
+- [x] Parse / write PGN-files
+- [x] Represent the chess game
+- [x] Recognize game terminals on the board (all the same as for the chess board but adding repetition draws, draws by agreement, resignations)
+- [x] Rendering game moves history
+
 
 ## Examples
 
