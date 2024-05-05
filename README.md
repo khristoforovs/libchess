@@ -21,7 +21,7 @@ What libchess can be used for:
 
 ### Initializing a ChessBoard:
 The easiest way to initialize the board is to use the FEN-string. Also, if you
-need a default starting chess position you can use the ::default() method:
+need a default starting chess position you can use the `::default()` method:
 ```rust
 use libchess::ChessBoard; 
 
