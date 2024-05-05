@@ -61,6 +61,11 @@ impl Color {
             Color::Black => Rank::First,
         }
     }
+
+    pub fn iter() -> impl Iterator<Item = Color> {
+        use Color::*;
+        [White, Black].iter().copied()
+    }
 }
 
 #[cfg(test)]
