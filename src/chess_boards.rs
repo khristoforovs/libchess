@@ -87,8 +87,8 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
         board
             .set_side_to_move(builder.get_side_to_move())
             .set_en_passant(builder.get_en_passant())
-            .set_castling_rights(Color::White, builder.get_castle_rights(Color::White))
-            .set_castling_rights(Color::Black, builder.get_castle_rights(Color::Black))
+            .set_castling_rights(White, builder.get_castle_rights(White))
+            .set_castling_rights(Black, builder.get_castle_rights(Black))
             .set_move_number(builder.get_move_number())
             .set_moves_since_capture_or_pawn_move(builder.get_moves_since_capture_or_pawn_move())
             .update_pins_and_checks()
@@ -154,7 +154,7 @@ impl ChessBoard {
     }
 
     /// Creates new instance of ChessBoard by setting up all board's properties manually
-    /// 
+    ///
     /// # Errors
     /// ``LibChessError::InvalidPositionColorsOverlap`` if there is any square taken by white and
     /// black color simultaneously
@@ -172,7 +172,7 @@ impl ChessBoard {
     ///
     /// ``LibChessError::InvalidBoardInconsistentCastlingRights`` if there is any incompatible
     /// conditions of king an rooks positions and castling rights for any of color
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use libchess::*;
@@ -510,7 +510,7 @@ impl ChessBoard {
     ///         .unwrap();
     /// assert_eq!(board.get_castle_rights(White), BothSides); /* Rooks or King not moved, so
     /// castling is legal for both sides but available only to the King side */
-    /// assert_eq!(board.castling_is_available_on_board(), KingSide);
+    /// assert_eq!(board.castling_is_available_on_board(None), KingSide);
     /// ```
     #[inline]
     pub fn get_castle_rights(&self, color: Color) -> CastlingRights {
@@ -569,14 +569,15 @@ impl ChessBoard {
     ///     ChessBoard::from_fen("r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1")
     ///         .unwrap();
     /// assert_eq!(board.get_castle_rights(White), BothSides);
-    /// assert_eq!(board.castling_is_available_on_board(), KingSide); /* despite white has rights to
+    /// assert_eq!(board.castling_is_available_on_board(None), KingSide); /* despite white has rights to
     /// castle to both sides, for this position allows to castle only to king side */
     /// ```
-    pub fn castling_is_available_on_board(&self) -> CastlingRights {
+    pub fn castling_is_available_on_board(&self, check_mask: Option<BitBoard>) -> CastlingRights {
         use squares::*;
 
         let mut result = Neither;
-        if !self.get_check_mask().is_blank() {
+        let checks = check_mask.unwrap_or(self.get_check_mask());
+        if !checks.is_blank() {
             return result;
         }
 
@@ -706,8 +707,8 @@ impl ChessBoard {
                         .is_blank();
                 }
             }
-            CastleKingSide => return self.castling_is_available_on_board().has_kingside(),
-            CastleQueenSide => return self.castling_is_available_on_board().has_queenside(),
+            CastleKingSide => return self.castling_is_available_on_board(None).has_kingside(),
+            CastleQueenSide => return self.castling_is_available_on_board(None).has_queenside(),
         }
 
         true
@@ -719,54 +720,60 @@ impl ChessBoard {
 
     /// Returns a Vec of all legal moves for current board
     pub fn get_legal_moves(&self) -> LegalMoves {
-        let mut moves = Vec::with_capacity(121);
+        let mut moves = Vec::with_capacity(218); /* maximum possible number of legal
+                                                 moves in a single position (just to avoid memory reallocations) */
         let color_mask = self.get_color_mask(self.side_to_move);
-        let is_check = !self.get_check_mask().is_blank();
+        let check_mask = self.get_check_mask();
 
-        for i in 0..PIECE_TYPES_NUMBER {
-            let piece_type = PieceType::from_index(i).unwrap();
+        for piece_type in PieceType::iter() {
             for square in color_mask & self.get_piece_type_mask(piece_type) {
                 let piece_moves = self
                     .get_piece_moves_mask(piece_type, square)
                     .map(|s| PieceMove::new(piece_type, square, s, None).unwrap())
                     .filter(|pm| {
-                        let s = pm.get_source_square();
-                        if is_check
+                        if !check_mask.is_blank()
                             | (piece_type == King)
                             | pm.is_en_passant_move(self)
-                            | !(BitBoard::from_square(s) & self.pinned).is_blank()
+                            | !(BitBoard::from_square(pm.get_source_square()) & self.pinned)
+                                .is_blank()
                         {
                             return self.get_check_mask_after_piece_move(pm).is_blank();
                         }
                         true
                     });
 
-                piece_moves.for_each(|m| {
-                    let destination = m.get_destination_square();
-                    let promotion_rank = self.side_to_move.get_promotion_rank();
-                    if (piece_type == Pawn) & (destination.get_rank() == promotion_rank) {
-                        // Generate promotion moves
-                        let (s, d) = (m.get_source_square(), destination);
-                        moves.extend_from_slice(&[
-                            mv!(Pawn, s, d, Knight),
-                            mv!(Pawn, s, d, Bishop),
-                            mv!(Pawn, s, d, Rook),
-                            mv!(Pawn, s, d, Queen),
-                        ]);
-                    } else {
-                        moves.push(BoardMove::MovePiece(m));
-                    }
-                })
+                if piece_type == Pawn {
+                    piece_moves.for_each(|m| {
+                        let destination = m.get_destination_square();
+                        let promotion_rank = self.side_to_move.get_promotion_rank();
+                        if destination.get_rank() == promotion_rank {
+                            // Generate promotion moves
+                            let (s, d) = (m.get_source_square(), destination);
+                            moves.extend_from_slice(&[
+                                mv!(Pawn, s, d, Knight),
+                                mv!(Pawn, s, d, Bishop),
+                                mv!(Pawn, s, d, Rook),
+                                mv!(Pawn, s, d, Queen),
+                            ]);
+                        } else {
+                            moves.push(BoardMove::MovePiece(m));
+                        }
+                    })
+                } else {
+                    moves.extend(piece_moves.map(|m| BoardMove::MovePiece(m)));
+                }
             }
         }
 
         // Check if castling is legal
-        moves.extend_from_slice(match self.castling_is_available_on_board() {
-            QueenSide => &[castle_queen_side!()],
-            KingSide => &[castle_king_side!()],
-            BothSides => &[castle_king_side!(), castle_queen_side!()],
-            Neither => &[],
-        });
+        moves.extend_from_slice(
+            match self.castling_is_available_on_board(Some(check_mask)) {
+                QueenSide => &[castle_queen_side!()],
+                KingSide => &[castle_king_side!()],
+                BothSides => &[castle_king_side!(), castle_queen_side!()],
+                Neither => &[],
+            },
+        );
 
         moves
     }
@@ -917,6 +924,8 @@ impl ChessBoard {
     /// 100% sure that ``next_move`` will be a legal move - use ``ChessBoard::make_move_mut``
     /// instead
     pub unsafe fn make_move_mut_unchecked(&mut self, next_move: &BoardMove) -> &mut Self {
+        use File::*;
+
         match next_move {
             BoardMove::MovePiece(m) => {
                 self.move_piece(m).clear_square_if_en_passant_capture(m);
@@ -926,8 +935,8 @@ impl ChessBoard {
                 self.move_piece(
                     &PieceMove::new(
                         King,
-                        Square::from_rank_file(back_rank, File::E),
-                        Square::from_rank_file(back_rank, File::G),
+                        Square::from_rank_file(back_rank, E),
+                        Square::from_rank_file(back_rank, G),
                         None,
                     )
                     .unwrap(),
@@ -935,8 +944,8 @@ impl ChessBoard {
                 self.move_piece(
                     &PieceMove::new(
                         Rook,
-                        Square::from_rank_file(back_rank, File::H),
-                        Square::from_rank_file(back_rank, File::F),
+                        Square::from_rank_file(back_rank, H),
+                        Square::from_rank_file(back_rank, F),
                         None,
                     )
                     .unwrap(),
@@ -947,8 +956,8 @@ impl ChessBoard {
                 self.move_piece(
                     &PieceMove::new(
                         PieceType::King,
-                        Square::from_rank_file(back_rank, File::E),
-                        Square::from_rank_file(back_rank, File::C),
+                        Square::from_rank_file(back_rank, E),
+                        Square::from_rank_file(back_rank, C),
                         None,
                     )
                     .unwrap(),
@@ -956,8 +965,8 @@ impl ChessBoard {
                 self.move_piece(
                     &PieceMove::new(
                         Rook,
-                        Square::from_rank_file(back_rank, File::A),
-                        Square::from_rank_file(back_rank, File::D),
+                        Square::from_rank_file(back_rank, A),
+                        Square::from_rank_file(back_rank, D),
                         None,
                     )
                     .unwrap(),
@@ -1145,9 +1154,9 @@ impl ChessBoard {
             self.clear_square(square);
         }
         let mask = BitBoard::from_square(square);
-        self.combined_mask |= mask;
-        self.pieces_mask[piece.0.to_index()] |= mask;
-        self.colors_mask[piece.1.to_index()] |= mask;
+        self.combined_mask ^= mask;
+        self.pieces_mask[piece.0.to_index()] ^= mask;
+        self.colors_mask[piece.1.to_index()] ^= mask;
         self.hash ^= ZOBRIST.get_piece_square_value(piece, square);
         self
     }
@@ -1256,14 +1265,13 @@ impl ChessBoard {
 
     fn update_terminal_status(&mut self) -> &mut Self {
         // To define whether the position is terminal one, we should understand that current side
-        // does not have legal moves. The simplest way could do this is just by calling
+        // does not have legal moves. The simplest way to do this is just by calling
         // board.get_legal_moves().len(). But we could avoid iterating over all available
         // moves for most of the cases and find only the first legal move.
         // Moreover, we do not need to process castling and promotions because for checkmate and
         // stalemate it is unnecessary
         let color_mask = self.get_color_mask(self.side_to_move);
-        for i in 0..PIECE_TYPES_NUMBER {
-            let piece_type = PieceType::from_index(i).unwrap();
+        for piece_type in PieceType::iter() {
             for square in color_mask & self.get_piece_type_mask(piece_type) {
                 if self
                     .get_piece_moves_mask(piece_type, square)
@@ -1290,9 +1298,9 @@ impl ChessBoard {
         let bishops_and_queens = self.get_piece_type_mask(Bishop) | self.get_piece_type_mask(Queen);
         let rooks_and_queens = self.get_piece_type_mask(Rook) | self.get_piece_type_mask(Queen);
 
-        let (bishop_moves, rook_moves) = (BISHOP.get_moves(square), ROOK.get_moves(square));
+        let (diagonal_moves, rect_moves) = (BISHOP.get_moves(square), ROOK.get_moves(square));
         let attackers = self.get_color_mask(opposite)
-            & (bishop_moves & bishops_and_queens | rook_moves & rooks_and_queens);
+            & (diagonal_moves & bishops_and_queens | rect_moves & rooks_and_queens);
 
         let (mut pinned, mut checks) = (BLANK, BLANK);
         for attacker in attackers {
@@ -1382,7 +1390,7 @@ mod tests {
     #[test]
     fn display_representation() {
         let board = ChessBoard::default();
-        let board_str = 
+        let board_str =
         "   white  KQkq
             ╔════════════════════════╗
          8  ║ r  n  b  q  k  b  n  r ║
@@ -1407,7 +1415,7 @@ mod tests {
             noindent(board_str)
         );
 
-        let board_str =         
+        let board_str =
         "   white  KQkq
             ╔════════════════════════╗
          1  ║ R  N  B  K  Q  B  N  R ║
@@ -1548,12 +1556,12 @@ mod tests {
             13 + 11 + 10 + 9 + 2 + 17
         );
 
-        // let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
-        // let board = ChessBoard::from_str(fen).unwrap();
-        // board
-        //     .get_legal_moves()
-        //     .into_iter()
-        //     .for_each(|one| assert_eq!(board.is_legal_move(one), true));
+        let fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1";
+        let board = ChessBoard::from_str(fen).unwrap();
+        board
+            .get_legal_moves()
+            .iter()
+            .for_each(|one| assert_eq!(board.is_legal_move(one), true));
     }
 
     #[test]

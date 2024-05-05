@@ -70,6 +70,11 @@ impl PieceType {
             _ => Err(Error::InvalidPeaceIndex { n }),
         }
     }
+
+    pub fn iter() -> impl Iterator<Item = PieceType> {
+        use PieceType::*;
+        [Pawn, Knight, Bishop, Rook, Queen, King].iter().copied()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
