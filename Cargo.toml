@@ -1,16 +1,18 @@
 [package]
 name = "libchess"
-version = "0.8.1"
+version = "0.8.2"
 edition = "2021"
 authors = ["Stanislav Khristoforov <stanislav.khristoforov@ya.ru>"]
 description = "Rust environment for the game of chess. Can be used as a basis for your own engine"
 keywords = ["game", "rust", "chess", "chess-game", "chess-board"]
 license = "MIT"
+readme = "README.md"
+repository = "https://github.com/khristoforovs/libchess"
 
 [dependencies]
-colored = "2.0.4"
+colored = "2.1.0"
 lazy_static = "1.4.0"
 rand = "0.8.5"
-regex = "1.9.3"
-textwrap = "0.16.0"
-thiserror = "1.0.44"
+regex = "1.10.4"
+textwrap = "0.16.1"
+thiserror = "1.0.58"
