@@ -11,8 +11,8 @@ repository = "https://github.com/khristoforovs/libchess"
 
 [dependencies]
 colored = "2.1.0"
-lazy_static = "1.4.0"
+lazy_static = "1.5.0"
 rand = "0.8.5"
-regex = "1.10.4"
+regex = "1.11.1"
 textwrap = "0.16.1"
-thiserror = "1.0.58"
+thiserror = "2.0.0"
