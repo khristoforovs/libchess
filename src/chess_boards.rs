@@ -791,18 +791,19 @@ impl ChessBoard {
     /// assert_eq!(board.get_status(), CheckMated(Black));
     /// ```
     pub fn get_status(&self) -> BoardStatus {
+        use BoardStatus::*;
         if self.is_terminal_position {
             if self.checks.count_ones() > 0 {
-                BoardStatus::CheckMated(self.side_to_move)
+                CheckMated(self.side_to_move)
             } else {
-                BoardStatus::Stalemate
+                Stalemate
             }
         } else if self.is_theoretical_draw_on_board() {
-            BoardStatus::TheoreticalDrawDeclared
+            TheoreticalDrawDeclared
         } else if self.moves_since_capture_or_pawn_move >= 100 {
-            BoardStatus::FiftyMovesDrawDeclared
+            FiftyMovesDrawDeclared
         } else {
-            BoardStatus::Ongoing
+            Ongoing
         }
     }
 
