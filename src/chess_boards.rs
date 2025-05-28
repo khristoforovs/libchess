@@ -91,7 +91,6 @@ impl TryFrom<&BoardBuilder> for ChessBoard {
             .set_castling_rights(Black, builder.get_castle_rights(Black))
             .set_move_number(builder.get_move_number())
             .set_moves_since_capture_or_pawn_move(builder.get_moves_since_capture_or_pawn_move())
-            .update_pins_and_checks()
             .update_terminal_status();
 
         board.hash = ZOBRIST.calculate_position_hash(&board);
@@ -284,7 +283,7 @@ impl ChessBoard {
         if (king_mask & self.get_color_mask(White)).count_ones() != 1 {
             return Some(Error::InvalidBoardMultipleOneColorKings);
         }
-        if (king_mask & self.get_color_mask(White)).count_ones() != 1 {
+        if (king_mask & self.get_color_mask(Black)).count_ones() != 1 {
             return Some(Error::InvalidBoardMultipleOneColorKings);
         }
 
@@ -626,10 +625,12 @@ impl ChessBoard {
         }
 
         let bitboard = BitBoard::from_square(square);
-        let sum = (1..PIECE_TYPES_NUMBER).fold(0, |acc, i| {
-            acc + i * !(self.pieces_mask[i] & bitboard).is_blank() as usize
-        });
-        Some(PieceType::from_index(sum).unwrap())
+        for (i, mask) in self.pieces_mask.iter().enumerate() {
+            if !(*mask & bitboard).is_blank() {
+                return Some(PieceType::from_index(i).unwrap());
+            }
+        }
+        None
     }
 
     /// Returns Some(Color) object if the square is not empty, None otherwise
@@ -639,19 +640,16 @@ impl ChessBoard {
         }
 
         if (self.get_color_mask(White) & BitBoard::from_square(square)).is_blank() {
-            return Some(Black);
+            Some(Black)
+        } else {
+            Some(White)
         }
-        Some(White)
     }
 
     /// Returns Some(Piece) if the square is not empty, None otherwise
     pub fn get_piece_on(&self, square: Square) -> Option<Piece> {
         let piece_type = self.get_piece_type_on(square)?;
-        let color = if (self.get_color_mask(White) & BitBoard::from_square(square)).is_blank() {
-            Black
-        } else {
-            White
-        };
+        let color = self.get_piece_color_on(square).unwrap();
         Some(Piece(piece_type, color))
     }
 
@@ -731,15 +729,20 @@ impl ChessBoard {
                     .get_piece_moves_mask(piece_type, square)
                     .map(|s| PieceMove::new(piece_type, square, s, None).unwrap())
                     .filter(|pm| {
-                        if !check_mask.is_blank()
-                            | (piece_type == King)
-                            | pm.is_en_passant_move(self)
-                            | !(BitBoard::from_square(pm.get_source_square()) & self.pinned)
-                                .is_blank()
-                        {
-                            return self.get_check_mask_after_piece_move(pm).is_blank();
+                        let full_check_needed = piece_type == King
+                            || pm.is_en_passant_move(self)
+                            || !(BitBoard::from_square(pm.get_source_square()) & self.pinned)
+                                .is_blank();
+
+                        if !check_mask.is_blank() || full_check_needed {
+                            if !check_mask.is_blank() && !full_check_needed {
+                                self.is_move_escape_check(pm)
+                            } else {
+                                self.get_check_mask_after_piece_move(pm).is_blank()
+                            }
+                        } else {
+                            true
                         }
-                        true
                     });
 
                 if piece_type == Pawn {
@@ -776,6 +779,41 @@ impl ChessBoard {
         );
 
         moves
+    }
+
+    /// Fast check if a non-king move escapes check
+    fn is_move_escape_check(&self, piece_move: &PieceMove) -> bool {
+        let king_square = self.get_king_square(self.side_to_move);
+        let checks = self.checks;
+        let checks_count = checks.count_ones();
+
+        if checks_count == 0 {
+            return true;
+        }
+
+        // This function is not for king moves
+        debug_assert_ne!(piece_move.get_piece_type(), King);
+
+        if checks_count > 1 {
+            return false;
+        }
+
+        // Find the checking piece square
+        let checker_square = checks.to_square();
+
+        // 1. Capture the checking piece
+        if piece_move.get_destination_square() == checker_square {
+            return true;
+        }
+
+        // 2. Block the check (only for sliding pieces)
+        if let Some(between) = BETWEEN.get(king_square, checker_square) {
+            if !(between & BitBoard::from_square(piece_move.get_destination_square())).is_blank() {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Returns the Zobrist-hash of the position. Is used to detect the repetition draw
@@ -981,7 +1019,6 @@ impl ChessBoard {
             .update_castling_rights(next_move)
             .set_side_to_move(opposite_side)
             .update_en_passant(next_move)
-            .update_pins_and_checks()
             .update_terminal_status();
 
         self
@@ -1032,29 +1069,6 @@ impl ChessBoard {
     fn get_piece_moves_mask(&self, piece_type: PieceType, square: Square) -> BitBoard {
         let color_mask = self.get_color_mask(self.side_to_move);
 
-        let truncate_rays = |pt: PieceType, square: Square| {
-            let slice = match pt {
-                Bishop => 4..8,
-                Rook => 0..4,
-                Queen => 0..8,
-                _ => unreachable!(),
-            };
-
-            let mut legals = BLANK;
-            slice.for_each(|i| {
-                let ray = RAYS.get(square)[i];
-                legals ^= match i {
-                    0 | 2 | 4 | 5 => (ray & self.combined_mask).last_bit_square(),
-                    1 | 3 | 6 | 7 => (ray & self.combined_mask).first_bit_square(),
-                    _ => unreachable!(),
-                }
-                .map_or(ray, |s| {
-                    BETWEEN.get(square, s).unwrap() ^ BitBoard::from_square(s)
-                });
-            });
-            legals & !color_mask
-        };
-
         match piece_type {
             Pawn => {
                 let ep = self.get_en_passant().map_or(BLANK, BitBoard::from_square);
@@ -1072,9 +1086,32 @@ impl ChessBoard {
             }
             Knight => KNIGHT.get_moves(square) & !color_mask,
             King => KING.get_moves(square) & !color_mask,
-            Bishop => truncate_rays(Bishop, square),
-            Rook => truncate_rays(Rook, square),
-            Queen => truncate_rays(Queen, square),
+            Bishop | Rook | Queen => {
+                let (start, end) = match piece_type {
+                    Bishop => (4, 8),
+                    Rook => (0, 4),
+                    Queen => (0, 8),
+                    _ => unreachable!(),
+                };
+
+                let mut legals = BLANK;
+                for i in start..end {
+                    let ray = RAYS.get(square)[i];
+                    let blocker = match i {
+                        0 | 2 | 4 | 5 => (ray & self.combined_mask).last_bit_square(),
+                        1 | 3 | 6 | 7 => (ray & self.combined_mask).first_bit_square(),
+                        _ => unreachable!(),
+                    };
+
+                    if let Some(blocker_sq) = blocker {
+                        let between = BETWEEN.get(square, blocker_sq).unwrap();
+                        legals |= between | BitBoard::from_square(blocker_sq);
+                    } else {
+                        legals |= ray;
+                    }
+                }
+                legals & !color_mask
+            }
         }
     }
 
@@ -1265,32 +1302,42 @@ impl ChessBoard {
     }
 
     fn update_terminal_status(&mut self) -> &mut Self {
-        // To define whether the position is terminal one, we should understand that current side
-        // does not have legal moves. The simplest way to do this is just by calling
-        // board.get_legal_moves().len(). But we could avoid iterating over all available
-        // moves for most of the cases and find only the first legal move.
-        // Moreover, we do not need to process castling and promotions because for checkmate and
-        // stalemate it is unnecessary
+        // Check if king is in check
+        let king_square = self.get_king_square(self.side_to_move);
+        let (pinned, checks) = self.get_pins_and_checks(king_square);
+        self.pinned = pinned;
+        self.checks = checks;
+
+        if !checks.is_blank() {
+            // King is in check - check for any escape
+            self.is_terminal_position = self.get_legal_moves().is_empty();
+            return self;
+        }
+
+        // Not in check - check for any legal move
         let color_mask = self.get_color_mask(self.side_to_move);
-        for piece_type in PieceType::iter() {
+        self.is_terminal_position = true;
+        'outer: for piece_type in PieceType::iter() {
             for square in color_mask & self.get_piece_type_mask(piece_type) {
-                if self
-                    .get_piece_moves_mask(piece_type, square)
-                    .into_iter()
-                    .map(|s| {
-                        self.get_check_mask_after_piece_move(
-                            &PieceMove::new(piece_type, square, s, None).unwrap(),
-                        )
-                    })
-                    .any(|x| x.is_blank())
-                {
-                    self.is_terminal_position = false;
-                    return self;
+                let moves = self.get_piece_moves_mask(piece_type, square);
+                for dest in moves {
+                    let piece_move = PieceMove::new(piece_type, square, dest, None).unwrap();
+                    if piece_type == King
+                        || piece_move.is_en_passant_move(self)
+                        || !(BitBoard::from_square(square) & self.pinned).is_blank()
+                    {
+                        if self.get_check_mask_after_piece_move(&piece_move).is_blank() {
+                            self.is_terminal_position = false;
+                            break 'outer;
+                        }
+                    } else {
+                        self.is_terminal_position = false;
+                        break 'outer;
+                    }
                 }
             }
         }
 
-        self.is_terminal_position = true;
         self
     }
 
