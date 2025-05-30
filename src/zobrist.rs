@@ -47,13 +47,13 @@ impl ZobristHasher {
         let mut rng = StdRng::seed_from_u64(SEED);
 
         // side to move
-        self.black_to_move_value = rng.gen();
+        self.black_to_move_value = rng.random();
 
         // fill table for pieces positions
         for c in 0..COLORS_NUMBER {
             for p in 0..PIECE_TYPES_NUMBER {
                 for sq in 0..SQUARES_NUMBER {
-                    self.piece_square_table[c][p][sq] = rng.gen();
+                    self.piece_square_table[c][p][sq] = rng.random();
                 }
             }
         }
@@ -61,13 +61,13 @@ impl ZobristHasher {
         // fill table for castling
         for c in 0..COLORS_NUMBER {
             for r in 0..CASTLING_RIGHTS_NUMBER {
-                self.castling_table[c][r] = rng.gen();
+                self.castling_table[c][r] = rng.random();
             }
         }
 
         // fill table for en passant
         for f in 0..FILES_NUMBER {
-            self.en_passant_table[f] = rng.gen();
+            self.en_passant_table[f] = rng.random();
         }
 
         self
